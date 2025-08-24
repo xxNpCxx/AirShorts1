@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: tgpaybot-v2
+    env: node
+    plan: starter
+    buildCommand: npm ci --include=dev && npm run build:prod
+    startCommand: npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: BOT_TOKEN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: WEBHOOK_URL
+        sync: false
+      - key: DEBUG
+        value: false
+      - key: ADMIN_USER_ID
+        sync: false
+    healthCheckPath: /health
+    autoDeploy: true
