@@ -2,18 +2,28 @@ import { Update, Start, Ctx, Hears, Action, Command } from 'nestjs-telegraf';
 import { UsersService } from '../users/users.service';
 import { MenuService } from '../menu/menu.service';
 import { SettingsService } from '../settings/settings.service';
+import { CustomLoggerService } from '../logger/logger.service';
 
 @Update()
 export class BotUpdate {
   constructor(
     private readonly _users: UsersService, 
     private readonly _menu: MenuService, 
-    private readonly _settings: SettingsService
+    private readonly _settings: SettingsService,
+    private readonly _logger: CustomLoggerService
   ) {}
   @Start()
   async onStart(@Ctx() ctx: any) {
-    await this._users.upsertFromContext(ctx);
-    await this._menu.sendMainMenu(ctx);
+    this._logger.debug(`Команда /start получена от пользователя ${ctx.from?.id}`, 'BotUpdate');
+    try {
+      await this._users.upsertFromContext(ctx);
+      this._logger.debug('Пользователь обновлен в базе данных', 'BotUpdate');
+      await this._menu.sendMainMenu(ctx);
+      this._logger.debug('Главное меню отправлено', 'BotUpdate');
+    } catch (error) {
+      this._logger.error(`Ошибка при обработке команды /start: ${error}`, undefined, 'BotUpdate');
+      await ctx.reply('❌ Произошла ошибка при запуске бота. Попробуйте еще раз.');
+    }
   }
 
   @Hears(['🏠 Главное меню', 'Главное меню'])

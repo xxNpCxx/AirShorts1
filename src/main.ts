@@ -8,7 +8,7 @@ import { CustomLoggerService } from './logger/logger.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log'],
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
   // Получаем экземпляр логгера
@@ -41,8 +41,7 @@ async function bootstrap() {
   logger.debug(`Node.js версия: ${process.version}`, 'Bootstrap');
   logger.debug(`NODE_ENV: ${process.env.NODE_ENV || 'development'}`, 'Bootstrap');
 
-  // Явно прокидываем обработчик вебхука, чтобы избежать 404 от Telegram
-  const hookPath = '/webhook';
+  // Получаем экземпляр бота
   const bot = app.get<Telegraf>(getBotToken());
   
   // Middleware для принудительного выхода из FSM при команде /start
@@ -71,7 +70,22 @@ async function bootstrap() {
     return next();
   });
   
-  // Явно парсим JSON и гарантируем 200 OK даже при ошибке, чтобы Telegram не видел 502/404
+  // Настраиваем webhook только если есть URL
+  const hookPath = '/webhook';
+  const webhookUrl = process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL;
+  
+  if (webhookUrl && webhookUrl.trim() !== '') {
+    try {
+      await bot.telegram.setWebhook(`${webhookUrl}${hookPath}`);
+      logger.log(`Webhook установлен: ${webhookUrl}${hookPath}`, 'Bootstrap');
+    } catch (error) {
+      logger.error(`Ошибка установки webhook: ${error}`, undefined, 'Bootstrap');
+    }
+  } else {
+    logger.debug('Webhook URL не настроен, пропускаем установку webhook', 'Bootstrap');
+  }
+  
+  // Обработчик webhook
   app.use(hookPath, express.json({ limit: '1mb' }), async (req: any, res: any) => {
     try {
       logger.debug('Webhook update получен', 'Webhook');
@@ -80,7 +94,7 @@ async function bootstrap() {
       const update = req.body || {};
       logger.telegramUpdate(update, 'Webhook');
       
-      await (bot as any).handleUpdate(req.body);
+      await bot.handleUpdate(req.body);
       res.status(200).send('OK');
     } catch (err) {
       logger.error(`Ошибка при обработке webhook update: ${err}`, undefined, 'Webhook');

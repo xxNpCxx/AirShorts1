@@ -1,5 +1,6 @@
 import { KeyboardsService } from '../keyboards/keyboards.service';
 import { SettingsService } from '../settings/settings.service';
+import { CustomLoggerService } from '../logger/logger.service';
 interface TelegramContext {
     from?: {
         id: number;
@@ -14,7 +15,8 @@ interface TelegramContext {
 export declare class MenuService {
     private readonly _kb;
     private readonly _settings;
-    constructor(_kb: KeyboardsService, _settings: SettingsService);
+    private readonly _logger;
+    constructor(_kb: KeyboardsService, _settings: SettingsService, _logger: CustomLoggerService);
     sendMainMenu(ctx: TelegramContext): Promise<void>;
     sendMainMenuBanner(ctx: TelegramContext, isOperator: boolean, isAdmin: boolean): Promise<void>;
     private sendReplyKeyboard;

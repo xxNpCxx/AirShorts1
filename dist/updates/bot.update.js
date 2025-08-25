@@ -17,15 +17,26 @@ const nestjs_telegraf_1 = require("nestjs-telegraf");
 const users_service_1 = require("../users/users.service");
 const menu_service_1 = require("../menu/menu.service");
 const settings_service_1 = require("../settings/settings.service");
+const logger_service_1 = require("../logger/logger.service");
 let BotUpdate = class BotUpdate {
-    constructor(_users, _menu, _settings) {
+    constructor(_users, _menu, _settings, _logger) {
         this._users = _users;
         this._menu = _menu;
         this._settings = _settings;
+        this._logger = _logger;
     }
     async onStart(ctx) {
-        await this._users.upsertFromContext(ctx);
-        await this._menu.sendMainMenu(ctx);
+        this._logger.debug(`Команда /start получена от пользователя ${ctx.from?.id}`, 'BotUpdate');
+        try {
+            await this._users.upsertFromContext(ctx);
+            this._logger.debug('Пользователь обновлен в базе данных', 'BotUpdate');
+            await this._menu.sendMainMenu(ctx);
+            this._logger.debug('Главное меню отправлено', 'BotUpdate');
+        }
+        catch (error) {
+            this._logger.error(`Ошибка при обработке команды /start: ${error}`, undefined, 'BotUpdate');
+            await ctx.reply('❌ Произошла ошибка при запуске бота. Попробуйте еще раз.');
+        }
     }
     async onMainMenu(ctx) {
         await this._users.upsertFromContext(ctx);
@@ -102,6 +113,7 @@ exports.BotUpdate = BotUpdate = __decorate([
     (0, nestjs_telegraf_1.Update)(),
     __metadata("design:paramtypes", [users_service_1.UsersService,
         menu_service_1.MenuService,
-        settings_service_1.SettingsService])
+        settings_service_1.SettingsService,
+        logger_service_1.CustomLoggerService])
 ], BotUpdate);
 //# sourceMappingURL=bot.update.js.map

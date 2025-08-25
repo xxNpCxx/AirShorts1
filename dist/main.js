@@ -11,7 +11,7 @@ const nestjs_telegraf_1 = require("nestjs-telegraf");
 const logger_service_1 = require("./logger/logger.service");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
-        logger: ['error', 'warn', 'log'],
+        logger: ['error', 'warn', 'log', 'debug', 'verbose'],
     });
     let logger;
     try {
@@ -39,7 +39,6 @@ async function bootstrap() {
     logger.debug(`Режим отладки: ${process.env.DEBUG || 'false'}`, 'Bootstrap');
     logger.debug(`Node.js версия: ${process.version}`, 'Bootstrap');
     logger.debug(`NODE_ENV: ${process.env.NODE_ENV || 'development'}`, 'Bootstrap');
-    const hookPath = '/webhook';
     const bot = app.get((0, nestjs_telegraf_1.getBotToken)());
     bot.use(async (ctx, next) => {
         if (ctx.message && typeof ctx.message.text === 'string' && ctx.message.text.startsWith('/start')) {
@@ -61,6 +60,20 @@ async function bootstrap() {
         }
         return next();
     });
+    const hookPath = '/webhook';
+    const webhookUrl = process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL;
+    if (webhookUrl && webhookUrl.trim() !== '') {
+        try {
+            await bot.telegram.setWebhook(`${webhookUrl}${hookPath}`);
+            logger.log(`Webhook установлен: ${webhookUrl}${hookPath}`, 'Bootstrap');
+        }
+        catch (error) {
+            logger.error(`Ошибка установки webhook: ${error}`, undefined, 'Bootstrap');
+        }
+    }
+    else {
+        logger.debug('Webhook URL не настроен, пропускаем установку webhook', 'Bootstrap');
+    }
     app.use(hookPath, express_1.default.json({ limit: '1mb' }), async (req, res) => {
         try {
             logger.debug('Webhook update получен', 'Webhook');

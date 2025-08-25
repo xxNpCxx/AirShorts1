@@ -46,51 +46,61 @@ exports.MenuService = void 0;
 const common_1 = require("@nestjs/common");
 const keyboards_service_1 = require("../keyboards/keyboards.service");
 const settings_service_1 = require("../settings/settings.service");
+const logger_service_1 = require("../logger/logger.service");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 let MenuService = class MenuService {
-    constructor(_kb, _settings) {
+    constructor(_kb, _settings, _logger) {
         this._kb = _kb;
         this._settings = _settings;
+        this._logger = _logger;
     }
     async sendMainMenu(ctx) {
+        this._logger.debug(`Отправка главного меню пользователю ${ctx.from?.id}`, 'MenuService');
         const isOperator = false;
         const isAdmin = false;
-        await this.sendMainMenuBanner(ctx, isOperator, isAdmin);
-        await this.sendReplyKeyboard(ctx);
+        try {
+            await this.sendMainMenuBanner(ctx, isOperator, isAdmin);
+            await this.sendReplyKeyboard(ctx);
+            this._logger.debug(`Главное меню успешно отправлено пользователю ${ctx.from?.id}`, 'MenuService');
+        }
+        catch (error) {
+            this._logger.error(`Ошибка при отправке главного меню: ${error}`, undefined, 'MenuService');
+            throw error;
+        }
     }
     async sendMainMenuBanner(ctx, isOperator, isAdmin) {
         try {
-            console.log(`[MenuService] Попытка отправить баннер главного меню пользователю: ${ctx.from?.id}`);
+            this._logger.debug(`Попытка отправить баннер главного меню пользователю: ${ctx.from?.id}`, 'MenuService');
             const imagePath = path.join(process.cwd(), 'images', 'banner.jpg');
-            console.log(`[MenuService] Путь к баннеру: ${imagePath}`);
+            this._logger.debug(`Путь к баннеру: ${imagePath}`, 'MenuService');
             if (!fs.existsSync(imagePath)) {
-                console.warn(`[MenuService] Баннер banner.jpg не найден по пути: ${imagePath}`);
+                this._logger.warn(`Баннер banner.jpg не найден по пути: ${imagePath}`, 'MenuService');
                 await ctx.reply('🎬 ГЕНЕРАТОР ВИДЕО\n\nДобро пожаловать в AI генератор видео!\n\n✨ Создавайте персонализированные видео\n🎭 3D аватары с вашим голосом\n📱 Оптимизировано для YouTube Shorts\n🚀 Быстрая генерация с d-id API', {
                     reply_markup: this._kb.mainInline().reply_markup
                 });
                 return;
             }
             const stats = fs.statSync(imagePath);
-            console.log(`[MenuService] Размер баннера: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+            this._logger.debug(`Размер баннера: ${(stats.size / 1024 / 1024).toFixed(2)} MB`, 'MenuService');
             const caption = `🎬 ГЕНЕРАТОР ВИДЕО\n\nДобро пожаловать в AI генератор видео!\n\n✨ Создавайте персонализированные видео\n🎭 3D аватары с вашим голосом\n📱 Оптимизировано для YouTube Shorts\n🚀 Быстрая генерация с d-id API`;
             if (ctx.telegram && ctx.from?.id) {
-                console.log(`[MenuService] Отправляю баннер с inline-клавиатурой пользователю ${ctx.from.id}`);
+                this._logger.debug(`Отправляю баннер с inline-клавиатурой пользователю ${ctx.from.id}`, 'MenuService');
                 await ctx.telegram.sendPhoto(ctx.from.id, { source: imagePath }, {
                     caption,
                     parse_mode: 'HTML',
                     reply_markup: this._kb.mainInline().reply_markup
                 });
-                console.log(`[MenuService] Баннер главного меню с inline-клавиатурой успешно отправлен пользователю ${ctx.from.id}`);
+                this._logger.debug(`Баннер главного меню с inline-клавиатурой успешно отправлен пользователю ${ctx.from.id}`, 'MenuService');
             }
             else {
-                console.warn('[MenuService] Не удалось отправить баннер: отсутствует telegram API или chat ID');
+                this._logger.warn('Не удалось отправить баннер: отсутствует telegram API или chat ID', 'MenuService');
                 await ctx.reply(caption, { reply_markup: this._kb.mainInline().reply_markup });
             }
         }
         catch (error) {
-            console.error('[MenuService] Ошибка при отправке баннера главного меню:', error);
-            console.error('[MenuService] Детали ошибки:', error instanceof Error ? error.stack : error);
+            this._logger.error(`Ошибка при отправке баннера главного меню: ${error}`, undefined, 'MenuService');
+            this._logger.debug(`Детали ошибки: ${error instanceof Error ? error.stack : error}`, 'MenuService');
             const caption = `🎬 ГЕНЕРАТОР ВИДЕО\n\nДобро пожаловать в AI генератор видео!\n\n✨ Создавайте персонализированные видео\n🎭 3D аватары с вашим голосом\n📱 Оптимизировано для YouTube Shorts\n🚀 Быстрая генерация с d-id API`;
             await ctx.reply(caption, { reply_markup: this._kb.mainInline().reply_markup });
         }
@@ -98,11 +108,11 @@ let MenuService = class MenuService {
     async sendReplyKeyboard(ctx) {
         try {
             await ctx.reply('⌨️', { reply_markup: this._kb.mainReply().reply_markup });
-            console.log(`[MenuService] Reply-клавиатура отправлена пользователю ${ctx.from?.id}`);
+            this._logger.debug(`Reply-клавиатура отправлена пользователю ${ctx.from?.id}`, 'MenuService');
         }
         catch (error) {
-            console.error('[MenuService] Ошибка при отправке reply-клавиатуры:', error);
-            console.error('[MenuService] Детали ошибки:', error instanceof Error ? error.stack : error);
+            this._logger.error(`Ошибка при отправке reply-клавиатуры: ${error}`, undefined, 'MenuService');
+            this._logger.debug(`Детали ошибки: ${error instanceof Error ? error.stack : error}`, 'MenuService');
             await ctx.reply('⌨️', { reply_markup: this._kb.mainReply().reply_markup });
         }
     }
@@ -110,6 +120,8 @@ let MenuService = class MenuService {
 exports.MenuService = MenuService;
 exports.MenuService = MenuService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [keyboards_service_1.KeyboardsService, settings_service_1.SettingsService])
+    __metadata("design:paramtypes", [keyboards_service_1.KeyboardsService,
+        settings_service_1.SettingsService,
+        logger_service_1.CustomLoggerService])
 ], MenuService);
 //# sourceMappingURL=menu.service.js.map

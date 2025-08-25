@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { KeyboardsService } from '../keyboards/keyboards.service';
 import { SettingsService } from '../settings/settings.service';
+import { CustomLoggerService } from '../logger/logger.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -16,18 +17,31 @@ interface TelegramContext {
 
 @Injectable()
 export class MenuService {
-  constructor(private readonly _kb: KeyboardsService, private readonly _settings: SettingsService) {}
+  constructor(
+    private readonly _kb: KeyboardsService, 
+    private readonly _settings: SettingsService,
+    private readonly _logger: CustomLoggerService
+  ) {}
 
   async sendMainMenu(ctx: TelegramContext): Promise<void> {
+    this._logger.debug(`Отправка главного меню пользователю ${ctx.from?.id}`, 'MenuService');
+    
     // В шаблоне без бизнес-ролей просто отправляем баннер и клавиатуры
     const isOperator = false;
     const isAdmin = false;
 
-    // Сначала отправляем баннер с inline-клавиатурой
-    await this.sendMainMenuBanner(ctx, isOperator, isAdmin);
-    
-    // Затем отдельно отправляем reply-клавиатуру (разделяем клавиатуры)
-    await this.sendReplyKeyboard(ctx);
+    try {
+      // Сначала отправляем баннер с inline-клавиатурой
+      await this.sendMainMenuBanner(ctx, isOperator, isAdmin);
+      
+      // Затем отдельно отправляем reply-клавиатуру (разделяем клавиатуры)
+      await this.sendReplyKeyboard(ctx);
+      
+      this._logger.debug(`Главное меню успешно отправлено пользователю ${ctx.from?.id}`, 'MenuService');
+    } catch (error) {
+      this._logger.error(`Ошибка при отправке главного меню: ${error}`, undefined, 'MenuService');
+      throw error;
+    }
   }
 
   /**
@@ -38,15 +52,15 @@ export class MenuService {
    */
   async sendMainMenuBanner(ctx: TelegramContext, isOperator: boolean, isAdmin: boolean): Promise<void> {
     try {
-      console.log(`[MenuService] Попытка отправить баннер главного меню пользователю: ${ctx.from?.id}`);
+      this._logger.debug(`Попытка отправить баннер главного меню пользователю: ${ctx.from?.id}`, 'MenuService');
       
       // Путь к баннеру - исправляем для Render.com
       const imagePath = path.join(process.cwd(), 'images', 'banner.jpg');
-      console.log(`[MenuService] Путь к баннеру: ${imagePath}`);
+      this._logger.debug(`Путь к баннеру: ${imagePath}`, 'MenuService');
       
       // Проверяем существование файла
       if (!fs.existsSync(imagePath)) {
-        console.warn(`[MenuService] Баннер banner.jpg не найден по пути: ${imagePath}`);
+        this._logger.warn(`Баннер banner.jpg не найден по пути: ${imagePath}`, 'MenuService');
         // Fallback: отправляем текстовое сообщение с inline-клавиатурой
         await ctx.reply('🎬 ГЕНЕРАТОР ВИДЕО\n\nДобро пожаловать в AI генератор видео!\n\n✨ Создавайте персонализированные видео\n🎭 3D аватары с вашим голосом\n📱 Оптимизировано для YouTube Shorts\n🚀 Быстрая генерация с d-id API', {
           reply_markup: this._kb.mainInline().reply_markup
@@ -56,27 +70,27 @@ export class MenuService {
 
       // Получаем размер файла для логирования
       const stats = fs.statSync(imagePath);
-      console.log(`[MenuService] Размер баннера: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+      this._logger.debug(`Размер баннера: ${(stats.size / 1024 / 1024).toFixed(2)} MB`, 'MenuService');
 
       // Отправляем баннер с inline-клавиатурой
       const caption = `🎬 ГЕНЕРАТОР ВИДЕО\n\nДобро пожаловать в AI генератор видео!\n\n✨ Создавайте персонализированные видео\n🎭 3D аватары с вашим голосом\n📱 Оптимизировано для YouTube Shorts\n🚀 Быстрая генерация с d-id API`;
       
       if (ctx.telegram && ctx.from?.id) {
-        console.log(`[MenuService] Отправляю баннер с inline-клавиатурой пользователю ${ctx.from.id}`);
+        this._logger.debug(`Отправляю баннер с inline-клавиатурой пользователю ${ctx.from.id}`, 'MenuService');
         await ctx.telegram.sendPhoto(ctx.from.id, { source: imagePath }, {
           caption,
           parse_mode: 'HTML',
           reply_markup: this._kb.mainInline().reply_markup
         });
-        console.log(`[MenuService] Баннер главного меню с inline-клавиатурой успешно отправлен пользователю ${ctx.from.id}`);
+        this._logger.debug(`Баннер главного меню с inline-клавиатурой успешно отправлен пользователю ${ctx.from.id}`, 'MenuService');
       } else {
-        console.warn('[MenuService] Не удалось отправить баннер: отсутствует telegram API или chat ID');
+        this._logger.warn('Не удалось отправить баннер: отсутствует telegram API или chat ID', 'MenuService');
         // Fallback: отправляем текстовое сообщение с inline-клавиатурой
         await ctx.reply(caption, { reply_markup: this._kb.mainInline().reply_markup });
       }
     } catch (error) {
-      console.error('[MenuService] Ошибка при отправке баннера главного меню:', error);
-      console.error('[MenuService] Детали ошибки:', error instanceof Error ? error.stack : error);
+      this._logger.error(`Ошибка при отправке баннера главного меню: ${error}`, undefined, 'MenuService');
+      this._logger.debug(`Детали ошибки: ${error instanceof Error ? error.stack : error}`, 'MenuService');
       // Fallback: отправляем текстовое сообщение с inline-клавиатурой
       const caption = `🎬 ГЕНЕРАТОР ВИДЕО\n\nДобро пожаловать в AI генератор видео!\n\n✨ Создавайте персонализированные видео\n🎭 3D аватары с вашим голосом\n📱 Оптимизировано для YouTube Shorts\n🚀 Быстрая генерация с d-id API`;
       await ctx.reply(caption, { reply_markup: this._kb.mainInline().reply_markup });
@@ -95,10 +109,10 @@ export class MenuService {
     try {
       // Отправляем reply-клавиатуру с минимальным текстом
       await ctx.reply('⌨️', { reply_markup: this._kb.mainReply().reply_markup });
-      console.log(`[MenuService] Reply-клавиатура отправлена пользователю ${ctx.from?.id}`);
+      this._logger.debug(`Reply-клавиатура отправлена пользователю ${ctx.from?.id}`, 'MenuService');
     } catch (error) {
-      console.error('[MenuService] Ошибка при отправке reply-клавиатуры:', error);
-      console.error('[MenuService] Детали ошибки:', error instanceof Error ? error.stack : error);
+      this._logger.error(`Ошибка при отправке reply-клавиатуры: ${error}`, undefined, 'MenuService');
+      this._logger.debug(`Детали ошибки: ${error instanceof Error ? error.stack : error}`, 'MenuService');
       // Fallback: отправляем reply-клавиатуру с минимальным текстом
       await ctx.reply('⌨️', { reply_markup: this._kb.mainReply().reply_markup });
     }
