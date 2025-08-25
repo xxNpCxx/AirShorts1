@@ -102,8 +102,16 @@ async function bootstrap() {
             logger.debug('Webhook update получен', 'Webhook');
             const update = req.body || {};
             logger.telegramUpdate(update, 'Webhook');
-            await bot.handleUpdate(req.body);
-            logger.debug('Webhook update обработан через NestJS', 'Webhook');
+            try {
+                await bot.handleUpdate(req.body);
+                logger.debug('Webhook update обработан через bot.handleUpdate', 'Webhook');
+            }
+            catch (nestError) {
+                logger.warn(`NestJS обработка не удалась: ${nestError}`, 'Webhook');
+                logger.debug('Пробуем fallback обработку', 'Webhook');
+                await bot.handleUpdate(req.body);
+                logger.debug('Webhook update обработан через fallback', 'Webhook');
+            }
             res.status(200).send('OK');
         }
         catch (err) {

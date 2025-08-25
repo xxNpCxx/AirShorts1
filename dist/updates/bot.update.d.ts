@@ -10,6 +10,7 @@ export declare class BotUpdate {
     constructor(_users: UsersService, _menu: MenuService, _settings: SettingsService, _logger: CustomLoggerService);
     onStart(ctx: any): Promise<void>;
     onStartHears(ctx: any): Promise<void>;
+    onText(ctx: any): Promise<void>;
     onMainMenu(ctx: any): Promise<void>;
     onMainMenuAction(ctx: any): Promise<void>;
     onMyId(ctx: any): Promise<void>;

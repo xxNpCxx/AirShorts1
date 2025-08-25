@@ -43,6 +43,14 @@ let BotUpdate = class BotUpdate {
         this._logger.debug(`[@Hears] Команда /start получена через @Hears от пользователя ${ctx.from?.id}`, 'BotUpdate');
         return this.onStart(ctx);
     }
+    async onText(ctx) {
+        this._logger.debug(`[@On text] Текстовое сообщение получено: "${ctx.message?.text}" от пользователя ${ctx.from?.id}`, 'BotUpdate');
+        if (ctx.message?.text === '/start') {
+            this._logger.debug(`[@On text] Обрабатываем команду /start`, 'BotUpdate');
+            return this.onStart(ctx);
+        }
+        this._logger.debug(`[@On text] Неизвестное сообщение: "${ctx.message?.text}"`, 'BotUpdate');
+    }
     async onMainMenu(ctx) {
         await this._users.upsertFromContext(ctx);
         await this._menu.sendMainMenu(ctx);
@@ -86,6 +94,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onStartHears", null);
+__decorate([
+    (0, nestjs_telegraf_1.On)('text'),
+    __param(0, (0, nestjs_telegraf_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], BotUpdate.prototype, "onText", null);
 __decorate([
     (0, nestjs_telegraf_1.Hears)(['🏠 Главное меню', 'Главное меню']),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),

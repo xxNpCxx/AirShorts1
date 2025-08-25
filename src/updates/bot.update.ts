@@ -1,4 +1,4 @@
-import { Update, Start, Ctx, Hears, Action, Command } from 'nestjs-telegraf';
+import { Update, Start, Ctx, Hears, Action, Command, On } from 'nestjs-telegraf';
 import { UsersService } from '../users/users.service';
 import { MenuService } from '../menu/menu.service';
 import { SettingsService } from '../settings/settings.service';
@@ -33,6 +33,21 @@ export class BotUpdate {
   async onStartHears(@Ctx() ctx: any) {
     this._logger.debug(`[@Hears] Команда /start получена через @Hears от пользователя ${ctx.from?.id}`, 'BotUpdate');
     return this.onStart(ctx);
+  }
+
+  // Обработчик для всех текстовых сообщений (для отладки)
+  @On('text')
+  async onText(@Ctx() ctx: any) {
+    this._logger.debug(`[@On text] Текстовое сообщение получено: "${ctx.message?.text}" от пользователя ${ctx.from?.id}`, 'BotUpdate');
+    
+    // Если это команда /start, обрабатываем её
+    if (ctx.message?.text === '/start') {
+      this._logger.debug(`[@On text] Обрабатываем команду /start`, 'BotUpdate');
+      return this.onStart(ctx);
+    }
+    
+    // Для других сообщений просто логируем
+    this._logger.debug(`[@On text] Неизвестное сообщение: "${ctx.message?.text}"`, 'BotUpdate');
   }
 
   @Hears(['🏠 Главное меню', 'Главное меню'])
