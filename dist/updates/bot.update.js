@@ -38,6 +38,10 @@ let BotUpdate = class BotUpdate {
             await ctx.reply('❌ Произошла ошибка при запуске бота. Попробуйте еще раз.');
         }
     }
+    async onStartHears(ctx) {
+        this._logger.debug(`Команда /start получена через @Hears от пользователя ${ctx.from?.id}`, 'BotUpdate');
+        return this.onStart(ctx);
+    }
     async onMainMenu(ctx) {
         await this._users.upsertFromContext(ctx);
         await this._menu.sendMainMenu(ctx);
@@ -74,6 +78,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onStart", null);
+__decorate([
+    (0, nestjs_telegraf_1.Hears)('/start'),
+    __param(0, (0, nestjs_telegraf_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], BotUpdate.prototype, "onStartHears", null);
 __decorate([
     (0, nestjs_telegraf_1.Hears)(['🏠 Главное меню', 'Главное меню']),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),

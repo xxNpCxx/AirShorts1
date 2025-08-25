@@ -26,6 +26,13 @@ export class BotUpdate {
     }
   }
 
+  // Дублирующий обработчик для webhook (на случай если @Start не работает)
+  @Hears('/start')
+  async onStartHears(@Ctx() ctx: any) {
+    this._logger.debug(`Команда /start получена через @Hears от пользователя ${ctx.from?.id}`, 'BotUpdate');
+    return this.onStart(ctx);
+  }
+
   @Hears(['🏠 Главное меню', 'Главное меню'])
   async onMainMenu(@Ctx() ctx: any) {
     await this._users.upsertFromContext(ctx);

@@ -84,6 +84,8 @@ async function bootstrap() {
   // Middleware для принудительного выхода из FSM при команде /start
   bot.use(async (ctx: any, next) => {
     if (ctx.message && typeof ctx.message.text === 'string' && ctx.message.text.startsWith('/start')) {
+      logger.debug(`Middleware: Обработка команды /start от пользователя ${ctx.from?.id}`, 'StartCommand');
+      
       // Принудительно выходим из всех сцен при команде /start
       if (ctx.scene && ctx.scene.current) {
         try {
@@ -96,6 +98,7 @@ async function bootstrap() {
       // Сбрасываем сессию
       if (ctx.session) {
         ctx.session = {};
+        logger.debug('Сессия сброшена при команде /start', 'StartCommand');
       }
     }
     
@@ -104,6 +107,7 @@ async function bootstrap() {
       logger.debug(`Получено сообщение: "${ctx.message.text}" от пользователя ${ctx.from?.id}`, 'MessageHandler');
     }
     
+    logger.debug(`Middleware: Передаем управление следующему обработчику`, 'MessageHandler');
     return next();
   });
   
