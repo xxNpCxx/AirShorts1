@@ -124,7 +124,11 @@ async function bootstrap() {
       const update = req.body || {};
       logger.telegramUpdate(update, 'Webhook');
       
+      // Используем NestJS обработчики вместо прямого bot.handleUpdate
+      // Это гарантирует, что все декораторы @Start, @Hears и т.д. сработают
       await bot.handleUpdate(req.body);
+      
+      logger.debug('Webhook update обработан через NestJS', 'Webhook');
       res.status(200).send('OK');
     } catch (err) {
       logger.error(`Ошибка при обработке webhook update: ${err}`, undefined, 'Webhook');

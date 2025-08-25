@@ -103,6 +103,7 @@ async function bootstrap() {
             const update = req.body || {};
             logger.telegramUpdate(update, 'Webhook');
             await bot.handleUpdate(req.body);
+            logger.debug('Webhook update обработан через NestJS', 'Webhook');
             res.status(200).send('OK');
         }
         catch (err) {

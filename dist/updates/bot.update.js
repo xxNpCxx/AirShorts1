@@ -24,9 +24,10 @@ let BotUpdate = class BotUpdate {
         this._menu = _menu;
         this._settings = _settings;
         this._logger = _logger;
+        this._logger.debug('BotUpdate инициализирован', 'BotUpdate');
     }
     async onStart(ctx) {
-        this._logger.debug(`Команда /start получена от пользователя ${ctx.from?.id}`, 'BotUpdate');
+        this._logger.debug(`[@Start] Команда /start получена от пользователя ${ctx.from?.id}`, 'BotUpdate');
         try {
             await this._users.upsertFromContext(ctx);
             this._logger.debug('Пользователь обновлен в базе данных', 'BotUpdate');
@@ -39,7 +40,7 @@ let BotUpdate = class BotUpdate {
         }
     }
     async onStartHears(ctx) {
-        this._logger.debug(`Команда /start получена через @Hears от пользователя ${ctx.from?.id}`, 'BotUpdate');
+        this._logger.debug(`[@Hears] Команда /start получена через @Hears от пользователя ${ctx.from?.id}`, 'BotUpdate');
         return this.onStart(ctx);
     }
     async onMainMenu(ctx) {

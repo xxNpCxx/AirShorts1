@@ -11,10 +11,12 @@ export class BotUpdate {
     private readonly _menu: MenuService, 
     private readonly _settings: SettingsService,
     private readonly _logger: CustomLoggerService
-  ) {}
+  ) {
+    this._logger.debug('BotUpdate инициализирован', 'BotUpdate');
+  }
   @Start()
   async onStart(@Ctx() ctx: any) {
-    this._logger.debug(`Команда /start получена от пользователя ${ctx.from?.id}`, 'BotUpdate');
+    this._logger.debug(`[@Start] Команда /start получена от пользователя ${ctx.from?.id}`, 'BotUpdate');
     try {
       await this._users.upsertFromContext(ctx);
       this._logger.debug('Пользователь обновлен в базе данных', 'BotUpdate');
@@ -29,7 +31,7 @@ export class BotUpdate {
   // Дублирующий обработчик для webhook (на случай если @Start не работает)
   @Hears('/start')
   async onStartHears(@Ctx() ctx: any) {
-    this._logger.debug(`Команда /start получена через @Hears от пользователя ${ctx.from?.id}`, 'BotUpdate');
+    this._logger.debug(`[@Hears] Команда /start получена через @Hears от пользователя ${ctx.from?.id}`, 'BotUpdate');
     return this.onStart(ctx);
   }
 
