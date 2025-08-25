@@ -11,6 +11,9 @@ import { MenuModule } from './menu/menu.module';
 import { RedisModule } from './redis/redis.module';
 import { MenuUpdate } from './updates/menu.update';
 import { LoggerModule } from './logger/logger.module';
+import { DidModule } from './d-id/did.module';
+import { ScenesModule } from './scenes/scenes.module';
+import { VideoGenerationScene } from './scenes/video-generation.scene';
 
 @Module({
   imports: [
@@ -21,6 +24,8 @@ import { LoggerModule } from './logger/logger.module';
     KeyboardsModule,
     MenuModule,
     RedisModule,
+    DidModule,
+    ScenesModule,
     TelegrafModule.forRoot({
       token: process.env.BOT_TOKEN || '',
       launchOptions: {
@@ -31,9 +36,10 @@ import { LoggerModule } from './logger/logger.module';
         },
       },
       middlewares: [session()],
+      include: [ScenesModule],
     }),
   ],
-  providers: [BotUpdate, MenuUpdate],
+  providers: [BotUpdate, MenuUpdate, VideoGenerationScene],
   controllers: [HealthController],
 })
 export class AppModule {}

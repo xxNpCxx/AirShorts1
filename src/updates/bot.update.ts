@@ -5,7 +5,11 @@ import { SettingsService } from '../settings/settings.service';
 
 @Update()
 export class BotUpdate {
-  constructor(private readonly _users: UsersService, private readonly _menu: MenuService, private readonly _settings: SettingsService) {}
+  constructor(
+    private readonly _users: UsersService, 
+    private readonly _menu: MenuService, 
+    private readonly _settings: SettingsService
+  ) {}
   @Start()
   async onStart(@Ctx() ctx: any) {
     await this._users.upsertFromContext(ctx);
@@ -46,5 +50,11 @@ export class BotUpdate {
   @Hears(/^myid$/i)
   async onMyIdHears(@Ctx() ctx: any) {
     return this.onMyId(ctx);
+  }
+
+  @Action('create_video')
+  async onCreateVideo(@Ctx() ctx: any) {
+    await ctx.answerCbQuery();
+    await ctx.scene.enter('video-generation');
   }
 }

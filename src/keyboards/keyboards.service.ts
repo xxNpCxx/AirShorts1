@@ -9,6 +9,7 @@ export class KeyboardsService {
 
   mainInline(newsChannel?: string) {
     const rows = [
+      [Markup.button.callback('🎬 Создать видео', 'create_video')],
       [Markup.button.callback('🆘 Поддержка оператора', 'support')],
       [Markup.button.callback('📜 Правила', 'rules')],
       [Markup.button.url('📰 Новостной канал', newsChannel || 'https://t.me/')],
