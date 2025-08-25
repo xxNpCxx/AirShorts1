@@ -40,6 +40,38 @@ async function bootstrap() {
     logger.debug(`Node.js версия: ${process.version}`, 'Bootstrap');
     logger.debug(`NODE_ENV: ${process.env.NODE_ENV || 'development'}`, 'Bootstrap');
     const bot = app.get((0, nestjs_telegraf_1.getBotToken)());
+    const setupWebhook = async (retryCount = 0) => {
+        const hookPath = '/webhook';
+        const webhookUrl = process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL;
+        if (!webhookUrl || webhookUrl.trim() === '') {
+            logger.debug('Webhook URL не настроен, пропускаем установку webhook', 'Bootstrap');
+            return;
+        }
+        try {
+            const webhookInfo = await bot.telegram.getWebhookInfo();
+            logger.debug(`Текущий webhook: ${webhookInfo.url || 'не настроен'}`, 'Bootstrap');
+            const targetUrl = `${webhookUrl}${hookPath}`;
+            if (webhookInfo.url !== targetUrl) {
+                await bot.telegram.setWebhook(targetUrl);
+                logger.log(`Webhook установлен: ${targetUrl}`, 'Bootstrap');
+            }
+            else {
+                logger.debug('Webhook уже настроен правильно', 'Bootstrap');
+            }
+        }
+        catch (error) {
+            if (error.response?.error_code === 429 && retryCount < 3) {
+                const retryAfter = error.response.parameters?.retry_after || 5;
+                logger.warn(`Telegram API Rate Limit, повторная попытка через ${retryAfter} секунд (${retryCount + 1}/3)`, 'Bootstrap');
+                setTimeout(() => {
+                    setupWebhook(retryCount + 1);
+                }, retryAfter * 1000);
+            }
+            else {
+                logger.error(`Ошибка установки webhook: ${error}`, undefined, 'Bootstrap');
+            }
+        }
+    };
     bot.use(async (ctx, next) => {
         if (ctx.message && typeof ctx.message.text === 'string' && ctx.message.text.startsWith('/start')) {
             if (ctx.scene && ctx.scene.current) {
@@ -60,20 +92,8 @@ async function bootstrap() {
         }
         return next();
     });
+    setupWebhook();
     const hookPath = '/webhook';
-    const webhookUrl = process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL;
-    if (webhookUrl && webhookUrl.trim() !== '') {
-        try {
-            await bot.telegram.setWebhook(`${webhookUrl}${hookPath}`);
-            logger.log(`Webhook установлен: ${webhookUrl}${hookPath}`, 'Bootstrap');
-        }
-        catch (error) {
-            logger.error(`Ошибка установки webhook: ${error}`, undefined, 'Bootstrap');
-        }
-    }
-    else {
-        logger.debug('Webhook URL не настроен, пропускаем установку webhook', 'Bootstrap');
-    }
     app.use(hookPath, express_1.default.json({ limit: '1mb' }), async (req, res) => {
         try {
             logger.debug('Webhook update получен', 'Webhook');

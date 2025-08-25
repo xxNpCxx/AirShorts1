@@ -44,6 +44,43 @@ async function bootstrap() {
   // Получаем экземпляр бота
   const bot = app.get<Telegraf>(getBotToken());
   
+  // Функция для установки webhook с retry
+  const setupWebhook = async (retryCount = 0): Promise<void> => {
+    const hookPath = '/webhook';
+    const webhookUrl = process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL;
+    
+    if (!webhookUrl || webhookUrl.trim() === '') {
+      logger.debug('Webhook URL не настроен, пропускаем установку webhook', 'Bootstrap');
+      return;
+    }
+    
+    try {
+      // Сначала проверяем текущий webhook
+      const webhookInfo = await bot.telegram.getWebhookInfo();
+      logger.debug(`Текущий webhook: ${webhookInfo.url || 'не настроен'}`, 'Bootstrap');
+      
+      // Устанавливаем webhook только если он отличается
+      const targetUrl = `${webhookUrl}${hookPath}`;
+      if (webhookInfo.url !== targetUrl) {
+        await bot.telegram.setWebhook(targetUrl);
+        logger.log(`Webhook установлен: ${targetUrl}`, 'Bootstrap');
+      } else {
+        logger.debug('Webhook уже настроен правильно', 'Bootstrap');
+      }
+    } catch (error: any) {
+      if (error.response?.error_code === 429 && retryCount < 3) {
+        const retryAfter = error.response.parameters?.retry_after || 5;
+        logger.warn(`Telegram API Rate Limit, повторная попытка через ${retryAfter} секунд (${retryCount + 1}/3)`, 'Bootstrap');
+        
+        setTimeout(() => {
+          setupWebhook(retryCount + 1);
+        }, retryAfter * 1000);
+      } else {
+        logger.error(`Ошибка установки webhook: ${error}`, undefined, 'Bootstrap');
+      }
+    }
+  };
+  
   // Middleware для принудительного выхода из FSM при команде /start
   bot.use(async (ctx: any, next) => {
     if (ctx.message && typeof ctx.message.text === 'string' && ctx.message.text.startsWith('/start')) {
@@ -70,22 +107,11 @@ async function bootstrap() {
     return next();
   });
   
-  // Настраиваем webhook только если есть URL
-  const hookPath = '/webhook';
-  const webhookUrl = process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL;
-  
-  if (webhookUrl && webhookUrl.trim() !== '') {
-    try {
-      await bot.telegram.setWebhook(`${webhookUrl}${hookPath}`);
-      logger.log(`Webhook установлен: ${webhookUrl}${hookPath}`, 'Bootstrap');
-    } catch (error) {
-      logger.error(`Ошибка установки webhook: ${error}`, undefined, 'Bootstrap');
-    }
-  } else {
-    logger.debug('Webhook URL не настроен, пропускаем установку webhook', 'Bootstrap');
-  }
+  // Запускаем установку webhook
+  setupWebhook();
   
   // Обработчик webhook
+  const hookPath = '/webhook';
   app.use(hookPath, express.json({ limit: '1mb' }), async (req: any, res: any) => {
     try {
       logger.debug('Webhook update получен', 'Webhook');
