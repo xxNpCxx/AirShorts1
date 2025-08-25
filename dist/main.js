@@ -1,12 +1,8 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 require("reflect-metadata");
 const core_1 = require("@nestjs/core");
 const app_module_1 = require("./app.module");
-const express_1 = __importDefault(require("express"));
 const nestjs_telegraf_1 = require("nestjs-telegraf");
 const logger_service_1 = require("./logger/logger.service");
 async function bootstrap() {
@@ -40,38 +36,6 @@ async function bootstrap() {
     logger.debug(`Node.js версия: ${process.version}`, 'Bootstrap');
     logger.debug(`NODE_ENV: ${process.env.NODE_ENV || 'development'}`, 'Bootstrap');
     const bot = app.get((0, nestjs_telegraf_1.getBotToken)());
-    const setupWebhook = async (retryCount = 0) => {
-        const hookPath = '/webhook';
-        const webhookUrl = process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL;
-        if (!webhookUrl || webhookUrl.trim() === '') {
-            logger.debug('Webhook URL не настроен, пропускаем установку webhook', 'Bootstrap');
-            return;
-        }
-        try {
-            const webhookInfo = await bot.telegram.getWebhookInfo();
-            logger.debug(`Текущий webhook: ${webhookInfo.url || 'не настроен'}`, 'Bootstrap');
-            const targetUrl = `${webhookUrl}${hookPath}`;
-            if (webhookInfo.url !== targetUrl) {
-                await bot.telegram.setWebhook(targetUrl);
-                logger.log(`Webhook установлен: ${targetUrl}`, 'Bootstrap');
-            }
-            else {
-                logger.debug('Webhook уже настроен правильно', 'Bootstrap');
-            }
-        }
-        catch (error) {
-            if (error.response?.error_code === 429 && retryCount < 3) {
-                const retryAfter = error.response.parameters?.retry_after || 5;
-                logger.warn(`Telegram API Rate Limit, повторная попытка через ${retryAfter} секунд (${retryCount + 1}/3)`, 'Bootstrap');
-                setTimeout(() => {
-                    setupWebhook(retryCount + 1);
-                }, retryAfter * 1000);
-            }
-            else {
-                logger.error(`Ошибка установки webhook: ${error}`, undefined, 'Bootstrap');
-            }
-        }
-    };
     bot.use(async (ctx, next) => {
         if (ctx.message && typeof ctx.message.text === 'string' && ctx.message.text.startsWith('/start')) {
             logger.debug(`Middleware: Обработка команды /start от пользователя ${ctx.from?.id}`, 'StartCommand');
@@ -95,30 +59,8 @@ async function bootstrap() {
         logger.debug(`Middleware: Передаем управление следующему обработчику`, 'MessageHandler');
         return next();
     });
-    setupWebhook();
-    const hookPath = '/webhook';
-    app.use(hookPath, express_1.default.json({ limit: '1mb' }), async (req, res) => {
-        try {
-            logger.debug('Webhook update получен', 'Webhook');
-            const update = req.body || {};
-            logger.telegramUpdate(update, 'Webhook');
-            try {
-                await bot.handleUpdate(req.body);
-                logger.debug('Webhook update обработан через bot.handleUpdate', 'Webhook');
-            }
-            catch (nestError) {
-                logger.warn(`NestJS обработка не удалась: ${nestError}`, 'Webhook');
-                logger.debug('Пробуем fallback обработку', 'Webhook');
-                await bot.handleUpdate(req.body);
-                logger.debug('Webhook update обработан через fallback', 'Webhook');
-            }
-            res.status(200).send('OK');
-        }
-        catch (err) {
-            logger.error(`Ошибка при обработке webhook update: ${err}`, undefined, 'Webhook');
-            res.status(200).send('OK');
-        }
-    });
+    logger.debug('Webhook будет настроен автоматически через NestJS', 'Bootstrap');
+    logger.debug('Webhook будет обрабатываться автоматически через NestJS', 'Bootstrap');
     const port = Number(process.env.PORT) || 3000;
     await app.listen(port);
     logger.log(`✅ Telegram бот запущен на порту ${port}`, 'Bootstrap');

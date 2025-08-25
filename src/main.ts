@@ -44,42 +44,7 @@ async function bootstrap() {
   // Получаем экземпляр бота
   const bot = app.get<Telegraf>(getBotToken());
   
-  // Функция для установки webhook с retry
-  const setupWebhook = async (retryCount = 0): Promise<void> => {
-    const hookPath = '/webhook';
-    const webhookUrl = process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL;
-    
-    if (!webhookUrl || webhookUrl.trim() === '') {
-      logger.debug('Webhook URL не настроен, пропускаем установку webhook', 'Bootstrap');
-      return;
-    }
-    
-    try {
-      // Сначала проверяем текущий webhook
-      const webhookInfo = await bot.telegram.getWebhookInfo();
-      logger.debug(`Текущий webhook: ${webhookInfo.url || 'не настроен'}`, 'Bootstrap');
-      
-      // Устанавливаем webhook только если он отличается
-      const targetUrl = `${webhookUrl}${hookPath}`;
-      if (webhookInfo.url !== targetUrl) {
-        await bot.telegram.setWebhook(targetUrl);
-        logger.log(`Webhook установлен: ${targetUrl}`, 'Bootstrap');
-      } else {
-        logger.debug('Webhook уже настроен правильно', 'Bootstrap');
-      }
-    } catch (error: any) {
-      if (error.response?.error_code === 429 && retryCount < 3) {
-        const retryAfter = error.response.parameters?.retry_after || 5;
-        logger.warn(`Telegram API Rate Limit, повторная попытка через ${retryAfter} секунд (${retryCount + 1}/3)`, 'Bootstrap');
-        
-        setTimeout(() => {
-          setupWebhook(retryCount + 1);
-        }, retryAfter * 1000);
-      } else {
-        logger.error(`Ошибка установки webhook: ${error}`, undefined, 'Bootstrap');
-      }
-    }
-  };
+
   
   // Middleware для принудительного выхода из FSM при команде /start
   bot.use(async (ctx: any, next) => {
@@ -111,40 +76,13 @@ async function bootstrap() {
     return next();
   });
   
-  // Запускаем установку webhook
-  setupWebhook();
+  // Webhook настраивается автоматически через NestJS TelegrafModule
+  // Не нужно настраивать вручную
+  logger.debug('Webhook будет настроен автоматически через NestJS', 'Bootstrap');
   
-  // Обработчик webhook
-  const hookPath = '/webhook';
-  app.use(hookPath, express.json({ limit: '1mb' }), async (req: any, res: any) => {
-    try {
-      logger.debug('Webhook update получен', 'Webhook');
-      
-      // Подробное логирование апдейта через наш логгер
-      const update = req.body || {};
-      logger.telegramUpdate(update, 'Webhook');
-      
-      // Пробуем использовать NestJS webhook механизм
-      try {
-        // Сначала пробуем через NestJS
-        await bot.handleUpdate(req.body);
-        logger.debug('Webhook update обработан через bot.handleUpdate', 'Webhook');
-      } catch (nestError: any) {
-        logger.warn(`NestJS обработка не удалась: ${nestError}`, 'Webhook');
-        
-        // Fallback: пробуем через bot.handleUpdate с обработкой ошибок
-        logger.debug('Пробуем fallback обработку', 'Webhook');
-        await bot.handleUpdate(req.body);
-        logger.debug('Webhook update обработан через fallback', 'Webhook');
-      }
-      
-      res.status(200).send('OK');
-    } catch (err) {
-      logger.error(`Ошибка при обработке webhook update: ${err}`, undefined, 'Webhook');
-      // Всегда отвечаем 200, иначе Telegram будет показывать 5xx и ретраить
-      res.status(200).send('OK');
-    }
-  });
+  // Webhook обрабатывается автоматически через NestJS TelegrafModule
+  // Не нужно создавать ручной обработчик
+  logger.debug('Webhook будет обрабатываться автоматически через NestJS', 'Bootstrap');
   
   const port = Number(process.env.PORT) || 3000;
   await app.listen(port);

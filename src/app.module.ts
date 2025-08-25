@@ -43,6 +43,7 @@ import { VideoGenerationScene } from './scenes/video-generation.scene';
       } : {}),
       middlewares: [session()],
       include: [ScenesModule],
+
     }),
   ],
   providers: [BotUpdate, MenuUpdate, VideoGenerationScene],
