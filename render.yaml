@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: tgpaybot-v2
+    name: airshorts-ai-video-generator
     env: node
     plan: starter
-    buildCommand: npm ci --include=dev && npm run build:prod
+    buildCommand: npm ci --legacy-peer-deps && npm run build
     startCommand: npm run start:prod
     envVars:
       - key: NODE_ENV
@@ -16,11 +16,11 @@ services:
         sync: false
       - key: REDIS_URL
         sync: false
+      - key: DID_API_KEY
+        sync: false
       - key: WEBHOOK_URL
         sync: false
       - key: DEBUG
         value: false
-      - key: ADMIN_USER_ID
-        sync: false
     healthCheckPath: /health
     autoDeploy: true
