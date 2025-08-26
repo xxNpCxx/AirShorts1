@@ -14,39 +14,135 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WebhookController = void 0;
 const common_1 = require("@nestjs/common");
-const telegraf_1 = require("telegraf");
 const logger_service_1 = require("../logger/logger.service");
 let WebhookController = class WebhookController {
     constructor(logger) {
         this.logger = logger;
-        this.bot = new telegraf_1.Telegraf(process.env.BOT_TOKEN || '');
     }
-    async handleWebhook(update, res) {
+    async getWebhook(req, res) {
+        this.logger.log(`📡 Webhook GET запрос от ${req.ip}`, 'WebhookController');
+        res.status(common_1.HttpStatus.OK).json({
+            status: 'ok',
+            message: 'Webhook endpoint is working',
+            timestamp: new Date().toISOString()
+        });
+    }
+    async handleWebhook(req, res, headers) {
         try {
-            this.logger.debug(`📥 Получен webhook запрос: ${JSON.stringify(update)}`, 'WebhookController');
-            if (!update || !update.update_id) {
-                this.logger.warn('❌ Получен невалидный webhook запрос', 'WebhookController');
-                return res.status(common_1.HttpStatus.BAD_REQUEST).json({ error: 'Invalid update format' });
+            this.logger.log(`📥 Webhook POST получен от ${req.ip}`, 'WebhookController');
+            this.logger.debug(`Headers: ${JSON.stringify(headers)}`, 'WebhookController');
+            this.logger.debug(`Body: ${JSON.stringify(req.body)}`, 'WebhookController');
+            if (!req.body || !req.body.update_id) {
+                this.logger.warn(`⚠️ Получен неверный webhook: ${JSON.stringify(req.body)}`, 'WebhookController');
+                throw new common_1.HttpException('Invalid webhook data', common_1.HttpStatus.BAD_REQUEST);
             }
-            await this.bot.handleUpdate(update);
-            this.logger.debug('✅ Webhook обновление обработано успешно', 'WebhookController');
-            return res.status(common_1.HttpStatus.OK).json({ ok: true });
+            const updateType = this.getUpdateType(req.body);
+            this.logger.log(`📋 Тип обновления: ${updateType}`, 'WebhookController');
+            this.logger.debug(`Update ID: ${req.body.update_id}`, 'WebhookController');
+            res.status(common_1.HttpStatus.OK).json({
+                status: 'ok',
+                updateType,
+                updateId: req.body.update_id,
+                timestamp: new Date().toISOString()
+            });
+            this.logger.log(`✅ Webhook обработан успешно`, 'WebhookController');
         }
         catch (error) {
             this.logger.error(`❌ Ошибка обработки webhook: ${error}`, undefined, 'WebhookController');
-            return res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({ error: 'Internal server error' });
+            if (error instanceof common_1.HttpException) {
+                res.status(error.getStatus()).json({
+                    error: error.message,
+                    timestamp: new Date().toISOString()
+                });
+            }
+            else {
+                res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({
+                    error: 'Internal server error',
+                    timestamp: new Date().toISOString()
+                });
+            }
         }
+    }
+    getUpdateType(update) {
+        if (update.message)
+            return 'message';
+        if (update.edited_message)
+            return 'edited_message';
+        if (update.channel_post)
+            return 'channel_post';
+        if (update.edited_channel_post)
+            return 'edited_channel_post';
+        if (update.inline_query)
+            return 'inline_query';
+        if (update.chosen_inline_result)
+            return 'chosen_inline_result';
+        if (update.callback_query)
+            return 'callback_query';
+        if (update.shipping_query)
+            return 'shipping_query';
+        if (update.pre_checkout_query)
+            return 'pre_checkout_query';
+        if (update.poll)
+            return 'poll';
+        if (update.poll_answer)
+            return 'poll_answer';
+        if (update.my_chat_member)
+            return 'my_chat_member';
+        if (update.chat_member)
+            return 'chat_member';
+        if (update.chat_join_request)
+            return 'chat_join_request';
+        return 'unknown';
+    }
+    async healthCheck(res) {
+        res.status(common_1.HttpStatus.OK).json({ status: 'ok', timestamp: new Date().toISOString() });
+    }
+    async getStatus(res) {
+        res.status(common_1.HttpStatus.OK).json({
+            status: 'ok',
+            message: 'Webhook controller is working',
+            timestamp: new Date().toISOString(),
+            endpoints: ['GET /', 'POST /', 'GET /status', 'POST /health'],
+            webhook: {
+                url: process.env.WEBHOOK_URL || 'https://airshorts1.onrender.com',
+                path: '/webhook',
+                status: 'active'
+            }
+        });
     }
 };
 exports.WebhookController = WebhookController;
 __decorate([
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
+    (0, common_1.Get)(),
+    __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
+], WebhookController.prototype, "getWebhook", null);
+__decorate([
+    (0, common_1.Post)(),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __param(2, (0, common_1.Headers)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, Object]),
+    __metadata("design:returntype", Promise)
 ], WebhookController.prototype, "handleWebhook", null);
+__decorate([
+    (0, common_1.Post)('health'),
+    __param(0, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], WebhookController.prototype, "healthCheck", null);
+__decorate([
+    (0, common_1.Get)('status'),
+    __param(0, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], WebhookController.prototype, "getStatus", null);
 exports.WebhookController = WebhookController = __decorate([
     (0, common_1.Controller)('webhook'),
     __metadata("design:paramtypes", [logger_service_1.CustomLoggerService])

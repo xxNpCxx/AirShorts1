@@ -4,6 +4,7 @@ import { TelegrafModule } from 'nestjs-telegraf';
 import { session } from 'telegraf';
 import { BotUpdate } from './updates/bot.update';
 import { HealthController } from './health.controller';
+import { WebhookController } from './controllers/webhook.controller';
 import { DatabaseModule } from './database/database.module';
 import { SettingsModule } from './settings/settings.module';
 import { UsersModule } from './users/users.module';
@@ -34,14 +35,20 @@ import { VideoGenerationScene } from './scenes/video-generation.scene';
       middlewares: [session()],
       launchOptions: {
         webhook: {
-          domain: 'https://airshorts1.onrender.com',
+          domain: process.env.WEBHOOK_URL || 'https://airshorts1.onrender.com',
           hookPath: '/webhook',
           port: Number(process.env.PORT) || 10000
+        }
+      },
+      include: [BotUpdate, MenuUpdate, VideoGenerationScene],
+      options: {
+        telegram: {
+          webhookReply: false
         }
       }
     })
   ],
   providers: [BotUpdate, MenuUpdate, VideoGenerationScene],
-  controllers: [HealthController]
+  controllers: [HealthController, WebhookController]
 })
 export class AppModule {}

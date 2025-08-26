@@ -4,12 +4,16 @@ import { AppModule } from './app.module';
 import { Telegraf } from 'telegraf';
 import { getBotToken } from 'nestjs-telegraf';
 import { CustomLoggerService } from './logger/logger.service';
+import { json } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
+  // Настраиваем middleware для парсинга JSON
+  app.use(json({ limit: '10mb' }));
+  
   // Получаем экземпляр логгера
   let logger: CustomLoggerService;
   try {
@@ -39,6 +43,14 @@ async function bootstrap() {
 
   // Middleware для бота
   const bot = app.get<Telegraf>(getBotToken());
+  
+  // Логируем все обновления
+  bot.use(async (ctx: any, next) => {
+    logger.telegramUpdate(ctx.update, 'BotMiddleware');
+    return next();
+  });
+  
+  // Middleware для команды /start
   bot.use(async (ctx: any, next) => {
     if (ctx.message && typeof ctx.message.text === 'string' && ctx.message.text.startsWith('/start')) {
       logger.debug(`Middleware: Обработка команды /start от пользователя ${ctx.from?.id}`, 'StartCommand');
@@ -58,17 +70,46 @@ async function bootstrap() {
   await app.listen(port);
   logger.log(`✅ Приложение запущено на порту ${port}`, 'Bootstrap');
   
-  // Проверяем статус webhook
+  // Настраиваем webhook
   try {
+    const webhookUrl = process.env.WEBHOOK_URL || 'https://airshorts1.onrender.com';
+    const webhookPath = `${webhookUrl}/webhook`;
+    
+    logger.log(`🔧 Настройка webhook: ${webhookPath}`, 'Bootstrap');
+    
+    // Устанавливаем webhook
+    await bot.telegram.setWebhook(webhookPath);
+    
+    // Проверяем статус
     const webhookInfo = await bot.telegram.getWebhookInfo();
-    logger.log(`📡 Webhook статус: ${webhookInfo.url || 'не настроен'}`, 'Bootstrap');
-    if (webhookInfo.url) {
-      logger.log(`✅ Webhook настроен автоматически через TelegrafModule`, 'Bootstrap');
-    } else {
-      logger.warn(`⚠️ Webhook не настроен автоматически`, 'Bootstrap');
+    logger.log(`📡 Webhook статус: ${webhookInfo.url}`, 'Bootstrap');
+    logger.log(`✅ Webhook успешно настроен`, 'Bootstrap');
+    
+    // Логируем детали webhook
+    logger.debug(`Webhook детали: ${JSON.stringify(webhookInfo)}`, 'Bootstrap');
+    
+    // Проверяем, что webhook действительно установлен
+    if (webhookInfo.url !== webhookPath) {
+      logger.warn(`⚠️ Webhook URL не совпадает: ожидалось ${webhookPath}, получено ${webhookInfo.url}`, 'Bootstrap');
     }
+    
+    // Логируем информацию о webhook
+    logger.log(`📊 Webhook информация:`, 'Bootstrap');
+    logger.log(`   - URL: ${webhookInfo.url}`, 'Bootstrap');
+    logger.log(`   - Pending updates: ${webhookInfo.pending_update_count}`, 'Bootstrap');
+    logger.log(`   - Last error: ${webhookInfo.last_error_message || 'нет'}`, 'Bootstrap');
+    logger.log(`   - Last error date: ${webhookInfo.last_error_date || 'нет'}`, 'Bootstrap');
+    
   } catch (error) {
-    logger.error(`❌ Ошибка проверки webhook: ${error}`, undefined, 'Bootstrap');
+    logger.error(`❌ Ошибка настройки webhook: ${error}`, undefined, 'Bootstrap');
+    
+    // Пытаемся получить информацию об ошибке
+    try {
+      const webhookInfo = await bot.telegram.getWebhookInfo();
+      logger.warn(`⚠️ Текущий webhook статус: ${JSON.stringify(webhookInfo)}`, 'Bootstrap');
+    } catch (webhookError) {
+      logger.error(`❌ Не удалось получить статус webhook: ${webhookError}`, undefined, 'Bootstrap');
+    }
   }
 }
 
