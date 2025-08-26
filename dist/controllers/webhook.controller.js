@@ -15,9 +15,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.WebhookController = void 0;
 const common_1 = require("@nestjs/common");
 const logger_service_1 = require("../logger/logger.service");
+const nestjs_telegraf_1 = require("nestjs-telegraf");
+const telegraf_1 = require("telegraf");
 let WebhookController = class WebhookController {
-    constructor(_logger) {
+    constructor(_logger, bot) {
         this._logger = _logger;
+        this.bot = bot;
     }
     async getWebhook(req, res) {
         this._logger.log(`📡 Webhook GET запрос от ${req.ip}`, "WebhookController");
@@ -43,7 +46,13 @@ let WebhookController = class WebhookController {
             const updateType = this.getUpdateType(req.body);
             this._logger.log(`📋 Тип обновления: ${updateType}`, "WebhookController");
             this._logger.debug(`Update ID: ${req.body.update_id}`, "WebhookController");
-            this._logger.log(`✅ Webhook получен, передаем в Telegraf для обработки`, "WebhookController");
+            try {
+                await this.bot.handleUpdate(req.body);
+                this._logger.log(`✅ Webhook передан в Telegraf для обработки`, "WebhookController");
+            }
+            catch (botError) {
+                this._logger.error(`❌ Ошибка передачи в Telegraf: ${botError}`, undefined, "WebhookController");
+            }
             res.status(common_1.HttpStatus.OK).json({
                 status: "ok",
                 updateType,
@@ -144,6 +153,8 @@ __decorate([
 ], WebhookController.prototype, "getStatus", null);
 exports.WebhookController = WebhookController = __decorate([
     (0, common_1.Controller)("webhook"),
-    __metadata("design:paramtypes", [logger_service_1.CustomLoggerService])
+    __param(1, (0, common_1.Inject)((0, nestjs_telegraf_1.getBotToken)())),
+    __metadata("design:paramtypes", [logger_service_1.CustomLoggerService,
+        telegraf_1.Telegraf])
 ], WebhookController);
 //# sourceMappingURL=webhook.controller.js.map
