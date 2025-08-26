@@ -25,7 +25,14 @@ let BotUpdate = class BotUpdate {
         this._logger.debug("BotUpdate инициализирован", "BotUpdate");
     }
     async onStart(ctx) {
-        this._logger.debug(`[@Start] Команда /start получена от пользователя ${ctx.from?.id}`, "BotUpdate");
+        this._logger.log(`🚀 [@Start] Команда /start получена от пользователя ${ctx.from?.id}`, "BotUpdate");
+        try {
+            await ctx.reply("🎉 Бот работает! Команда /start обработана!");
+            this._logger.log("✅ Тестовое сообщение отправлено", "BotUpdate");
+        }
+        catch (error) {
+            this._logger.error(`❌ Ошибка отправки тестового сообщения: ${error}`, undefined, "BotUpdate");
+        }
         try {
             await this._users.upsertFromContext(ctx);
             this._logger.debug("Пользователь обновлен в базе данных", "BotUpdate");

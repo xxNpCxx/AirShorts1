@@ -38,14 +38,25 @@ export class BotUpdate {
     this._logger.debug("BotUpdate инициализирован", "BotUpdate");
   }
 
-
-
   @Start()
   async onStart(@Ctx() ctx: TelegramContext) {
-    this._logger.debug(
-      `[@Start] Команда /start получена от пользователя ${ctx.from?.id}`,
+    this._logger.log(
+      `🚀 [@Start] Команда /start получена от пользователя ${ctx.from?.id}`,
       "BotUpdate",
     );
+    
+    // Отправляем простое сообщение для тестирования
+    try {
+      await ctx.reply("🎉 Бот работает! Команда /start обработана!");
+      this._logger.log("✅ Тестовое сообщение отправлено", "BotUpdate");
+    } catch (error) {
+      this._logger.error(
+        `❌ Ошибка отправки тестового сообщения: ${error}`,
+        undefined,
+        "BotUpdate",
+      );
+    }
+    
     try {
       await this._users.upsertFromContext(ctx);
       this._logger.debug("Пользователь обновлен в базе данных", "BotUpdate");
