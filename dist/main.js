@@ -66,6 +66,25 @@ async function bootstrap() {
         const webhookUrl = process.env.WEBHOOK_URL || 'https://airshorts1.onrender.com';
         const webhookPath = `${webhookUrl}/webhook`;
         logger.log(`🔧 Настройка webhook: ${webhookPath}`, 'Bootstrap');
+        const currentWebhookInfo = await bot.telegram.getWebhookInfo();
+        logger.log(`📡 Текущий webhook статус: ${currentWebhookInfo.url || 'не настроен'}`, 'Bootstrap');
+        if (currentWebhookInfo.url && currentWebhookInfo.url !== webhookPath) {
+            logger.log(`🔄 Сбрасываем старый webhook: ${currentWebhookInfo.url}`, 'Bootstrap');
+            logger.log(`   Новый webhook будет: ${webhookPath}`, 'Bootstrap');
+            await bot.telegram.deleteWebhook();
+            logger.log(`✅ Старый webhook сброшен`, 'Bootstrap');
+        }
+        if (currentWebhookInfo.url === webhookPath && currentWebhookInfo.last_error_message) {
+            logger.log(`⚠️ Webhook настроен, но есть ошибки: ${currentWebhookInfo.last_error_message}`, 'Bootstrap');
+            logger.log(`🔄 Переустанавливаем webhook для исправления ошибок`, 'Bootstrap');
+            await bot.telegram.deleteWebhook();
+            logger.log(`✅ Webhook сброшен для переустановки`, 'Bootstrap');
+        }
+        if (currentWebhookInfo.pending_update_count > 0) {
+            logger.log(`📥 Обнаружены ожидающие обновления: ${currentWebhookInfo.pending_update_count}`, 'Bootstrap');
+            logger.log(`ℹ️ Pending updates будут очищены при установке нового webhook`, 'Bootstrap');
+        }
+        logger.log(`🔧 Устанавливаем новый webhook: ${webhookPath}`, 'Bootstrap');
         await bot.telegram.setWebhook(webhookPath);
         const webhookInfo = await bot.telegram.getWebhookInfo();
         logger.log(`📡 Webhook статус: ${webhookInfo.url}`, 'Bootstrap');
@@ -79,6 +98,17 @@ async function bootstrap() {
         logger.log(`   - Pending updates: ${webhookInfo.pending_update_count}`, 'Bootstrap');
         logger.log(`   - Last error: ${webhookInfo.last_error_message || 'нет'}`, 'Bootstrap');
         logger.log(`   - Last error date: ${webhookInfo.last_error_date || 'нет'}`, 'Bootstrap');
+        if (webhookInfo.pending_update_count > 0) {
+            logger.log(`📥 Ожидающие обновления: ${webhookInfo.pending_update_count}`, 'Bootstrap');
+        }
+        if (webhookInfo.url === webhookPath) {
+            logger.log(`🎯 Webhook успешно настроен и готов к работе!`, 'Bootstrap');
+        }
+        else {
+            logger.error(`❌ Webhook настроен неправильно!`, 'Bootstrap');
+            logger.error(`   Ожидалось: ${webhookPath}`, 'Bootstrap');
+            logger.error(`   Получено: ${webhookInfo.url}`, 'Bootstrap');
+        }
     }
     catch (error) {
         logger.error(`❌ Ошибка настройки webhook: ${error}`, undefined, 'Bootstrap');
