@@ -27,7 +27,7 @@ let UsersService = UsersService_1 = class UsersService {
         if (!u)
             return false;
         try {
-            const res = await this.pool.query('SELECT telegram_id FROM users WHERE telegram_id = $1', [u.id]);
+            const res = await this.pool.query("SELECT telegram_id FROM users WHERE telegram_id = $1", [u.id]);
             const isNewUser = res.rowCount === 0;
             await this.pool.query(`INSERT INTO users (telegram_id, username, first_name, last_name, language_code, is_bot)
          VALUES ($1, $2, $3, $4, $5, $6)
@@ -49,7 +49,7 @@ let UsersService = UsersService_1 = class UsersService {
             return isNewUser;
         }
         catch (err) {
-            this.logger.error('[users][pg] Ошибка upsert:', err);
+            this.logger.error("[users][pg] Ошибка upsert:", err);
             return false;
         }
     }

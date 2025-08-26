@@ -17,7 +17,7 @@ const settings_service_1 = require("./settings.service");
 let SettingsModule = SettingsModule_1 = class SettingsModule {
     constructor() {
         this.logger = new common_1.Logger(SettingsModule_1.name);
-        this.logger.log('[SettingsModule] Инициализация модуля настроек');
+        this.logger.log("[SettingsModule] Инициализация модуля настроек");
     }
 };
 exports.SettingsModule = SettingsModule;

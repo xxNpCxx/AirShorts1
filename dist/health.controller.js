@@ -13,7 +13,7 @@ exports.HealthController = void 0;
 const common_1 = require("@nestjs/common");
 let HealthController = class HealthController {
     get() {
-        return { status: 'ok' };
+        return { status: "ok" };
     }
 };
 exports.HealthController = HealthController;
@@ -24,6 +24,6 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], HealthController.prototype, "get", null);
 exports.HealthController = HealthController = __decorate([
-    (0, common_1.Controller)('health')
+    (0, common_1.Controller)("health")
 ], HealthController);
 //# sourceMappingURL=health.controller.js.map

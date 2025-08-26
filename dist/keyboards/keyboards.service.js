@@ -11,15 +11,17 @@ const common_1 = require("@nestjs/common");
 const telegraf_1 = require("telegraf");
 let KeyboardsService = class KeyboardsService {
     mainReply() {
-        return telegraf_1.Markup.keyboard([["🏠 Главное меню"]]).resize().persistent();
+        return telegraf_1.Markup.keyboard([["🏠 Главное меню"]])
+            .resize()
+            .persistent();
     }
     mainInline(newsChannel) {
         const rows = [
-            [telegraf_1.Markup.button.callback('🎬 Создать видео', 'create_video')],
-            [telegraf_1.Markup.button.callback('🆘 Поддержка оператора', 'support')],
-            [telegraf_1.Markup.button.callback('📜 Правила', 'rules')],
-            [telegraf_1.Markup.button.url('📰 Новостной канал', newsChannel || 'https://t.me/')],
-            [telegraf_1.Markup.button.url('⭐️ Отзывы', 'https://t.me/review413n_obmen')],
+            [telegraf_1.Markup.button.callback("🎬 Создать видео", "create_video")],
+            [telegraf_1.Markup.button.callback("🆘 Поддержка оператора", "support")],
+            [telegraf_1.Markup.button.callback("📜 Правила", "rules")],
+            [telegraf_1.Markup.button.url("📰 Новостной канал", newsChannel || "https://t.me/")],
+            [telegraf_1.Markup.button.url("⭐️ Отзывы", "https://t.me/review413n_obmen")],
         ];
         return telegraf_1.Markup.inlineKeyboard(rows);
     }

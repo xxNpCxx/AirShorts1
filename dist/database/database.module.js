@@ -9,7 +9,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DatabaseModule = exports.PG_POOL = void 0;
 const common_1 = require("@nestjs/common");
 const pg_1 = require("pg");
-exports.PG_POOL = 'PG_POOL';
+exports.PG_POOL = "PG_POOL";
 let DatabaseModule = class DatabaseModule {
 };
 exports.DatabaseModule = DatabaseModule;
@@ -20,8 +20,13 @@ exports.DatabaseModule = DatabaseModule = __decorate([
                 provide: exports.PG_POOL,
                 useFactory: () => {
                     const connectionString = process.env.DATABASE_URL;
-                    const ssl = process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false;
-                    return new pg_1.Pool({ connectionString, ssl: ssl });
+                    const ssl = process.env.NODE_ENV === "production"
+                        ? { rejectUnauthorized: false }
+                        : false;
+                    return new pg_1.Pool({
+                        connectionString,
+                        ssl: ssl,
+                    });
                 },
             },
         ],

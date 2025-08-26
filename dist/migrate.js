@@ -44,9 +44,9 @@ async function runMigrations() {
         connectionString: process.env.DATABASE_URL,
     });
     try {
-        console.log('🔌 Подключение к базе данных...');
+        console.log("🔌 Подключение к базе данных...");
         await client.connect();
-        console.log('✅ Подключение успешно');
+        console.log("✅ Подключение успешно");
         let tableExists = false;
         let hasNameColumn = false;
         let hasFilenameColumn = false;
@@ -66,13 +66,13 @@ async function runMigrations() {
       `);
             hasFilenameColumn = filenameCheck.rows.length > 0;
             tableExists = true;
-            console.log('🏗️ Таблица migrations уже существует');
+            console.log("🏗️ Таблица migrations уже существует");
         }
-        catch (error) {
-            console.log('🏗️ Таблица migrations не существует, создаем новую');
+        catch {
+            console.log("🏗️ Таблица migrations не существует, создаем новую");
         }
         if (!tableExists) {
-            console.log('🏗️ Создаем таблицу migrations...');
+            console.log("🏗️ Создаем таблицу migrations...");
             await client.query(`
         CREATE TABLE migrations (
           id SERIAL PRIMARY KEY,
@@ -80,10 +80,10 @@ async function runMigrations() {
           executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
-            console.log('✅ Таблица migrations создана');
+            console.log("✅ Таблица migrations создана");
         }
         else if (!hasNameColumn && !hasFilenameColumn) {
-            console.log('🔄 Обновляем существующую таблицу migrations...');
+            console.log("🔄 Обновляем существующую таблицу migrations...");
             try {
                 await client.query(`
           ALTER TABLE migrations 
@@ -93,69 +93,72 @@ async function runMigrations() {
           ALTER TABLE migrations 
           ADD COLUMN executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         `);
-                console.log('✅ Таблица migrations обновлена');
+                console.log("✅ Таблица migrations обновлена");
             }
-            catch (error) {
-                console.log('⚠️ Некоторые колонки уже существуют, продолжаем...');
+            catch {
+                console.log("⚠️ Некоторые колонки уже существуют, продолжаем...");
             }
         }
         else if (hasFilenameColumn && !hasNameColumn) {
-            console.log('🔄 Переименовываем filename в name...');
+            console.log("🔄 Переименовываем filename в name...");
             try {
                 await client.query(`
           ALTER TABLE migrations 
           RENAME COLUMN filename TO name
         `);
-                console.log('✅ Колонка filename переименована в name');
+                console.log("✅ Колонка filename переименована в name");
             }
-            catch (error) {
-                console.log('⚠️ Ошибка при переименовании колонки:', error);
+            catch {
+                console.log("⚠️ Ошибка при переименовании колонки");
             }
         }
         else {
-            console.log('✅ Таблица migrations уже имеет правильную структуру');
+            console.log("✅ Таблица migrations уже имеет правильную структуру");
         }
-        const migrationsDir = (0, path_1.join)(__dirname, '../../migrations');
+        const migrationsDir = (0, path_1.join)(__dirname, "../../migrations");
         const migrationFiles = (0, fs_1.readdirSync)(migrationsDir)
-            .filter(file => file.endsWith('.sql'))
+            .filter((file) => file.endsWith(".sql"))
             .sort();
         console.log(`📁 Найдено ${migrationFiles.length} файлов миграций`);
         let failuresCount = 0;
         for (const filename of migrationFiles) {
             try {
-                const { rows } = await client.query('SELECT id FROM migrations WHERE name = $1', [filename]);
+                const { rows } = await client.query("SELECT id FROM migrations WHERE name = $1", [filename]);
                 if (rows.length > 0) {
                     console.log(`⏭️  Миграция ${filename} уже выполнена, пропускаем`);
                     continue;
                 }
                 console.log(`🚀 Выполняем миграцию: ${filename}`);
                 const sqlPath = (0, path_1.join)(migrationsDir, filename);
-                const sql = (0, fs_1.readFileSync)(sqlPath, 'utf8');
-                await client.query('BEGIN');
+                const sql = (0, fs_1.readFileSync)(sqlPath, "utf8");
+                await client.query("BEGIN");
                 await client.query(sql);
-                await client.query('INSERT INTO migrations (name) VALUES ($1)', [filename]);
-                await client.query('COMMIT');
+                await client.query("INSERT INTO migrations (name) VALUES ($1)", [
+                    filename,
+                ]);
+                await client.query("COMMIT");
                 console.log(`✅ Миграция ${filename} выполнена успешно`);
             }
             catch (error) {
                 failuresCount += 1;
                 try {
-                    await client.query('ROLLBACK');
+                    await client.query("ROLLBACK");
                 }
-                catch { }
+                catch {
+                }
                 console.error(`❌ Ошибка при выполнении миграции ${filename}:`, error);
                 continue;
             }
         }
         if (failuresCount === 0) {
-            console.log('🎉 Все миграции выполнены успешно!');
+            console.log("🎉 Все миграции выполнены успешно!");
         }
         else {
             console.log(`🏁 Миграции завершены с ошибками. Неуспешных: ${failuresCount}`);
         }
     }
     catch (error) {
-        console.error('❌ Ошибка при выполнении миграций:', error);
+        console.error("❌ Ошибка при выполнении миграций:", error);
         throw error;
     }
     finally {
@@ -165,11 +168,11 @@ async function runMigrations() {
 if (require.main === module) {
     runMigrations()
         .then(() => {
-        console.log('🏁 Миграции завершены');
+        console.log("🏁 Миграции завершены");
         process.exit(0);
     })
         .catch((error) => {
-        console.error('💥 Критическая ошибка:', error);
+        console.error("💥 Критическая ошибка:", error);
         process.exit(1);
     });
 }

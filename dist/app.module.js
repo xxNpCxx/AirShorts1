@@ -32,7 +32,7 @@ exports.AppModule = AppModule = __decorate([
         imports: [
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
-                envFilePath: '.env',
+                envFilePath: ".env",
             }),
             logger_module_1.LoggerModule,
             database_module_1.DatabaseModule,
@@ -43,24 +43,24 @@ exports.AppModule = AppModule = __decorate([
             redis_module_1.RedisModule,
             did_module_1.DidModule,
             nestjs_telegraf_1.TelegrafModule.forRoot({
-                token: process.env.BOT_TOKEN || '',
+                token: process.env.BOT_TOKEN || "",
                 middlewares: [(0, telegraf_1.session)()],
                 launchOptions: {
                     webhook: {
-                        domain: process.env.WEBHOOK_URL || 'https://airshorts1.onrender.com',
-                        hookPath: '/webhook'
-                    }
+                        domain: process.env.WEBHOOK_URL || "https://airshorts1.onrender.com",
+                        hookPath: "/webhook",
+                    },
                 },
                 include: [bot_update_1.BotUpdate, menu_update_1.MenuUpdate, video_generation_scene_1.VideoGenerationScene],
                 options: {
                     telegram: {
-                        webhookReply: false
-                    }
-                }
-            })
+                        webhookReply: false,
+                    },
+                },
+            }),
         ],
         providers: [bot_update_1.BotUpdate, menu_update_1.MenuUpdate, video_generation_scene_1.VideoGenerationScene],
-        controllers: [health_controller_1.HealthController, webhook_controller_1.WebhookController]
+        controllers: [health_controller_1.HealthController, webhook_controller_1.WebhookController],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

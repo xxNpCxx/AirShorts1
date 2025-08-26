@@ -1,2 +1,2 @@
-import 'reflect-metadata';
+import "reflect-metadata";
 //# sourceMappingURL=main.d.ts.map

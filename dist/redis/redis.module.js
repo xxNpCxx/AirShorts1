@@ -12,7 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RedisModule = exports.REDIS_TOKEN = void 0;
 const common_1 = require("@nestjs/common");
 const ioredis_1 = __importDefault(require("ioredis"));
-exports.REDIS_TOKEN = 'REDIS_CLIENT';
+exports.REDIS_TOKEN = "REDIS_CLIENT";
 let RedisModule = class RedisModule {
 };
 exports.RedisModule = RedisModule;
@@ -26,7 +26,9 @@ exports.RedisModule = RedisModule = __decorate([
                     const url = process.env.REDIS_URL;
                     if (!url)
                         return null;
-                    const tls = url.startsWith('rediss://') ? { rejectUnauthorized: false } : undefined;
+                    const tls = url.startsWith("rediss://")
+                        ? { rejectUnauthorized: false }
+                        : undefined;
                     return new ioredis_1.default(url, tls ? { tls } : {});
                 },
             },

@@ -17,21 +17,23 @@ let DidService = DidService_1 = class DidService {
     constructor(configService) {
         this.configService = configService;
         this.logger = new common_1.Logger(DidService_1.name);
-        this.baseUrl = 'https://api.d-id.com';
-        this.apiKey = this.configService.get('DID_API_KEY') || 'eHhucGN4eEBnbWFpbC5jb20:coOsJoP3VqEWDKyQ7FobG';
+        this.baseUrl = "https://api.d-id.com";
+        this.apiKey =
+            this.configService.get("DID_API_KEY") ||
+                "eHhucGN4eEBnbWFpbC5jb20:coOsJoP3VqEWDKyQ7FobG";
     }
     async generateVideo(request) {
         try {
-            this.logger.log('Starting video generation with d-id API');
+            this.logger.log("Starting video generation with d-id API");
             const payload = {
                 source_url: request.photoUrl,
                 script: {
-                    type: 'text',
+                    type: "text",
                     input: request.script,
                     provider: {
-                        type: 'microsoft',
-                        voice_id: 'en-US-JennyNeural'
-                    }
+                        type: "microsoft",
+                        voice_id: "en-US-JennyNeural",
+                    },
                 },
                 config: {
                     fluent: true,
@@ -42,22 +44,22 @@ let DidService = DidService_1 = class DidService {
                     auto_match: true,
                     normalization_factor: 1,
                     motion_factor: 1,
-                    result_format: 'mp4',
-                    quality: request.quality === '1080p' ? 'full' : 'medium',
-                    output_resolution: request.quality === '1080p' ? '1080p' : '720p'
+                    result_format: "mp4",
+                    quality: request.quality === "1080p" ? "full" : "medium",
+                    output_resolution: request.quality === "1080p" ? "1080p" : "720p",
                 },
-                presenter_id: 'd-u-01H7YFp1q8uYbH9sgX2J9Z4',
-                driver_id: 'd-u-01H7YFp1q8uYbH9sgX2J9Z4',
+                presenter_id: "d-u-01H7YFp1q8uYbH9sgX2J9Z4",
+                driver_id: "d-u-01H7YFp1q8uYbH9sgX2J9Z4",
                 background: {
-                    type: 'color',
-                    value: '#000000'
-                }
+                    type: "color",
+                    value: "#000000",
+                },
             };
             const response = await fetch(`${this.baseUrl}/talks`, {
-                method: 'POST',
+                method: "POST",
                 headers: {
-                    'Authorization': `Basic ${this.apiKey}`,
-                    'Content-Type': 'application/json',
+                    Authorization: `Basic ${this.apiKey}`,
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify(payload),
             });
@@ -66,15 +68,15 @@ let DidService = DidService_1 = class DidService {
                 this.logger.error(`d-id API error: ${response.status} - ${errorText}`);
                 throw new Error(`d-id API error: ${response.status}`);
             }
-            const result = await response.json();
+            const result = (await response.json());
             this.logger.log(`Video generation started with ID: ${result.id}`);
             return {
                 id: result.id,
-                status: 'created',
+                status: "created",
             };
         }
         catch (error) {
-            this.logger.error('Error generating video:', error);
+            this.logger.error("Error generating video:", error);
             throw error;
         }
     }
@@ -82,66 +84,66 @@ let DidService = DidService_1 = class DidService {
         try {
             const response = await fetch(`${this.baseUrl}/talks/${videoId}`, {
                 headers: {
-                    'Authorization': `Basic ${this.apiKey}`,
+                    Authorization: `Basic ${this.apiKey}`,
                 },
             });
             if (!response.ok) {
                 throw new Error(`Failed to get video status: ${response.status}`);
             }
-            const result = await response.json();
+            const result = (await response.json());
             return {
                 id: result.id,
-                status: result.status,
+                status: result.status || "unknown",
                 result_url: result.result_url,
                 error: result.error?.message,
             };
         }
         catch (error) {
-            this.logger.error('Error getting video status:', error);
+            this.logger.error("Error getting video status:", error);
             throw error;
         }
     }
     async uploadAudio(audioBuffer) {
         try {
             const formData = new FormData();
-            formData.append('audio', new Blob([audioBuffer]), 'audio.wav');
+            formData.append("audio", new Blob([audioBuffer]), "audio.wav");
             const response = await fetch(`${this.baseUrl}/audios`, {
-                method: 'POST',
+                method: "POST",
                 headers: {
-                    'Authorization': `Basic ${this.apiKey}`,
+                    Authorization: `Basic ${this.apiKey}`,
                 },
                 body: formData,
             });
             if (!response.ok) {
                 throw new Error(`Failed to upload audio: ${response.status}`);
             }
-            const result = await response.json();
+            const result = (await response.json());
             return result.audio_url;
         }
         catch (error) {
-            this.logger.error('Error uploading audio:', error);
+            this.logger.error("Error uploading audio:", error);
             throw error;
         }
     }
     async uploadImage(imageBuffer) {
         try {
             const formData = new FormData();
-            formData.append('image', new Blob([imageBuffer]), 'image.jpg');
+            formData.append("image", new Blob([imageBuffer]), "image.jpg");
             const response = await fetch(`${this.baseUrl}/images`, {
-                method: 'POST',
+                method: "POST",
                 headers: {
-                    'Authorization': `Basic ${this.apiKey}`,
+                    Authorization: `Basic ${this.apiKey}`,
                 },
                 body: formData,
             });
             if (!response.ok) {
                 throw new Error(`Failed to upload image: ${response.status}`);
             }
-            const result = await response.json();
+            const result = (await response.json());
             return result.image_url;
         }
         catch (error) {
-            this.logger.error('Error uploading image:', error);
+            this.logger.error("Error uploading image:", error);
             throw error;
         }
     }

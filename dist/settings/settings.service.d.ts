@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { Pool } from "pg";
 export declare class SettingsService {
     private readonly pool;
     constructor(pool: Pool);
@@ -11,6 +11,6 @@ export declare class SettingsService {
     getOwnerId(): Promise<string | null>;
     getAdminIds(): Promise<string[]>;
     getOperatorIds(): Promise<string[]>;
-    checkRole(userId: string, role: 'owner' | 'admin' | 'operator'): Promise<boolean>;
+    checkRole(userId: string, role: "owner" | "admin" | "operator"): Promise<boolean>;
 }
 //# sourceMappingURL=settings.service.d.ts.map

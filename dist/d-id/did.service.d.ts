@@ -1,11 +1,11 @@
-import { ConfigService } from '@nestjs/config';
+import { ConfigService } from "@nestjs/config";
 export interface VideoGenerationRequest {
     photoUrl: string;
     audioUrl: string;
     script: string;
-    platform: 'youtube-shorts';
+    platform: "youtube-shorts";
     duration: number;
-    quality: '720p' | '1080p';
+    quality: "720p" | "1080p";
     textPrompt?: string;
 }
 export interface VideoGenerationResponse {
@@ -15,7 +15,7 @@ export interface VideoGenerationResponse {
     error?: string;
 }
 export declare class DidService {
-    private configService;
+    private readonly configService;
     private readonly logger;
     private readonly apiKey;
     private readonly baseUrl;

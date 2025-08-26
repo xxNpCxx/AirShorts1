@@ -1,4 +1,4 @@
-import { DidService, VideoGenerationRequest, VideoGenerationResponse } from './did.service';
+import { DidService, VideoGenerationRequest, VideoGenerationResponse } from "./did.service";
 export declare class DidController {
     private readonly didService;
     constructor(didService: DidService);

@@ -16,47 +16,45 @@ exports.BotUpdate = void 0;
 const nestjs_telegraf_1 = require("nestjs-telegraf");
 const users_service_1 = require("../users/users.service");
 const menu_service_1 = require("../menu/menu.service");
-const settings_service_1 = require("../settings/settings.service");
 const logger_service_1 = require("../logger/logger.service");
 let BotUpdate = class BotUpdate {
-    constructor(_users, _menu, _settings, _logger) {
+    constructor(_users, _menu, _logger) {
         this._users = _users;
         this._menu = _menu;
-        this._settings = _settings;
         this._logger = _logger;
-        this._logger.debug('BotUpdate инициализирован', 'BotUpdate');
+        this._logger.debug("BotUpdate инициализирован", "BotUpdate");
     }
     async onMessage(ctx) {
-        this._logger.debug(`[@On message] Получено сообщение от пользователя ${ctx.from?.id}`, 'BotUpdate');
+        this._logger.debug(`[@On message] Получено сообщение от пользователя ${ctx.from?.id}`, "BotUpdate");
         if (ctx.message) {
-            this._logger.debug(`[@On message] Тип: ${ctx.message.text ? 'text' : 'other'}, Текст: "${ctx.message.text || 'нет текста'}"`, 'BotUpdate');
+            this._logger.debug(`[@On message] Тип: ${ctx.message.text ? "text" : "other"}, Текст: "${ctx.message.text || "нет текста"}"`, "BotUpdate");
         }
         return;
     }
     async onStart(ctx) {
-        this._logger.debug(`[@Start] Команда /start получена от пользователя ${ctx.from?.id}`, 'BotUpdate');
+        this._logger.debug(`[@Start] Команда /start получена от пользователя ${ctx.from?.id}`, "BotUpdate");
         try {
             await this._users.upsertFromContext(ctx);
-            this._logger.debug('Пользователь обновлен в базе данных', 'BotUpdate');
+            this._logger.debug("Пользователь обновлен в базе данных", "BotUpdate");
             await this._menu.sendMainMenu(ctx);
-            this._logger.debug('Главное меню отправлено', 'BotUpdate');
+            this._logger.debug("Главное меню отправлено", "BotUpdate");
         }
         catch (error) {
-            this._logger.error(`Ошибка при обработке команды /start: ${error}`, undefined, 'BotUpdate');
-            await ctx.reply('❌ Произошла ошибка при запуске бота. Попробуйте еще раз.');
+            this._logger.error(`Ошибка при обработке команды /start: ${error}`, undefined, "BotUpdate");
+            await ctx.reply("❌ Произошла ошибка при запуске бота. Попробуйте еще раз.");
         }
     }
     async onStartHears(ctx) {
-        this._logger.debug(`[@Hears] Команда /start получена через @Hears от пользователя ${ctx.from?.id}`, 'BotUpdate');
+        this._logger.debug(`[@Hears] Команда /start получена через @Hears от пользователя ${ctx.from?.id}`, "BotUpdate");
         return this.onStart(ctx);
     }
     async onText(ctx) {
-        this._logger.debug(`[@On text] Текстовое сообщение получено: "${ctx.message?.text}" от пользователя ${ctx.from?.id}`, 'BotUpdate');
-        if (ctx.message?.text === '/start') {
-            this._logger.debug(`[@On text] Обрабатываем команду /start`, 'BotUpdate');
+        this._logger.debug(`[@On text] Текстовое сообщение получено: "${ctx.message?.text}" от пользователя ${ctx.from?.id}`, "BotUpdate");
+        if (ctx.message?.text === "/start") {
+            this._logger.debug(`[@On text] Обрабатываем команду /start`, "BotUpdate");
             return this.onStart(ctx);
         }
-        this._logger.debug(`[@On text] Неизвестное сообщение: "${ctx.message?.text}"`, 'BotUpdate');
+        this._logger.debug(`[@On text] Неизвестное сообщение: "${ctx.message?.text}"`, "BotUpdate");
     }
     async onMainMenu(ctx) {
         await this._users.upsertFromContext(ctx);
@@ -67,28 +65,32 @@ let BotUpdate = class BotUpdate {
         await this._menu.sendMainMenu(ctx);
     }
     async onMyId(ctx) {
+        if (!ctx.from) {
+            await ctx.reply("❌ Не удалось получить данные пользователя");
+            return;
+        }
         const userId = ctx.from.id;
-        const username = ctx.from.username || 'не задан';
-        const firstName = ctx.from.first_name || '';
-        const lastName = ctx.from.last_name || '';
+        const username = ctx.from.username || "не задан";
+        const firstName = ctx.from.first_name || "";
+        const lastName = ctx.from.last_name || "";
         const message = `🆔 Ваши данные:\n\n` +
             `📱 Chat ID: \`${userId}\`\n` +
             `👤 Username: @${username}\n` +
             `📝 Имя: ${firstName} ${lastName}\n\n` +
             `💡 Для копирования Chat ID выделите число выше`;
-        await ctx.reply(message, { parse_mode: 'Markdown' });
+        await ctx.reply(message, { parse_mode: "Markdown" });
     }
     async onMyIdHears(ctx) {
         return this.onMyId(ctx);
     }
     async onCreateVideo(ctx) {
         await ctx.answerCbQuery();
-        await ctx.scene.enter('video-generation');
+        await ctx.scene.enter("video-generation");
     }
 };
 exports.BotUpdate = BotUpdate;
 __decorate([
-    (0, nestjs_telegraf_1.On)('message'),
+    (0, nestjs_telegraf_1.On)("message"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -102,35 +104,35 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onStart", null);
 __decorate([
-    (0, nestjs_telegraf_1.Hears)('/start'),
+    (0, nestjs_telegraf_1.Hears)("/start"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onStartHears", null);
 __decorate([
-    (0, nestjs_telegraf_1.On)('text'),
+    (0, nestjs_telegraf_1.On)("text"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onText", null);
 __decorate([
-    (0, nestjs_telegraf_1.Hears)(['🏠 Главное меню', 'Главное меню']),
+    (0, nestjs_telegraf_1.Hears)(["🏠 Главное меню", "Главное меню"]),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onMainMenu", null);
 __decorate([
-    (0, nestjs_telegraf_1.Action)('main_menu'),
+    (0, nestjs_telegraf_1.Action)("main_menu"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onMainMenuAction", null);
 __decorate([
-    (0, nestjs_telegraf_1.Command)('myid'),
+    (0, nestjs_telegraf_1.Command)("myid"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -144,7 +146,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onMyIdHears", null);
 __decorate([
-    (0, nestjs_telegraf_1.Action)('create_video'),
+    (0, nestjs_telegraf_1.Action)("create_video"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -154,7 +156,6 @@ exports.BotUpdate = BotUpdate = __decorate([
     (0, nestjs_telegraf_1.Update)(),
     __metadata("design:paramtypes", [users_service_1.UsersService,
         menu_service_1.MenuService,
-        settings_service_1.SettingsService,
         logger_service_1.CustomLoggerService])
 ], BotUpdate);
 //# sourceMappingURL=bot.update.js.map

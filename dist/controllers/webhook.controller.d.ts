@@ -1,10 +1,10 @@
-import { Request, Response } from 'express';
-import { CustomLoggerService } from '../logger/logger.service';
+import { Request, Response } from "express";
+import { CustomLoggerService } from "../logger/logger.service";
 export declare class WebhookController {
-    private readonly logger;
-    constructor(logger: CustomLoggerService);
+    private readonly _logger;
+    constructor(_logger: CustomLoggerService);
     getWebhook(req: Request, res: Response): Promise<void>;
-    handleWebhook(req: Request, res: Response, headers: any): Promise<void>;
+    handleWebhook(req: Request, res: Response, headers: Record<string, string | string[] | undefined>): Promise<void>;
     private getUpdateType;
     healthCheck(res: Response): Promise<void>;
     getStatus(res: Response): Promise<void>;

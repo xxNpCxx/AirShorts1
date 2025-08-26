@@ -1,7 +1,6 @@
 {
   "name": "telegram-bot-template",
   "version": "1.0.0",
-  "type": "module",
   "description": "Шаблон Telegram бота с использованием NestJS и структурированных правил Cursor AI",
   "main": "dist/main.js",
   "scripts": {

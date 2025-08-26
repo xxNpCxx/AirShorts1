@@ -1,7 +1,6 @@
-import { KeyboardsService } from '../keyboards/keyboards.service';
-import { SettingsService } from '../settings/settings.service';
-import { CustomLoggerService } from '../logger/logger.service';
-interface TelegramContext {
+import { KeyboardsService } from "../keyboards/keyboards.service";
+import { CustomLoggerService } from "../logger/logger.service";
+type TelegramContext = {
     from?: {
         id: number;
     };
@@ -9,16 +8,19 @@ interface TelegramContext {
         reply_markup?: unknown;
     }) => Promise<void>;
     telegram?: {
-        sendPhoto: (chatId: number, photo: any, options?: any) => Promise<any>;
+        sendPhoto: (chatId: number, photo: string, options?: {
+            reply_markup?: unknown;
+            caption?: string;
+            parse_mode?: string;
+        }) => Promise<void>;
     };
-}
+};
 export declare class MenuService {
     private readonly _kb;
-    private readonly _settings;
     private readonly _logger;
-    constructor(_kb: KeyboardsService, _settings: SettingsService, _logger: CustomLoggerService);
+    constructor(_kb: KeyboardsService, _logger: CustomLoggerService);
     sendMainMenu(ctx: TelegramContext): Promise<void>;
-    sendMainMenuBanner(ctx: TelegramContext, isOperator: boolean, isAdmin: boolean): Promise<void>;
+    sendMainMenuBanner(ctx: TelegramContext): Promise<void>;
     private sendReplyKeyboard;
 }
 export {};

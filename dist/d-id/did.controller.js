@@ -28,21 +28,21 @@ let DidController = class DidController {
 };
 exports.DidController = DidController;
 __decorate([
-    (0, common_1.Post)('generate'),
+    (0, common_1.Post)("generate"),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], DidController.prototype, "generateVideo", null);
 __decorate([
-    (0, common_1.Get)('status/:id'),
-    __param(0, (0, common_1.Param)('id')),
+    (0, common_1.Get)("status/:id"),
+    __param(0, (0, common_1.Param)("id")),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], DidController.prototype, "getVideoStatus", null);
 exports.DidController = DidController = __decorate([
-    (0, common_1.Controller)('did'),
+    (0, common_1.Controller)("did"),
     __metadata("design:paramtypes", [did_service_1.DidService])
 ], DidController);
 //# sourceMappingURL=did.controller.js.map
