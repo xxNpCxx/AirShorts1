@@ -123,6 +123,23 @@ async function bootstrap() {
   logger.debug(`Webhook URL: ${webhookUrl || 'не настроен'}`, 'Bootstrap');
   logger.debug(`База данных: ${process.env.DATABASE_URL ? 'подключена' : 'не настроена'}`, 'Bootstrap');
   logger.debug(`Redis: ${process.env.REDIS_URL ? 'подключен' : 'не настроен'}`, 'Bootstrap');
+
+      // Добавляем обработчик webhook маршрута
+      const expressApp = app.getHttpAdapter().getInstance();
+      expressApp.post('/webhook', async (req: any, res: any) => {
+        try {
+          logger.debug(`📥 Получен webhook запрос: ${JSON.stringify(req.body)}`, 'Webhook');
+          
+          // Обрабатываем обновление через бота
+          await bot.handleUpdate(req.body);
+          
+          logger.debug('✅ Webhook обновление обработано успешно', 'Webhook');
+          res.status(200).json({ ok: true });
+        } catch (error) {
+          logger.error(`❌ Ошибка обработки webhook: ${error}`, undefined, 'Webhook');
+          res.status(500).json({ error: 'Internal server error' });
+        }
+      });
 }
 
 bootstrap();
