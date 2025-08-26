@@ -88,6 +88,8 @@ async function bootstrap() {
       logger.log(`   Новый webhook будет: ${webhookPath}`, 'Bootstrap');
       await bot.telegram.deleteWebhook();
       logger.log(`✅ Старый webhook сброшен`, 'Bootstrap');
+      // Добавляем задержку после сброса webhook
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
     
     // Если webhook настроен на правильный URL, но есть ошибки, переустанавливаем
@@ -96,6 +98,8 @@ async function bootstrap() {
       logger.log(`🔄 Переустанавливаем webhook для исправления ошибок`, 'Bootstrap');
       await bot.telegram.deleteWebhook();
       logger.log(`✅ Webhook сброшен для переустановки`, 'Bootstrap');
+      // Добавляем задержку после сброса webhook
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
     
     // Если есть pending updates, логируем их количество
@@ -104,12 +108,37 @@ async function bootstrap() {
       logger.log(`ℹ️ Pending updates будут очищены при установке нового webhook`, 'Bootstrap');
     }
     
-    // Устанавливаем новый webhook
+    // Устанавливаем новый webhook с повторными попытками
     logger.log(`🔧 Устанавливаем новый webhook: ${webhookPath}`, 'Bootstrap');
-    await bot.telegram.setWebhook(webhookPath);
     
-    // Проверяем статус
-    const webhookInfo = await bot.telegram.getWebhookInfo();
+    let webhookInfo;
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        await bot.telegram.setWebhook(webhookPath);
+        webhookInfo = await bot.telegram.getWebhookInfo();
+        break; // Успешно установлен
+      } catch (setWebhookError: any) {
+        retryCount++;
+        if (setWebhookError.message?.includes('429')) {
+          const retryAfter = parseInt(setWebhookError.message.match(/retry after (\d+)/)?.[1] || '5');
+          logger.warn(`⚠️ Rate limit (429): ждем ${retryAfter} секунд перед повторной попыткой ${retryCount}/${maxRetries}`, 'Bootstrap');
+          await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+        } else if (retryCount < maxRetries) {
+          logger.warn(`⚠️ Ошибка установки webhook: ${setWebhookError.message}, повторная попытка ${retryCount}/${maxRetries}`, 'Bootstrap');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } else {
+          throw setWebhookError; // Превышено количество попыток
+        }
+      }
+    }
+    
+    if (!webhookInfo) {
+      throw new Error('Не удалось установить webhook после всех попыток');
+    }
+    
     logger.log(`📡 Webhook статус: ${webhookInfo.url}`, 'Bootstrap');
     logger.log(`✅ Webhook успешно настроен`, 'Bootstrap');
     
