@@ -37,7 +37,7 @@ async function bootstrap() {
   logger.debug(`Node.js версия: ${process.version}`, 'Bootstrap');
   logger.debug(`NODE_ENV: ${process.env.NODE_ENV || 'development'}`, 'Bootstrap');
 
-  // Middleware
+  // Middleware для бота
   const bot = app.get<Telegraf>(getBotToken());
   bot.use(async (ctx: any, next) => {
     if (ctx.message && typeof ctx.message.text === 'string' && ctx.message.text.startsWith('/start')) {
@@ -53,9 +53,11 @@ async function bootstrap() {
     return next();
   });
 
+  // Запускаем приложение
   const port = Number(process.env.PORT) || 3000;
   await app.listen(port);
   logger.log(`✅ Приложение запущено на порту ${port}`, 'Bootstrap');
+  logger.log(`✅ Webhook настроен автоматически через TelegrafModule`, 'Bootstrap');
 }
 
 bootstrap();
