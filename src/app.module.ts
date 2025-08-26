@@ -4,7 +4,6 @@ import { TelegrafModule } from 'nestjs-telegraf';
 import { session } from 'telegraf';
 import { BotUpdate } from './updates/bot.update';
 import { HealthController } from './health.controller';
-import { WebhookController } from './controllers/webhook.controller';
 import { DatabaseModule } from './database/database.module';
 import { SettingsModule } from './settings/settings.module';
 import { UsersModule } from './users/users.module';
@@ -32,11 +31,16 @@ import { VideoGenerationScene } from './scenes/video-generation.scene';
     DidModule,
     TelegrafModule.forRoot({
       token: process.env.BOT_TOKEN || '',
-      middlewares: [session()]
-      // Убираем include: [ScenesModule] - это может вызывать конфликт
+      middlewares: [session()],
+      launchOptions: {
+        webhook: {
+          domain: process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL || '',
+          hookPath: '/webhook',
+        }
+      }
     })
   ],
-  providers: [BotUpdate, MenuUpdate, VideoGenerationScene, WebhookController],
-  controllers: [HealthController, WebhookController]
+  providers: [BotUpdate, MenuUpdate, VideoGenerationScene],
+  controllers: [HealthController]
 })
 export class AppModule {}
