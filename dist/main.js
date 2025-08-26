@@ -82,20 +82,7 @@ async function bootstrap() {
             if (webhookInfo.last_error_message) {
                 logger.warn(`⚠️ Последняя ошибка webhook: ${webhookInfo.last_error_message}`, 'Bootstrap');
             }
-            const expressApp = app.getHttpAdapter().getInstance();
-            expressApp.post('/webhook', async (req, res) => {
-                try {
-                    logger.debug(`📥 Получен webhook запрос: ${JSON.stringify(req.body)}`, 'Webhook');
-                    await bot.handleUpdate(req.body);
-                    logger.debug('✅ Webhook обновление обработано успешно', 'Webhook');
-                    res.status(200).json({ ok: true });
-                }
-                catch (error) {
-                    logger.error(`❌ Ошибка обработки webhook: ${error}`, undefined, 'Webhook');
-                    res.status(500).json({ error: 'Internal server error' });
-                }
-            });
-            logger.log('✅ Webhook маршрут зарегистрирован', 'Bootstrap');
+            logger.log('✅ Webhook маршрут зарегистрирован через контроллер', 'Bootstrap');
             logger.log('✅ Бот работает в webhook режиме', 'Bootstrap');
         }
         catch (error) {

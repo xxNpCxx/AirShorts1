@@ -4,6 +4,7 @@ import { TelegrafModule } from 'nestjs-telegraf';
 import { session } from 'telegraf';
 import { BotUpdate } from './updates/bot.update';
 import { HealthController } from './health.controller';
+import { WebhookController } from './controllers/webhook.controller';
 import { DatabaseModule } from './database/database.module';
 import { SettingsModule } from './settings/settings.module';
 import { UsersModule } from './users/users.module';
@@ -37,7 +38,7 @@ import { VideoGenerationScene } from './scenes/video-generation.scene';
       include: [ScenesModule]
     })
   ],
-  providers: [BotUpdate, MenuUpdate, VideoGenerationScene],
-  controllers: [HealthController]
+  providers: [BotUpdate, MenuUpdate, VideoGenerationScene, WebhookController],
+  controllers: [HealthController, WebhookController]
 })
 export class AppModule {}
