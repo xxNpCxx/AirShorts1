@@ -13,7 +13,6 @@ const nestjs_telegraf_1 = require("nestjs-telegraf");
 const telegraf_1 = require("telegraf");
 const bot_update_1 = require("./updates/bot.update");
 const health_controller_1 = require("./health.controller");
-const webhook_controller_1 = require("./controllers/webhook.controller");
 const database_module_1 = require("./database/database.module");
 const settings_module_1 = require("./settings/settings.module");
 const users_module_1 = require("./users/users.module");
@@ -23,7 +22,6 @@ const redis_module_1 = require("./redis/redis.module");
 const menu_update_1 = require("./updates/menu.update");
 const logger_module_1 = require("./logger/logger.module");
 const did_module_1 = require("./d-id/did.module");
-const scenes_module_1 = require("./scenes/scenes.module");
 const video_generation_scene_1 = require("./scenes/video-generation.scene");
 let AppModule = class AppModule {
 };
@@ -43,15 +41,19 @@ exports.AppModule = AppModule = __decorate([
             menu_module_1.MenuModule,
             redis_module_1.RedisModule,
             did_module_1.DidModule,
-            scenes_module_1.ScenesModule,
             nestjs_telegraf_1.TelegrafModule.forRoot({
                 token: process.env.BOT_TOKEN || '',
                 middlewares: [(0, telegraf_1.session)()],
-                include: [scenes_module_1.ScenesModule]
+                launchOptions: {
+                    webhook: {
+                        domain: process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL || '',
+                        hookPath: '/webhook',
+                    }
+                }
             })
         ],
-        providers: [bot_update_1.BotUpdate, menu_update_1.MenuUpdate, video_generation_scene_1.VideoGenerationScene, webhook_controller_1.WebhookController],
-        controllers: [health_controller_1.HealthController, webhook_controller_1.WebhookController]
+        providers: [bot_update_1.BotUpdate, menu_update_1.MenuUpdate, video_generation_scene_1.VideoGenerationScene],
+        controllers: [health_controller_1.HealthController]
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map
