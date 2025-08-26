@@ -22,9 +22,7 @@ export declare class BotUpdate {
     private readonly _menu;
     private readonly _logger;
     constructor(_users: UsersService, _menu: MenuService, _logger: CustomLoggerService);
-    onMessage(ctx: TelegramContext): Promise<void>;
     onStart(ctx: TelegramContext): Promise<void>;
-    onStartHears(ctx: TelegramContext): Promise<void>;
     onText(ctx: TelegramContext): Promise<void>;
     onMainMenu(ctx: TelegramContext): Promise<void>;
     onMainMenuAction(ctx: TelegramContext): Promise<void>;

@@ -38,25 +38,7 @@ export class BotUpdate {
     this._logger.debug("BotUpdate инициализирован", "BotUpdate");
   }
 
-  // Обработчик для всех входящих обновлений (включая webhook)
-  @On("message")
-  async onMessage(@Ctx() ctx: TelegramContext) {
-    this._logger.debug(
-      `[@On message] Получено сообщение от пользователя ${ctx.from?.id}`,
-      "BotUpdate",
-    );
 
-    // Логируем детали сообщения для отладки webhook
-    if (ctx.message) {
-      this._logger.debug(
-        `[@On message] Тип: ${ctx.message.text ? "text" : "other"}, Текст: "${ctx.message.text || "нет текста"}"`,
-        "BotUpdate",
-      );
-    }
-
-    // Передаем управление следующему обработчику
-    return;
-  }
 
   @Start()
   async onStart(@Ctx() ctx: TelegramContext) {
@@ -81,16 +63,6 @@ export class BotUpdate {
     }
   }
 
-  // Дублирующий обработчик для webhook (на случай если @Start не работает)
-  @Hears("/start")
-  async onStartHears(@Ctx() ctx: TelegramContext) {
-    this._logger.debug(
-      `[@Hears] Команда /start получена через @Hears от пользователя ${ctx.from?.id}`,
-      "BotUpdate",
-    );
-    return this.onStart(ctx);
-  }
-
   // Обработчик для всех текстовых сообщений (для отладки)
   @On("text")
   async onText(@Ctx() ctx: TelegramContext) {
@@ -98,12 +70,6 @@ export class BotUpdate {
       `[@On text] Текстовое сообщение получено: "${ctx.message?.text}" от пользователя ${ctx.from?.id}`,
       "BotUpdate",
     );
-
-    // Если это команда /start, обрабатываем её
-    if (ctx.message?.text === "/start") {
-      this._logger.debug(`[@On text] Обрабатываем команду /start`, "BotUpdate");
-      return this.onStart(ctx);
-    }
 
     // Для других сообщений просто логируем
     this._logger.debug(

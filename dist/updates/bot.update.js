@@ -24,13 +24,6 @@ let BotUpdate = class BotUpdate {
         this._logger = _logger;
         this._logger.debug("BotUpdate инициализирован", "BotUpdate");
     }
-    async onMessage(ctx) {
-        this._logger.debug(`[@On message] Получено сообщение от пользователя ${ctx.from?.id}`, "BotUpdate");
-        if (ctx.message) {
-            this._logger.debug(`[@On message] Тип: ${ctx.message.text ? "text" : "other"}, Текст: "${ctx.message.text || "нет текста"}"`, "BotUpdate");
-        }
-        return;
-    }
     async onStart(ctx) {
         this._logger.debug(`[@Start] Команда /start получена от пользователя ${ctx.from?.id}`, "BotUpdate");
         try {
@@ -44,16 +37,8 @@ let BotUpdate = class BotUpdate {
             await ctx.reply("❌ Произошла ошибка при запуске бота. Попробуйте еще раз.");
         }
     }
-    async onStartHears(ctx) {
-        this._logger.debug(`[@Hears] Команда /start получена через @Hears от пользователя ${ctx.from?.id}`, "BotUpdate");
-        return this.onStart(ctx);
-    }
     async onText(ctx) {
         this._logger.debug(`[@On text] Текстовое сообщение получено: "${ctx.message?.text}" от пользователя ${ctx.from?.id}`, "BotUpdate");
-        if (ctx.message?.text === "/start") {
-            this._logger.debug(`[@On text] Обрабатываем команду /start`, "BotUpdate");
-            return this.onStart(ctx);
-        }
         this._logger.debug(`[@On text] Неизвестное сообщение: "${ctx.message?.text}"`, "BotUpdate");
     }
     async onMainMenu(ctx) {
@@ -90,26 +75,12 @@ let BotUpdate = class BotUpdate {
 };
 exports.BotUpdate = BotUpdate;
 __decorate([
-    (0, nestjs_telegraf_1.On)("message"),
-    __param(0, (0, nestjs_telegraf_1.Ctx)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], BotUpdate.prototype, "onMessage", null);
-__decorate([
     (0, nestjs_telegraf_1.Start)(),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onStart", null);
-__decorate([
-    (0, nestjs_telegraf_1.Hears)("/start"),
-    __param(0, (0, nestjs_telegraf_1.Ctx)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], BotUpdate.prototype, "onStartHears", null);
 __decorate([
     (0, nestjs_telegraf_1.On)("text"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
