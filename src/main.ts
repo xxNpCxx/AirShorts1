@@ -77,39 +77,8 @@ async function bootstrap() {
     return next();
   });
 
-  // Middleware для команды /start
+  // Middleware для логирования сообщений (без перехвата команд)
   bot.use(async (ctx: Context<Update>, next) => {
-    // Проверяем, что это текстовое сообщение
-    if (
-      ctx.message &&
-      "text" in ctx.message &&
-      ctx.message.text?.startsWith("/start")
-    ) {
-      logger.debug(
-        `Middleware: Обработка команды /start от пользователя ${ctx.from?.id}`,
-        "StartCommand",
-      );
-
-      // Проверяем наличие scene и session через type guards
-      if (
-        "scene" in ctx &&
-        ctx.scene &&
-        typeof ctx.scene === "object" &&
-        "current" in ctx.scene &&
-        "leave" in ctx.scene
-      ) {
-        try {
-          await (ctx.scene as { leave: () => Promise<void> }).leave();
-        } catch {
-          // Игнорируем ошибку выхода из сцены
-        }
-      }
-
-      if ("session" in ctx && ctx.session) {
-        (ctx as { session: Record<string, unknown> }).session = {};
-      }
-    }
-
     // Логируем текстовые сообщения
     if (ctx.message && "text" in ctx.message && ctx.message.text) {
       logger.debug(

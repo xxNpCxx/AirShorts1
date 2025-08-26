@@ -50,25 +50,6 @@ async function bootstrap() {
         return next();
     });
     bot.use(async (ctx, next) => {
-        if (ctx.message &&
-            "text" in ctx.message &&
-            ctx.message.text?.startsWith("/start")) {
-            logger.debug(`Middleware: Обработка команды /start от пользователя ${ctx.from?.id}`, "StartCommand");
-            if ("scene" in ctx &&
-                ctx.scene &&
-                typeof ctx.scene === "object" &&
-                "current" in ctx.scene &&
-                "leave" in ctx.scene) {
-                try {
-                    await ctx.scene.leave();
-                }
-                catch {
-                }
-            }
-            if ("session" in ctx && ctx.session) {
-                ctx.session = {};
-            }
-        }
         if (ctx.message && "text" in ctx.message && ctx.message.text) {
             logger.debug(`Получено сообщение: "${ctx.message.text}" от пользователя ${ctx.from?.id}`, "MessageHandler");
         }
