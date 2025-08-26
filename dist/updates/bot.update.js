@@ -38,6 +38,10 @@ let BotUpdate = class BotUpdate {
         }
     }
     async onText(ctx) {
+        if (ctx.message?.text?.startsWith("/")) {
+            this._logger.debug(`[@On text] Пропускаем команду: "${ctx.message.text}"`, "BotUpdate");
+            return;
+        }
         this._logger.debug(`[@On text] Текстовое сообщение получено: "${ctx.message?.text}" от пользователя ${ctx.from?.id}`, "BotUpdate");
         this._logger.debug(`[@On text] Неизвестное сообщение: "${ctx.message?.text}"`, "BotUpdate");
     }

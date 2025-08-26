@@ -63,9 +63,18 @@ export class BotUpdate {
     }
   }
 
-  // Обработчик для всех текстовых сообщений (для отладки)
+  // Обработчик для всех текстовых сообщений (кроме команд)
   @On("text")
   async onText(@Ctx() ctx: TelegramContext) {
+    // Пропускаем команды - они обрабатываются отдельными декораторами
+    if (ctx.message?.text?.startsWith("/")) {
+      this._logger.debug(
+        `[@On text] Пропускаем команду: "${ctx.message.text}"`,
+        "BotUpdate",
+      );
+      return;
+    }
+
     this._logger.debug(
       `[@On text] Текстовое сообщение получено: "${ctx.message?.text}" от пользователя ${ctx.from?.id}`,
       "BotUpdate",
