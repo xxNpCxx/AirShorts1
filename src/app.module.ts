@@ -14,7 +14,6 @@ import { RedisModule } from './redis/redis.module';
 import { MenuUpdate } from './updates/menu.update';
 import { LoggerModule } from './logger/logger.module';
 import { DidModule } from './d-id/did.module';
-import { ScenesModule } from './scenes/scenes.module';
 import { VideoGenerationScene } from './scenes/video-generation.scene';
 
 @Module({
@@ -31,13 +30,10 @@ import { VideoGenerationScene } from './scenes/video-generation.scene';
     MenuModule,
     RedisModule,
     DidModule,
-    ScenesModule,
     TelegrafModule.forRoot({
       token: process.env.BOT_TOKEN || '',
-      middlewares: [session()],
-      include: [ScenesModule],
-      // Отключаем автоматический запуск для webhook режима
-      launchOptions: false
+      middlewares: [session()]
+      // Убираем include: [ScenesModule] - это может вызывать конфликт
     })
   ],
   providers: [BotUpdate, MenuUpdate, VideoGenerationScene, WebhookController],
