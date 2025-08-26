@@ -84,30 +84,42 @@ async function bootstrap() {
     return next();
   });
   
-  // Webhook настраивается автоматически через NestJS TelegrafModule
+  // Запускаем приложение на указанном порту
+  const port = Number(process.env.PORT) || 3000;
+  await app.listen(port);
+  
+  logger.log(`✅ Telegram бот запущен на порту ${port}`, 'Bootstrap');
+  
+  // Настраиваем webhook вручную после запуска приложения
   if (webhookUrl) {
-    logger.log('✅ Webhook будет настроен автоматически через NestJS', 'Bootstrap');
-    
-    // Проверяем текущий webhook в Telegram API
     try {
+      logger.log('🔧 Настраиваю webhook вручную...', 'Bootstrap');
+      
+      // Устанавливаем webhook
+      await bot.telegram.setWebhook(`${webhookUrl}/webhook`);
+      logger.log('✅ Webhook успешно настроен', 'Bootstrap');
+      
+      // Проверяем статус webhook
       const webhookInfo = await bot.telegram.getWebhookInfo();
-      logger.log(`📡 Текущий webhook: ${webhookInfo.url}`, 'Bootstrap');
+      logger.log(`📡 Webhook URL: ${webhookInfo.url}`, 'Bootstrap');
       logger.log(`📊 Ожидающие обновления: ${webhookInfo.pending_update_count}`, 'Bootstrap');
       
       if (webhookInfo.last_error_message) {
         logger.warn(`⚠️ Последняя ошибка webhook: ${webhookInfo.last_error_message}`, 'Bootstrap');
       }
     } catch (error) {
-      logger.error(`Ошибка при получении информации о webhook: ${error}`, undefined, 'Bootstrap');
+      logger.error(`❌ Ошибка при настройке webhook: ${error}`, undefined, 'Bootstrap');
+      logger.log('🔄 Переключаюсь на polling режим', 'Bootstrap');
+      
+      // Если webhook не удалось настроить, запускаем в polling режиме
+      bot.launch();
+      logger.log('✅ Бот запущен в polling режиме', 'Bootstrap');
     }
   } else {
     logger.log('✅ Бот будет работать в polling режиме', 'Bootstrap');
+    bot.launch();
   }
   
-  const port = Number(process.env.PORT) || 3000;
-  await app.listen(port);
-  
-  logger.log(`✅ Telegram бот запущен на порту ${port}`, 'Bootstrap');
   logger.debug(`Webhook URL: ${webhookUrl || 'не настроен'}`, 'Bootstrap');
   logger.debug(`База данных: ${process.env.DATABASE_URL ? 'подключена' : 'не настроена'}`, 'Bootstrap');
   logger.debug(`Redis: ${process.env.REDIS_URL ? 'подключен' : 'не настроен'}`, 'Bootstrap');
