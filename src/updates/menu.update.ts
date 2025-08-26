@@ -1,30 +1,40 @@
-import { Action, Ctx, Hears, Update } from 'nestjs-telegraf';
-import { Markup } from 'telegraf';
+import { Action, Ctx, Hears, Update } from "nestjs-telegraf";
+import { Markup } from "telegraf";
+
+type TelegramContext = {
+  answerCbQuery: () => Promise<void>;
+  reply: (
+    text: string,
+    options?: { parse_mode?: string; reply_markup?: unknown },
+  ) => Promise<void>;
+};
 
 @Update()
 export class MenuUpdate {
-
-  @Action('support')
-  async supportAction(@Ctx() ctx: any) {
+  @Action("support")
+  async supportAction(@Ctx() ctx: TelegramContext) {
     await ctx.answerCbQuery();
     return this.support(ctx);
   }
 
-  @Hears('🆘 Поддержка оператора')
-  async support(@Ctx() ctx: any) {
-    const username = (process.env.OPERATOR_USERNAME || '').replace('@', '');
-    const url = username ? `https://t.me/${username}` : 'https://t.me/';
-    await ctx.reply('Связь с оператором:', Markup.inlineKeyboard([Markup.button.url('Написать оператору', url)]));
+  @Hears("🆘 Поддержка оператора")
+  async support(@Ctx() ctx: TelegramContext) {
+    const username = (process.env.OPERATOR_USERNAME || "").replace("@", "");
+    const url = username ? `https://t.me/${username}` : "https://t.me/";
+    await ctx.reply(
+      "Связь с оператором:",
+      Markup.inlineKeyboard([Markup.button.url("Написать оператору", url)]),
+    );
   }
 
-  @Action('rules')
-  async rulesAction(@Ctx() ctx: any) {
+  @Action("rules")
+  async rulesAction(@Ctx() ctx: TelegramContext) {
     await ctx.answerCbQuery();
     return this.rules(ctx);
   }
 
-  @Hears('📜 Правила')
-  async rules(@Ctx() ctx: any) {
+  @Hears("📜 Правила")
+  async rules(@Ctx() ctx: TelegramContext) {
     await ctx.reply(
       `📌 Правила пользования обменным сервисом
 
@@ -55,9 +65,7 @@ export class MenuUpdate {
 
 🔔 Соблюдение правил — гарантия вашей безопасности и стабильной работы обменника.
 📲 При вопросах — обращайтесь к оператору.`,
-      { parse_mode: 'Markdown' },
+      { parse_mode: "Markdown" },
     );
   }
 }
-
-

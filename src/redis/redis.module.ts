@@ -1,7 +1,7 @@
-import { Global, Module } from '@nestjs/common';
-import Redis from 'ioredis';
+import { Global, Module } from "@nestjs/common";
+import Redis from "ioredis";
 
-export const REDIS_TOKEN = 'REDIS_CLIENT';
+export const REDIS_TOKEN = "REDIS_CLIENT";
 
 @Global()
 @Module({
@@ -11,7 +11,9 @@ export const REDIS_TOKEN = 'REDIS_CLIENT';
       useFactory: (): Redis | null => {
         const url = process.env.REDIS_URL;
         if (!url) return null;
-        const tls = url.startsWith('rediss://') ? { rejectUnauthorized: false } : undefined;
+        const tls = url.startsWith("rediss://")
+          ? { rejectUnauthorized: false }
+          : undefined;
         return new Redis(url, tls ? { tls } : {});
       },
     },
@@ -19,5 +21,3 @@ export const REDIS_TOKEN = 'REDIS_CLIENT';
   exports: [REDIS_TOKEN],
 })
 export class RedisModule {}
-
-

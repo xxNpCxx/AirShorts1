@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
-import { KeyboardsService } from './keyboards.service';
-import { SettingsModule } from '../settings/settings.module';
+import { Module } from "@nestjs/common";
+import { KeyboardsService } from "./keyboards.service";
+import { SettingsModule } from "../settings/settings.module";
 
 @Module({
   imports: [SettingsModule],
@@ -8,5 +8,3 @@ import { SettingsModule } from '../settings/settings.module';
   exports: [KeyboardsService],
 })
 export class KeyboardsModule {}
-
-

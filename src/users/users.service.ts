@@ -1,6 +1,6 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { PG_POOL } from '../database/database.module';
-import { Pool } from 'pg';
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import { PG_POOL } from "../database/database.module";
+import { Pool } from "pg";
 
 interface TelegramUser {
   id: number;
@@ -25,7 +25,10 @@ export class UsersService {
     const u = ctx.from;
     if (!u) return false;
     try {
-      const res = await this.pool.query('SELECT telegram_id FROM users WHERE telegram_id = $1', [u.id]);
+      const res = await this.pool.query(
+        "SELECT telegram_id FROM users WHERE telegram_id = $1",
+        [u.id],
+      );
       const isNewUser = res.rowCount === 0;
       await this.pool.query(
         `INSERT INTO users (telegram_id, username, first_name, last_name, language_code, is_bot)
@@ -49,10 +52,8 @@ export class UsersService {
       );
       return isNewUser;
     } catch (err) {
-      this.logger.error('[users][pg] Ошибка upsert:', err);
+      this.logger.error("[users][pg] Ошибка upsert:", err);
       return false;
     }
   }
 }
-
-

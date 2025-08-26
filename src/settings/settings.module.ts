@@ -1,6 +1,6 @@
-import { Module, Logger } from '@nestjs/common';
-import { DatabaseModule } from '../database/database.module';
-import { SettingsService } from './settings.service';
+import { Module, Logger } from "@nestjs/common";
+import { DatabaseModule } from "../database/database.module";
+import { SettingsService } from "./settings.service";
 
 @Module({
   imports: [DatabaseModule],
@@ -11,8 +11,6 @@ export class SettingsModule {
   private readonly logger = new Logger(SettingsModule.name);
 
   constructor() {
-    this.logger.log('[SettingsModule] Инициализация модуля настроек');
+    this.logger.log("[SettingsModule] Инициализация модуля настроек");
   }
 }
-
-
