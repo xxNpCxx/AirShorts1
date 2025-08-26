@@ -35,7 +35,9 @@ import { VideoGenerationScene } from './scenes/video-generation.scene';
     TelegrafModule.forRoot({
       token: process.env.BOT_TOKEN || '',
       middlewares: [session()],
-      include: [ScenesModule]
+      include: [ScenesModule],
+      // Отключаем автоматический запуск для webhook режима
+      launchOptions: false
     })
   ],
   providers: [BotUpdate, MenuUpdate, VideoGenerationScene, WebhookController],

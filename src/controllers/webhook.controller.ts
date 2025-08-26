@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Res, HttpStatus, Inject } from '@nestjs/common';
 import { Response } from 'express';
 import { Telegraf } from 'telegraf';
 import { getBotToken } from 'nestjs-telegraf';
@@ -6,13 +6,13 @@ import { CustomLoggerService } from '../logger/logger.service';
 
 @Controller('webhook')
 export class WebhookController {
-  private readonly bot: Telegraf;
   private readonly logger: CustomLoggerService;
 
-  constructor(logger: CustomLoggerService) {
+  constructor(
+    @Inject(getBotToken()) private readonly bot: Telegraf,
+    logger: CustomLoggerService
+  ) {
     this.logger = logger;
-    // Получаем экземпляр бота
-    this.bot = new Telegraf(process.env.BOT_TOKEN || '');
   }
 
   @Post()

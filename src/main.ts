@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Telegraf } from 'telegraf';
-import express from 'express';
 import { getBotToken } from 'nestjs-telegraf';
 import { CustomLoggerService } from './logger/logger.service';
 
