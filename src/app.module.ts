@@ -36,15 +36,14 @@ import { VideoGenerationScene } from './scenes/video-generation.scene';
       launchOptions: {
         webhook: {
           domain: (process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL) as string,
-          hookPath: '/webhook',
-          port: Number(process.env.PORT) || 3000,
-        },
+          hookPath: '/webhook'
+        }
       },
       middlewares: [session()],
-      include: [ScenesModule],
-    }),
+      include: [ScenesModule]
+    })
   ],
   providers: [BotUpdate, MenuUpdate, VideoGenerationScene],
-  controllers: [HealthController],
+  controllers: [HealthController]
 })
 export class AppModule {}
