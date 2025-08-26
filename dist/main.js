@@ -36,6 +36,15 @@ async function bootstrap() {
     logger.debug(`Node.js версия: ${process.version}`, 'Bootstrap');
     logger.debug(`NODE_ENV: ${process.env.NODE_ENV || 'development'}`, 'Bootstrap');
     const bot = app.get((0, nestjs_telegraf_1.getBotToken)());
+    const webhookUrl = process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL;
+    if (webhookUrl) {
+        logger.log(`🌐 Webhook URL: ${webhookUrl}`, 'Bootstrap');
+        logger.log(`🔗 Webhook путь: ${webhookUrl}/webhook`, 'Bootstrap');
+        logger.log(`🚪 Порт: ${process.env.PORT || 3000}`, 'Bootstrap');
+    }
+    else {
+        logger.warn('⚠️ WEBHOOK_URL не настроен, бот будет работать в polling режиме', 'Bootstrap');
+    }
     bot.use(async (ctx, next) => {
         if (ctx.message && typeof ctx.message.text === 'string' && ctx.message.text.startsWith('/start')) {
             logger.debug(`Middleware: Обработка команды /start от пользователя ${ctx.from?.id}`, 'StartCommand');
@@ -59,12 +68,27 @@ async function bootstrap() {
         logger.debug(`Middleware: Передаем управление следующему обработчику`, 'MessageHandler');
         return next();
     });
-    logger.debug('Webhook будет настроен автоматически через NestJS', 'Bootstrap');
-    logger.debug('Webhook будет обрабатываться автоматически через NestJS', 'Bootstrap');
+    if (webhookUrl) {
+        logger.log('✅ Webhook будет настроен автоматически через NestJS', 'Bootstrap');
+        try {
+            const webhookInfo = await bot.telegram.getWebhookInfo();
+            logger.log(`📡 Текущий webhook: ${webhookInfo.url}`, 'Bootstrap');
+            logger.log(`📊 Ожидающие обновления: ${webhookInfo.pending_update_count}`, 'Bootstrap');
+            if (webhookInfo.last_error_message) {
+                logger.warn(`⚠️ Последняя ошибка webhook: ${webhookInfo.last_error_message}`, 'Bootstrap');
+            }
+        }
+        catch (error) {
+            logger.error(`Ошибка при получении информации о webhook: ${error}`, undefined, 'Bootstrap');
+        }
+    }
+    else {
+        logger.log('✅ Бот будет работать в polling режиме', 'Bootstrap');
+    }
     const port = Number(process.env.PORT) || 3000;
     await app.listen(port);
     logger.log(`✅ Telegram бот запущен на порту ${port}`, 'Bootstrap');
-    logger.debug(`Webhook путь: ${process.env.WEBHOOK_URL || 'не настроен'}`, 'Bootstrap');
+    logger.debug(`Webhook URL: ${webhookUrl || 'не настроен'}`, 'Bootstrap');
     logger.debug(`База данных: ${process.env.DATABASE_URL ? 'подключена' : 'не настроена'}`, 'Bootstrap');
     logger.debug(`Redis: ${process.env.REDIS_URL ? 'подключен' : 'не настроен'}`, 'Bootstrap');
 }

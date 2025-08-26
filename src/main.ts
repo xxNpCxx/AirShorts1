@@ -44,7 +44,15 @@ async function bootstrap() {
   // Получаем экземпляр бота
   const bot = app.get<Telegraf>(getBotToken());
   
-
+  // Проверяем переменные окружения для webhook
+  const webhookUrl = process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL;
+  if (webhookUrl) {
+    logger.log(`🌐 Webhook URL: ${webhookUrl}`, 'Bootstrap');
+    logger.log(`🔗 Webhook путь: ${webhookUrl}/webhook`, 'Bootstrap');
+    logger.log(`🚪 Порт: ${process.env.PORT || 3000}`, 'Bootstrap');
+  } else {
+    logger.warn('⚠️ WEBHOOK_URL не настроен, бот будет работать в polling режиме', 'Bootstrap');
+  }
   
   // Middleware для принудительного выхода из FSM при команде /start
   bot.use(async (ctx: any, next) => {
@@ -77,18 +85,30 @@ async function bootstrap() {
   });
   
   // Webhook настраивается автоматически через NestJS TelegrafModule
-  // Не нужно настраивать вручную
-  logger.debug('Webhook будет настроен автоматически через NestJS', 'Bootstrap');
-  
-  // Webhook обрабатывается автоматически через NestJS TelegrafModule
-  // Не нужно создавать ручной обработчик
-  logger.debug('Webhook будет обрабатываться автоматически через NestJS', 'Bootstrap');
+  if (webhookUrl) {
+    logger.log('✅ Webhook будет настроен автоматически через NestJS', 'Bootstrap');
+    
+    // Проверяем текущий webhook в Telegram API
+    try {
+      const webhookInfo = await bot.telegram.getWebhookInfo();
+      logger.log(`📡 Текущий webhook: ${webhookInfo.url}`, 'Bootstrap');
+      logger.log(`📊 Ожидающие обновления: ${webhookInfo.pending_update_count}`, 'Bootstrap');
+      
+      if (webhookInfo.last_error_message) {
+        logger.warn(`⚠️ Последняя ошибка webhook: ${webhookInfo.last_error_message}`, 'Bootstrap');
+      }
+    } catch (error) {
+      logger.error(`Ошибка при получении информации о webhook: ${error}`, undefined, 'Bootstrap');
+    }
+  } else {
+    logger.log('✅ Бот будет работать в polling режиме', 'Bootstrap');
+  }
   
   const port = Number(process.env.PORT) || 3000;
   await app.listen(port);
   
   logger.log(`✅ Telegram бот запущен на порту ${port}`, 'Bootstrap');
-  logger.debug(`Webhook путь: ${process.env.WEBHOOK_URL || 'не настроен'}`, 'Bootstrap');
+  logger.debug(`Webhook URL: ${webhookUrl || 'не настроен'}`, 'Bootstrap');
   logger.debug(`База данных: ${process.env.DATABASE_URL ? 'подключена' : 'не настроена'}`, 'Bootstrap');
   logger.debug(`Redis: ${process.env.REDIS_URL ? 'подключен' : 'не настроен'}`, 'Bootstrap');
 }

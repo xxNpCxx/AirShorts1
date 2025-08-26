@@ -8,6 +8,7 @@ export declare class BotUpdate {
     private readonly _settings;
     private readonly _logger;
     constructor(_users: UsersService, _menu: MenuService, _settings: SettingsService, _logger: CustomLoggerService);
+    onMessage(ctx: any): Promise<void>;
     onStart(ctx: any): Promise<void>;
     onStartHears(ctx: any): Promise<void>;
     onText(ctx: any): Promise<void>;

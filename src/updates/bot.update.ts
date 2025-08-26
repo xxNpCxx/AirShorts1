@@ -14,6 +14,21 @@ export class BotUpdate {
   ) {
     this._logger.debug('BotUpdate инициализирован', 'BotUpdate');
   }
+
+  // Обработчик для всех входящих обновлений (включая webhook)
+  @On('message')
+  async onMessage(@Ctx() ctx: any) {
+    this._logger.debug(`[@On message] Получено сообщение от пользователя ${ctx.from?.id}`, 'BotUpdate');
+    
+    // Логируем детали сообщения для отладки webhook
+    if (ctx.message) {
+      this._logger.debug(`[@On message] Тип: ${ctx.message.text ? 'text' : 'other'}, Текст: "${ctx.message.text || 'нет текста'}"`, 'BotUpdate');
+    }
+    
+    // Передаем управление следующему обработчику
+    return;
+  }
+
   @Start()
   async onStart(@Ctx() ctx: any) {
     this._logger.debug(`[@Start] Команда /start получена от пользователя ${ctx.from?.id}`, 'BotUpdate');

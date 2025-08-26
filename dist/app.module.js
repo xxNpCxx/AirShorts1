@@ -45,14 +45,13 @@ exports.AppModule = AppModule = __decorate([
             scenes_module_1.ScenesModule,
             nestjs_telegraf_1.TelegrafModule.forRoot({
                 token: process.env.BOT_TOKEN || '',
-                ...(process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL ? {
-                    launchOptions: {
-                        webhook: {
-                            domain: (process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL),
-                            hookPath: '/webhook',
-                        },
+                launchOptions: {
+                    webhook: {
+                        domain: (process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL),
+                        hookPath: '/webhook',
+                        port: Number(process.env.PORT) || 3000,
                     },
-                } : {}),
+                },
                 middlewares: [(0, telegraf_1.session)()],
                 include: [scenes_module_1.ScenesModule],
             }),

@@ -33,17 +33,15 @@ import { VideoGenerationScene } from './scenes/video-generation.scene';
     ScenesModule,
     TelegrafModule.forRoot({
       token: process.env.BOT_TOKEN || '',
-      ...(process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL ? {
-        launchOptions: {
-          webhook: {
-            domain: (process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL) as string,
-            hookPath: '/webhook',
-          },
+      launchOptions: {
+        webhook: {
+          domain: (process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL) as string,
+          hookPath: '/webhook',
+          port: Number(process.env.PORT) || 3000,
         },
-      } : {}),
+      },
       middlewares: [session()],
       include: [ScenesModule],
-
     }),
   ],
   providers: [BotUpdate, MenuUpdate, VideoGenerationScene],
