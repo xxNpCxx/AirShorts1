@@ -87,14 +87,7 @@ async function bootstrap() {
         }
         catch (error) {
             logger.error(`❌ Ошибка при настройке webhook: ${error}`, undefined, 'Bootstrap');
-            logger.log('🔄 Переключаюсь на polling режим', 'Bootstrap');
-            try {
-                bot.launch();
-                logger.log('✅ Бот запущен в polling режиме', 'Bootstrap');
-            }
-            catch (launchError) {
-                logger.error(`❌ Ошибка при запуске в polling режиме: ${launchError}`, undefined, 'Bootstrap');
-            }
+            logger.log('🔄 Webhook не удалось настроить, но приложение продолжает работать', 'Bootstrap');
         }
     }
     else {

@@ -24,13 +24,17 @@ let WebhookController = class WebhookController {
     async handleWebhook(update, res) {
         try {
             this.logger.debug(`📥 Получен webhook запрос: ${JSON.stringify(update)}`, 'WebhookController');
+            if (!update || !update.update_id) {
+                this.logger.warn('❌ Получен невалидный webhook запрос', 'WebhookController');
+                return res.status(common_1.HttpStatus.BAD_REQUEST).json({ error: 'Invalid update format' });
+            }
             await this.bot.handleUpdate(update);
             this.logger.debug('✅ Webhook обновление обработано успешно', 'WebhookController');
-            res.status(common_1.HttpStatus.OK).json({ ok: true });
+            return res.status(common_1.HttpStatus.OK).json({ ok: true });
         }
         catch (error) {
             this.logger.error(`❌ Ошибка обработки webhook: ${error}`, undefined, 'WebhookController');
-            res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({ error: 'Internal server error' });
+            return res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({ error: 'Internal server error' });
         }
     }
 };
