@@ -107,23 +107,7 @@ async function bootstrap() {
       if (webhookInfo.last_error_message) {
         logger.warn(`⚠️ Последняя ошибка webhook: ${webhookInfo.last_error_message}`, 'Bootstrap');
       }
-    } catch (error) {
-      logger.error(`❌ Ошибка при настройке webhook: ${error}`, undefined, 'Bootstrap');
-      logger.log('🔄 Переключаюсь на polling режим', 'Bootstrap');
       
-      // Если webhook не удалось настроить, запускаем в polling режиме
-      bot.launch();
-      logger.log('✅ Бот запущен в polling режиме', 'Bootstrap');
-    }
-  } else {
-    logger.log('✅ Бот будет работать в polling режиме', 'Bootstrap');
-    bot.launch();
-  }
-  
-  logger.debug(`Webhook URL: ${webhookUrl || 'не настроен'}`, 'Bootstrap');
-  logger.debug(`База данных: ${process.env.DATABASE_URL ? 'подключена' : 'не настроена'}`, 'Bootstrap');
-  logger.debug(`Redis: ${process.env.REDIS_URL ? 'подключен' : 'не настроен'}`, 'Bootstrap');
-
       // Добавляем обработчик webhook маршрута
       const expressApp = app.getHttpAdapter().getInstance();
       expressApp.post('/webhook', async (req: any, res: any) => {
@@ -140,6 +124,35 @@ async function bootstrap() {
           res.status(500).json({ error: 'Internal server error' });
         }
       });
+      
+      logger.log('✅ Webhook маршрут зарегистрирован', 'Bootstrap');
+      logger.log('✅ Бот работает в webhook режиме', 'Bootstrap');
+      
+    } catch (error) {
+      logger.error(`❌ Ошибка при настройке webhook: ${error}`, undefined, 'Bootstrap');
+      logger.log('🔄 Переключаюсь на polling режим', 'Bootstrap');
+      
+      // Если webhook не удалось настроить, запускаем в polling режиме
+      try {
+        bot.launch();
+        logger.log('✅ Бот запущен в polling режиме', 'Bootstrap');
+      } catch (launchError) {
+        logger.error(`❌ Ошибка при запуске в polling режиме: ${launchError}`, undefined, 'Bootstrap');
+      }
+    }
+  } else {
+    logger.log('✅ Бот будет работать в polling режиме', 'Bootstrap');
+    try {
+      bot.launch();
+      logger.log('✅ Бот запущен в polling режиме', 'Bootstrap');
+    } catch (launchError) {
+      logger.error(`❌ Ошибка при запуске в polling режиме: ${launchError}`, undefined, 'Bootstrap');
+    }
+  }
+  
+  logger.debug(`Webhook URL: ${webhookUrl || 'не настроен'}`, 'Bootstrap');
+  logger.debug(`База данных: ${process.env.DATABASE_URL ? 'подключена' : 'не настроена'}`, 'Bootstrap');
+  logger.debug(`Redis: ${process.env.REDIS_URL ? 'подключен' : 'не настроен'}`, 'Bootstrap');
 }
 
 bootstrap();
