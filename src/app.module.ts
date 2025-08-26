@@ -34,8 +34,9 @@ import { VideoGenerationScene } from './scenes/video-generation.scene';
       middlewares: [session()],
       launchOptions: {
         webhook: {
-          domain: process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL || '',
+          domain: 'https://airshorts1.onrender.com',
           hookPath: '/webhook',
+          port: Number(process.env.PORT) || 10000
         }
       }
     })

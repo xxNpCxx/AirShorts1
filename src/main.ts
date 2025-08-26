@@ -57,7 +57,19 @@ async function bootstrap() {
   const port = Number(process.env.PORT) || 3000;
   await app.listen(port);
   logger.log(`✅ Приложение запущено на порту ${port}`, 'Bootstrap');
-  logger.log(`✅ Webhook настроен автоматически через TelegrafModule`, 'Bootstrap');
+  
+  // Проверяем статус webhook
+  try {
+    const webhookInfo = await bot.telegram.getWebhookInfo();
+    logger.log(`📡 Webhook статус: ${webhookInfo.url || 'не настроен'}`, 'Bootstrap');
+    if (webhookInfo.url) {
+      logger.log(`✅ Webhook настроен автоматически через TelegrafModule`, 'Bootstrap');
+    } else {
+      logger.warn(`⚠️ Webhook не настроен автоматически`, 'Bootstrap');
+    }
+  } catch (error) {
+    logger.error(`❌ Ошибка проверки webhook: ${error}`, undefined, 'Bootstrap');
+  }
 }
 
 bootstrap();
