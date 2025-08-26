@@ -68,24 +68,12 @@ async function bootstrap() {
   // Middleware для бота
   const bot = app.get<Telegraf>(getBotToken());
 
-  // Логируем все обновления
+  // Логируем все обновления (только для отладки)
   bot.use(async (ctx, next) => {
     logger.telegramUpdate(
       ctx.update as unknown as Record<string, unknown>,
       "BotMiddleware",
     );
-    return next();
-  });
-
-  // Middleware для логирования сообщений (без перехвата команд)
-  bot.use(async (ctx: Context<Update>, next) => {
-    // Логируем текстовые сообщения
-    if (ctx.message && "text" in ctx.message && ctx.message.text) {
-      logger.debug(
-        `Получено сообщение: "${ctx.message.text}" от пользователя ${ctx.from?.id}`,
-        "MessageHandler",
-      );
-    }
     return next();
   });
 

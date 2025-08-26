@@ -49,12 +49,6 @@ async function bootstrap() {
         logger.telegramUpdate(ctx.update, "BotMiddleware");
         return next();
     });
-    bot.use(async (ctx, next) => {
-        if (ctx.message && "text" in ctx.message && ctx.message.text) {
-            logger.debug(`Получено сообщение: "${ctx.message.text}" от пользователя ${ctx.from?.id}`, "MessageHandler");
-        }
-        return next();
-    });
     const port = Number(process.env.PORT) || 3000;
     logger.log(`🚀 Запуск приложения на порту ${port}`, "Bootstrap");
     await app.listen(port);
