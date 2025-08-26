@@ -36,8 +36,7 @@ import { VideoGenerationScene } from './scenes/video-generation.scene';
       launchOptions: {
         webhook: {
           domain: process.env.WEBHOOK_URL || 'https://airshorts1.onrender.com',
-          hookPath: '/webhook',
-          port: Number(process.env.PORT) || 10000
+          hookPath: '/webhook'
         }
       },
       include: [BotUpdate, MenuUpdate, VideoGenerationScene],

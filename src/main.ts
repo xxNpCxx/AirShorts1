@@ -67,6 +67,7 @@ async function bootstrap() {
 
   // Запускаем приложение
   const port = Number(process.env.PORT) || 3000;
+  logger.log(`🚀 Запуск приложения на порту ${port}`, 'Bootstrap');
   await app.listen(port);
   logger.log(`✅ Приложение запущено на порту ${port}`, 'Bootstrap');
   
