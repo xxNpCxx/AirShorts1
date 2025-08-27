@@ -396,8 +396,14 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                     return;
                 }
                 if (status.status === 'error' || status.error) {
-                    this.logger.error(`❌ Ошибка генерации видео ${videoId}: ${status.error}`);
+                    this.logger.error(`❌ Ошибка генерации видео ${videoId}: ${status.error}`, {
+                        videoId,
+                        userId,
+                        errorDetails: status.error,
+                        status: status.status
+                    });
                     await this.bot.telegram.sendMessage(userId, `❌ К сожалению, произошла ошибка при создании видео.\n\n` +
+                        `🔧 Проблема была автоматически зарегистрирована для исправления.\n\n` +
                         `💡 Попробуйте:\n` +
                         `• Создать видео заново\n` +
                         `• Использовать другое фото\n` +

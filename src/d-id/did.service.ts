@@ -69,7 +69,7 @@ export class DidService {
           pad_audio: 0.1,
           stitch: true,
           align_driver: true,
-          align_expand_factor: 1,
+          align_expand_factor: 0.9, // Исправлено: D-ID требует значение [0.0, 1.0)
           auto_match: true,
           normalization_factor: 1,
           motion_factor: 1,
