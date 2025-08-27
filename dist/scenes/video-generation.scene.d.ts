@@ -35,6 +35,10 @@ export declare class VideoGenerationScene {
     private showQualitySelection;
     private showTextPromptInput;
     private startVideoGeneration;
+    onYouTubeShortsSelected(ctx: Context): Promise<void>;
+    onTikTokSelected(ctx: Context): Promise<void>;
+    onInstagramReelsSelected(ctx: Context): Promise<void>;
+    onCancelVideoGeneration(ctx: Context): Promise<void>;
     onCancel(ctx: Context): Promise<void>;
 }
 export {};

@@ -79,16 +79,6 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 session.script = text;
                 await this.showPlatformSelection(ctx);
             }
-            else if (!session.platform) {
-                if (text.toLowerCase().includes("youtube") ||
-                    text.toLowerCase().includes("shorts")) {
-                    session.platform = "youtube-shorts";
-                    await this.showDurationSelection(ctx);
-                }
-                else {
-                    await ctx.reply("❌ Поддерживается только YouTube Shorts. Попробуйте еще раз.");
-                }
-            }
             else if (!session.duration) {
                 const duration = parseInt(text);
                 if (isNaN(duration) || duration < 15 || duration > 60) {
@@ -124,9 +114,24 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
         }
     }
     async showPlatformSelection(ctx) {
-        await ctx.reply("✅ Сценарий получен! Теперь выберите платформу:\n\n" +
-            "📱 YouTube Shorts (единственная поддерживаемая платформа)\n\n" +
-            'Напишите "YouTube Shorts" или "shorts":');
+        await ctx.reply("✅ Сценарий получен! Теперь выберите платформу:", {
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        { text: "📱 YouTube Shorts", callback_data: "platform_youtube_shorts" }
+                    ],
+                    [
+                        { text: "📺 TikTok", callback_data: "platform_tiktok" }
+                    ],
+                    [
+                        { text: "📸 Instagram Reels", callback_data: "platform_instagram_reels" }
+                    ],
+                    [
+                        { text: "❌ Отмена", callback_data: "cancel_video_generation" }
+                    ]
+                ]
+            }
+        });
     }
     async showDurationSelection(ctx) {
         await ctx.reply("✅ Платформа выбрана! Теперь укажите длительность видео в секундах:\n\n" +
@@ -170,6 +175,46 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             this.logger.error("Error starting video generation:", error);
             await ctx.reply(`❌ Ошибка при создании видео:\n${error.message}\n\n` +
                 `Попробуйте еще раз или обратитесь к администратору.`);
+        }
+    }
+    async onYouTubeShortsSelected(ctx) {
+        try {
+            await ctx.answerCbQuery();
+            const session = ctx.session;
+            session.platform = "youtube-shorts";
+            await ctx.editMessageText("✅ Платформа выбрана: YouTube Shorts");
+            await this.showDurationSelection(ctx);
+        }
+        catch (error) {
+            this.logger.error("Error selecting YouTube Shorts:", error);
+            await ctx.answerCbQuery("❌ Ошибка выбора платформы");
+        }
+    }
+    async onTikTokSelected(ctx) {
+        try {
+            await ctx.answerCbQuery("❌ TikTok пока не поддерживается");
+        }
+        catch (error) {
+            this.logger.error("Error selecting TikTok:", error);
+        }
+    }
+    async onInstagramReelsSelected(ctx) {
+        try {
+            await ctx.answerCbQuery("❌ Instagram Reels пока не поддерживается");
+        }
+        catch (error) {
+            this.logger.error("Error selecting Instagram Reels:", error);
+        }
+    }
+    async onCancelVideoGeneration(ctx) {
+        try {
+            await ctx.answerCbQuery();
+            await ctx.editMessageText("❌ Создание видео отменено.");
+            await ctx.scene?.leave();
+        }
+        catch (error) {
+            this.logger.error("Error canceling video generation:", error);
+            await ctx.answerCbQuery("❌ Ошибка отмены");
         }
     }
     async onCancel(ctx) {
@@ -236,6 +281,34 @@ __decorate([
     __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], VideoGenerationScene.prototype, "startVideoGeneration", null);
+__decorate([
+    (0, nestjs_telegraf_1.Action)("platform_youtube_shorts"),
+    __param(0, (0, nestjs_telegraf_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
+    __metadata("design:returntype", Promise)
+], VideoGenerationScene.prototype, "onYouTubeShortsSelected", null);
+__decorate([
+    (0, nestjs_telegraf_1.Action)("platform_tiktok"),
+    __param(0, (0, nestjs_telegraf_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
+    __metadata("design:returntype", Promise)
+], VideoGenerationScene.prototype, "onTikTokSelected", null);
+__decorate([
+    (0, nestjs_telegraf_1.Action)("platform_instagram_reels"),
+    __param(0, (0, nestjs_telegraf_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
+    __metadata("design:returntype", Promise)
+], VideoGenerationScene.prototype, "onInstagramReelsSelected", null);
+__decorate([
+    (0, nestjs_telegraf_1.Action)("cancel_video_generation"),
+    __param(0, (0, nestjs_telegraf_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
+    __metadata("design:returntype", Promise)
+], VideoGenerationScene.prototype, "onCancelVideoGeneration", null);
 __decorate([
     (0, nestjs_telegraf_1.Action)("cancel"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),

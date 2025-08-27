@@ -117,21 +117,8 @@ export class VideoGenerationScene {
         // Первый текстовый ввод - это сценарий
         session.script = text;
         await this.showPlatformSelection(ctx);
-      } else if (!session.platform) {
-        // Второй текстовый ввод - это платформа
-        if (
-          text.toLowerCase().includes("youtube") ||
-          text.toLowerCase().includes("shorts")
-        ) {
-          session.platform = "youtube-shorts";
-          await this.showDurationSelection(ctx);
-        } else {
-          await ctx.reply(
-            "❌ Поддерживается только YouTube Shorts. Попробуйте еще раз.",
-          );
-        }
       } else if (!session.duration) {
-        // Третий текстовый ввод - это длительность
+        // Второй текстовый ввод - это длительность (платформа выбирается через inline кнопки)
         const duration = parseInt(text);
         if (isNaN(duration) || duration < 15 || duration > 60) {
           await ctx.reply(
@@ -142,7 +129,7 @@ export class VideoGenerationScene {
         session.duration = duration;
         await this.showQualitySelection(ctx);
       } else if (!session.quality) {
-        // Четвертый текстовый ввод - это качество
+        // Третий текстовый ввод - это качество
         if (
           text.toLowerCase().includes("720") ||
           text.toLowerCase().includes("720p")
@@ -160,7 +147,7 @@ export class VideoGenerationScene {
 
         await this.showTextPromptInput(ctx);
       } else if (!session.textPrompt) {
-        // Пятый текстовый ввод - это текстовый промпт
+        // Четвертый текстовый ввод - это текстовый промпт
         session.textPrompt = text;
         await this.startVideoGeneration(ctx);
       }
@@ -172,9 +159,25 @@ export class VideoGenerationScene {
 
   private async showPlatformSelection(@Ctx() ctx: Context) {
     await ctx.reply(
-      "✅ Сценарий получен! Теперь выберите платформу:\n\n" +
-        "📱 YouTube Shorts (единственная поддерживаемая платформа)\n\n" +
-        'Напишите "YouTube Shorts" или "shorts":',
+      "✅ Сценарий получен! Теперь выберите платформу:",
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: "📱 YouTube Shorts", callback_data: "platform_youtube_shorts" }
+            ],
+            [
+              { text: "📺 TikTok", callback_data: "platform_tiktok" }
+            ],
+            [
+              { text: "📸 Instagram Reels", callback_data: "platform_instagram_reels" }
+            ],
+            [
+              { text: "❌ Отмена", callback_data: "cancel_video_generation" }
+            ]
+          ]
+        }
+      }
     );
   }
 
@@ -242,6 +245,54 @@ export class VideoGenerationScene {
         `❌ Ошибка при создании видео:\n${(error as Error).message}\n\n` +
           `Попробуйте еще раз или обратитесь к администратору.`,
       );
+    }
+  }
+
+  @Action("platform_youtube_shorts")
+  async onYouTubeShortsSelected(@Ctx() ctx: Context) {
+    try {
+      await ctx.answerCbQuery();
+      const session = (ctx as unknown as { session: SessionData }).session;
+      session.platform = "youtube-shorts";
+      
+      await ctx.editMessageText(
+        "✅ Платформа выбрана: YouTube Shorts"
+      );
+      
+      await this.showDurationSelection(ctx);
+    } catch (error) {
+      this.logger.error("Error selecting YouTube Shorts:", error);
+      await ctx.answerCbQuery("❌ Ошибка выбора платформы");
+    }
+  }
+
+  @Action("platform_tiktok")
+  async onTikTokSelected(@Ctx() ctx: Context) {
+    try {
+      await ctx.answerCbQuery("❌ TikTok пока не поддерживается");
+    } catch (error) {
+      this.logger.error("Error selecting TikTok:", error);
+    }
+  }
+
+  @Action("platform_instagram_reels")
+  async onInstagramReelsSelected(@Ctx() ctx: Context) {
+    try {
+      await ctx.answerCbQuery("❌ Instagram Reels пока не поддерживается");
+    } catch (error) {
+      this.logger.error("Error selecting Instagram Reels:", error);
+    }
+  }
+
+  @Action("cancel_video_generation")
+  async onCancelVideoGeneration(@Ctx() ctx: Context) {
+    try {
+      await ctx.answerCbQuery();
+      await ctx.editMessageText("❌ Создание видео отменено.");
+      await (ctx as { scene?: { leave: () => Promise<void> } }).scene?.leave();
+    } catch (error) {
+      this.logger.error("Error canceling video generation:", error);
+      await ctx.answerCbQuery("❌ Ошибка отмены");
     }
   }
 
