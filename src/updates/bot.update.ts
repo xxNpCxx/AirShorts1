@@ -23,46 +23,7 @@ export class BotUpdate {
     this._logger.log("🚀 BotUpdate создан и готов к работе", "BotUpdate");
   }
 
-  // Метод для обработки webhook обновлений
-  async handleUpdate(update: any) {
-    this._logger.log(`📥 [handleUpdate] Получено обновление: ${JSON.stringify(update)}`, "BotUpdate");
-    
-    try {
-      // Проверяем тип обновления
-      if (update.message && update.message.text) {
-        const text = update.message.text;
-        const fromId = update.message.from?.id;
-        
-        this._logger.log(`📝 [handleUpdate] Текст: "${text}" от пользователя ${fromId}`, "BotUpdate");
-        
-        // Обрабатываем команду /start
-        if (text === "/start") {
-          this._logger.log(`🚀 [handleUpdate] Обрабатываем команду /start`, "BotUpdate");
-          
-          // Создаем контекст для обработки
-          const mockCtx = {
-            message: update.message,
-            from: update.message.from,
-            reply: async (text: string) => {
-              this._logger.log(`💬 [handleUpdate] Ответ: ${text}`, "BotUpdate");
-              // Здесь должна быть логика отправки ответа
-            }
-          } as unknown as Context;
-          
-          // Вызываем существующий обработчик
-          await this.onStart(mockCtx);
-        }
-      }
-      
-      this._logger.log(`✅ [handleUpdate] Обновление обработано успешно`, "BotUpdate");
-    } catch (error) {
-      this._logger.error(
-        `❌ [handleUpdate] Ошибка обработки обновления: ${error}`,
-        undefined,
-        "BotUpdate",
-      );
-    }
-  }
+
 
   @Start()
   async onStart(@Ctx() ctx: Context) {
