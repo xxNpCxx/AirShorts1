@@ -260,26 +260,8 @@ export class VideoGenerationScene {
         }
         session.duration = duration;
         await this.showQualitySelection(ctx);
-      } else if (!session.quality) {
-        // Третий текстовый ввод - это качество
-        if (
-          text.toLowerCase().includes("720") ||
-          text.toLowerCase().includes("720p")
-        ) {
-          session.quality = "720p";
-        } else if (
-          text.toLowerCase().includes("1080") ||
-          text.toLowerCase().includes("1080p")
-        ) {
-          session.quality = "720p";
-        } else {
-          await ctx.reply("❌ Выберите качество: 720p или 1080p");
-          return;
-        }
-
-        await this.showTextPromptInput(ctx);
       } else if (!session.textPrompt) {
-        // Четвертый текстовый ввод - это текстовый промпт
+        // Третий текстовый ввод - это текстовый промпт (качество выбирается через inline кнопки)
         session.textPrompt = text;
         await this.startVideoGeneration(ctx);
       }
@@ -323,10 +305,20 @@ export class VideoGenerationScene {
 
   private async showQualitySelection(@Ctx() ctx: Context) {
     await ctx.reply(
-      "✅ Длительность выбрана! Теперь выберите качество видео:\n\n" +
-        "🎥 720p - быстрее, меньше места\n" +
-        "🎥 1080p - лучше качество, больше места\n\n" +
-        'Напишите "720p" или "1080p":',
+      "✅ Длительность выбрана! Теперь выберите качество видео:",
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: "🎥 720p (быстрее)", callback_data: "quality_720p" },
+              { text: "🏆 1080p (лучше)", callback_data: "quality_1080p" }
+            ],
+            [
+              { text: "❌ Отмена", callback_data: "cancel_video_generation" }
+            ]
+          ]
+        }
+      }
     );
   }
 
@@ -443,6 +435,42 @@ export class VideoGenerationScene {
       await ctx.answerCbQuery("❌ Эта платформа пока не поддерживается");
     } catch (error) {
       this.logger.error("Error selecting Instagram Reels:", error);
+    }
+  }
+
+  @Action("quality_720p")
+  async onQuality720Selected(@Ctx() ctx: Context) {
+    try {
+      await ctx.answerCbQuery();
+      const session = (ctx as unknown as { session: SessionData }).session;
+      session.quality = "720p";
+
+      await ctx.editMessageText(
+        "✅ Качество выбрано: 720p (быстрее генерация, меньше места)"
+      );
+
+      await this.showTextPromptInput(ctx);
+    } catch (error) {
+      this.logger.error("Error selecting 720p quality:", error);
+      await ctx.answerCbQuery("❌ Ошибка выбора качества");
+    }
+  }
+
+  @Action("quality_1080p")
+  async onQuality1080Selected(@Ctx() ctx: Context) {
+    try {
+      await ctx.answerCbQuery();
+      const session = (ctx as unknown as { session: SessionData }).session;
+      session.quality = "1080p";
+
+      await ctx.editMessageText(
+        "✅ Качество выбрано: 1080p (лучшее качество, больше места)"
+      );
+
+      await this.showTextPromptInput(ctx);
+    } catch (error) {
+      this.logger.error("Error selecting 1080p quality:", error);
+      await ctx.answerCbQuery("❌ Ошибка выбора качества");
     }
   }
 

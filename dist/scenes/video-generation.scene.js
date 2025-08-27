@@ -183,21 +183,6 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 session.duration = duration;
                 await this.showQualitySelection(ctx);
             }
-            else if (!session.quality) {
-                if (text.toLowerCase().includes("720") ||
-                    text.toLowerCase().includes("720p")) {
-                    session.quality = "720p";
-                }
-                else if (text.toLowerCase().includes("1080") ||
-                    text.toLowerCase().includes("1080p")) {
-                    session.quality = "720p";
-                }
-                else {
-                    await ctx.reply("❌ Выберите качество: 720p или 1080p");
-                    return;
-                }
-                await this.showTextPromptInput(ctx);
-            }
             else if (!session.textPrompt) {
                 session.textPrompt = text;
                 await this.startVideoGeneration(ctx);
@@ -234,10 +219,19 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             "Введите число секунд:");
     }
     async showQualitySelection(ctx) {
-        await ctx.reply("✅ Длительность выбрана! Теперь выберите качество видео:\n\n" +
-            "🎥 720p - быстрее, меньше места\n" +
-            "🎥 1080p - лучше качество, больше места\n\n" +
-            'Напишите "720p" или "1080p":');
+        await ctx.reply("✅ Длительность выбрана! Теперь выберите качество видео:", {
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        { text: "🎥 720p (быстрее)", callback_data: "quality_720p" },
+                        { text: "🏆 1080p (лучше)", callback_data: "quality_1080p" }
+                    ],
+                    [
+                        { text: "❌ Отмена", callback_data: "cancel_video_generation" }
+                    ]
+                ]
+            }
+        });
     }
     async showTextPromptInput(ctx) {
         await ctx.reply("✅ Качество выбрано! Теперь добавьте текстовый промпт для улучшения генерации:\n\n" +
@@ -328,6 +322,32 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
         }
         catch (error) {
             this.logger.error("Error selecting Instagram Reels:", error);
+        }
+    }
+    async onQuality720Selected(ctx) {
+        try {
+            await ctx.answerCbQuery();
+            const session = ctx.session;
+            session.quality = "720p";
+            await ctx.editMessageText("✅ Качество выбрано: 720p (быстрее генерация, меньше места)");
+            await this.showTextPromptInput(ctx);
+        }
+        catch (error) {
+            this.logger.error("Error selecting 720p quality:", error);
+            await ctx.answerCbQuery("❌ Ошибка выбора качества");
+        }
+    }
+    async onQuality1080Selected(ctx) {
+        try {
+            await ctx.answerCbQuery();
+            const session = ctx.session;
+            session.quality = "1080p";
+            await ctx.editMessageText("✅ Качество выбрано: 1080p (лучшее качество, больше места)");
+            await this.showTextPromptInput(ctx);
+        }
+        catch (error) {
+            this.logger.error("Error selecting 1080p quality:", error);
+            await ctx.answerCbQuery("❌ Ошибка выбора качества");
         }
     }
     async onCancelVideoGeneration(ctx) {
@@ -447,6 +467,20 @@ __decorate([
     __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], VideoGenerationScene.prototype, "onInstagramReelsSelected", null);
+__decorate([
+    (0, nestjs_telegraf_1.Action)("quality_720p"),
+    __param(0, (0, nestjs_telegraf_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
+    __metadata("design:returntype", Promise)
+], VideoGenerationScene.prototype, "onQuality720Selected", null);
+__decorate([
+    (0, nestjs_telegraf_1.Action)("quality_1080p"),
+    __param(0, (0, nestjs_telegraf_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
+    __metadata("design:returntype", Promise)
+], VideoGenerationScene.prototype, "onQuality1080Selected", null);
 __decorate([
     (0, nestjs_telegraf_1.Action)("cancel_video_generation"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
