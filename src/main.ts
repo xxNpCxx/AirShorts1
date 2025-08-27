@@ -70,8 +70,8 @@ async function bootstrap() {
   // Запускаем приложение
   const port = Number(process.env.PORT) || 3000;
   logger.log(`🚀 Запуск приложения на порту ${port}`, "Bootstrap");
-  await app.listen(port);
-  logger.log(`✅ Приложение запущено на порту ${port}`, "Bootstrap");
+  // Убираем app.listen() - TelegrafModule сам управляет сервером
+  logger.log(`✅ Приложение готово к работе на порту ${port}`, "Bootstrap");
 
   // Webhook настраивается автоматически через TelegrafModule
   logger.log(`🔧 Webhook настраивается автоматически через TelegrafModule`, "Bootstrap");
