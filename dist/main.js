@@ -48,7 +48,8 @@ async function bootstrap() {
     logger.debug(`PORT: ${process.env.PORT || "не установлен, используется 3000"}`, "Bootstrap");
     const port = Number(process.env.PORT) || 3000;
     logger.log(`🚀 Запуск приложения на порту ${port}`, "Bootstrap");
-    logger.log(`✅ Приложение готово к работе на порту ${port}`, "Bootstrap");
+    await app.listen(port);
+    logger.log(`✅ HTTP сервер запущен на порту ${port}`, "Bootstrap");
     logger.log(`🔧 Webhook настраивается автоматически через TelegrafModule`, "Bootstrap");
     logger.log(`📡 Webhook URL: ${process.env.WEBHOOK_URL || "https://airshorts1.onrender.com"}/webhook`, "Bootstrap");
     logger.log(`✅ Приложение готово к работе!`, "Bootstrap");

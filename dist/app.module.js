@@ -41,21 +41,23 @@ exports.AppModule = AppModule = __decorate([
             menu_module_1.MenuModule,
             redis_module_1.RedisModule,
             did_module_1.DidModule,
-            nestjs_telegraf_1.TelegrafModule.forRoot({
-                token: process.env.BOT_TOKEN || "",
-                botName: "AirShortsBot",
-                middlewares: [(0, telegraf_1.session)()],
-                launchOptions: {
-                    webhook: {
-                        domain: process.env.WEBHOOK_URL || "https://airshorts1.onrender.com",
-                        hookPath: "/webhook",
+            nestjs_telegraf_1.TelegrafModule.forRootAsync({
+                useFactory: () => ({
+                    token: process.env.BOT_TOKEN || "",
+                    botName: "AirShortsBot",
+                    middlewares: [(0, telegraf_1.session)()],
+                    launchOptions: {
+                        webhook: {
+                            domain: process.env.WEBHOOK_URL || "https://airshorts1.onrender.com",
+                            hookPath: "/webhook",
+                        },
                     },
-                },
-                options: {
-                    telegram: {
-                        webhookReply: false,
+                    options: {
+                        telegram: {
+                            webhookReply: false,
+                        },
                     },
-                },
+                }),
             }),
         ],
         providers: [bot_update_1.BotUpdate, menu_update_1.MenuUpdate, video_generation_scene_1.VideoGenerationScene],
