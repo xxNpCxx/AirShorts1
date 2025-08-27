@@ -130,33 +130,56 @@ export class MenuService {
   /**
    * Отправляет reply-клавиатуру для навигации (отдельно от inline-клавиатуры)
    * @param ctx Telegram контекст
-   * @param isOperator Является ли пользователь оператором
-   * @param isAdmin Является ли пользователь администратором
    */
   private async sendReplyKeyboard(ctx: TelegramContext): Promise<void> {
     try {
-      // Отправляем reply-клавиатуру с минимальным текстом
-      await ctx.reply(".", {
-        reply_markup: this._kb.mainReply().reply_markup,
-      });
-      this._logger.debug(
-        `Reply-клавиатура отправлена пользователю ${ctx.from?.id}`,
-        "MenuService",
-      );
+      // Путь к баннеру для reply-клавиатуры
+      const imagePath = path.join(__dirname, "../images/banner.jpg");
+      
+      if (fs.existsSync(imagePath)) {
+        // Отправляем фото с reply-клавиатурой (без подписи)
+        await ctx.sendPhoto(
+          { source: imagePath },
+          {
+            reply_markup: this._kb.mainReply().reply_markup,
+          }
+        );
+        this._logger.debug(
+          `Reply-клавиатура с фото отправлена пользователю ${ctx.from?.id}`,
+          "MenuService",
+        );
+      } else {
+        // Временно: отправляем эмодзи как изображение без текста
+        this._logger.debug(
+          `Баннер не найден, используем эмодзи вместо фото: ${imagePath}`,
+          "MenuService",
+        );
+        await ctx.reply("🎬", {
+          reply_markup: this._kb.mainReply().reply_markup,
+        });
+        this._logger.debug(
+          `Reply-клавиатура с эмодзи отправлена пользователю ${ctx.from?.id}`,
+          "MenuService",
+        );
+      }
     } catch (error) {
       this._logger.error(
         `Ошибка при отправке reply-клавиатуры: ${error}`,
         undefined,
         "MenuService",
       );
-      this._logger.debug(
-        `Детали ошибки: ${error instanceof Error ? error.stack : error}`,
-        "MenuService",
-      );
-      // Fallback: отправляем reply-клавиатуру с минимальным текстом
-      await ctx.reply(".", {
-        reply_markup: this._kb.mainReply().reply_markup,
-      });
+      // Fallback: отправляем эмодзи с reply-клавиатурой
+      try {
+        await ctx.reply("🎬", {
+          reply_markup: this._kb.mainReply().reply_markup,
+        });
+      } catch (fallbackError) {
+        this._logger.error(
+          `Критическая ошибка reply-клавиатуры: ${fallbackError}`,
+          undefined,
+          "MenuService",
+        );
+      }
     }
   }
 }

@@ -107,17 +107,31 @@ let MenuService = class MenuService {
     }
     async sendReplyKeyboard(ctx) {
         try {
-            await ctx.reply(".", {
-                reply_markup: this._kb.mainReply().reply_markup,
-            });
-            this._logger.debug(`Reply-клавиатура отправлена пользователю ${ctx.from?.id}`, "MenuService");
+            const imagePath = path.join(__dirname, "../images/banner.jpg");
+            if (fs.existsSync(imagePath)) {
+                await ctx.sendPhoto({ source: imagePath }, {
+                    reply_markup: this._kb.mainReply().reply_markup,
+                });
+                this._logger.debug(`Reply-клавиатура с фото отправлена пользователю ${ctx.from?.id}`, "MenuService");
+            }
+            else {
+                this._logger.debug(`Баннер не найден, используем эмодзи вместо фото: ${imagePath}`, "MenuService");
+                await ctx.reply("🎬", {
+                    reply_markup: this._kb.mainReply().reply_markup,
+                });
+                this._logger.debug(`Reply-клавиатура с эмодзи отправлена пользователю ${ctx.from?.id}`, "MenuService");
+            }
         }
         catch (error) {
             this._logger.error(`Ошибка при отправке reply-клавиатуры: ${error}`, undefined, "MenuService");
-            this._logger.debug(`Детали ошибки: ${error instanceof Error ? error.stack : error}`, "MenuService");
-            await ctx.reply(".", {
-                reply_markup: this._kb.mainReply().reply_markup,
-            });
+            try {
+                await ctx.reply("🎬", {
+                    reply_markup: this._kb.mainReply().reply_markup,
+                });
+            }
+            catch (fallbackError) {
+                this._logger.error(`Критическая ошибка reply-клавиатуры: ${fallbackError}`, undefined, "MenuService");
+            }
         }
     }
 };
