@@ -44,7 +44,7 @@ export class BotUpdate {
       `🚀 [@Start] Команда /start получена от пользователя ${ctx.from?.id}`,
       "BotUpdate",
     );
-    
+
     // Отправляем простое сообщение для тестирования
     try {
       await ctx.reply("🎉 Бот работает! Команда /start обработана!");
@@ -56,7 +56,7 @@ export class BotUpdate {
         "BotUpdate",
       );
     }
-    
+
     try {
       await this._users.upsertFromContext(ctx);
       this._logger.debug("Пользователь обновлен в базе данных", "BotUpdate");

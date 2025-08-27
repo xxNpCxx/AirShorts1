@@ -45,10 +45,6 @@ async function bootstrap() {
     logger.debug(`Node.js версия: ${process.version}`, "Bootstrap");
     logger.debug(`NODE_ENV: ${process.env.NODE_ENV || "development"}`, "Bootstrap");
     const bot = app.get((0, nestjs_telegraf_1.getBotToken)());
-    bot.use(async (ctx, next) => {
-        logger.telegramUpdate(ctx.update, "BotMiddleware");
-        return next();
-    });
     const port = Number(process.env.PORT) || 3000;
     logger.log(`🚀 Запуск приложения на порту ${port}`, "Bootstrap");
     await app.listen(port);

@@ -74,7 +74,7 @@ export class WebhookController {
       // Передаем обновление в Telegraf для обработки
       try {
         await this.bot.handleUpdate(req.body);
-        
+
         this._logger.log(
           `✅ Webhook передан в Telegraf для обработки`,
           "WebhookController",

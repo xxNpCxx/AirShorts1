@@ -68,14 +68,7 @@ async function bootstrap() {
   // Middleware для бота
   const bot = app.get<Telegraf>(getBotToken());
 
-  // Логируем все обновления (только для отладки)
-  bot.use(async (ctx, next) => {
-    logger.telegramUpdate(
-      ctx.update as unknown as Record<string, unknown>,
-      "BotMiddleware",
-    );
-    return next();
-  });
+
 
   // Запускаем приложение
   const port = Number(process.env.PORT) || 3000;
