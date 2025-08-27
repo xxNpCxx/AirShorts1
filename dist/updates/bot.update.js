@@ -24,6 +24,7 @@ let BotUpdate = class BotUpdate {
         this._menu = _menu;
         this._logger = _logger;
         this._logger.debug("BotUpdate инициализирован", "BotUpdate");
+        this._logger.log("🚀 BotUpdate создан и готов к работе", "BotUpdate");
     }
     async onStart(ctx) {
         this._logger.log(`🚀 [@Start] Команда /start получена от пользователя ${ctx.from?.id}`, "BotUpdate");
@@ -46,6 +47,28 @@ let BotUpdate = class BotUpdate {
         }
     }
     async onText(ctx) {
+        if (ctx.message && "text" in ctx.message && ctx.message.text === "/start") {
+            this._logger.log(`🚀 [@On text] Команда /start получена от пользователя ${ctx.from?.id}`, "BotUpdate");
+            this._logger.log(`📝 [@On text] Текст сообщения: "${ctx.message.text}"`, "BotUpdate");
+            try {
+                await ctx.reply("🎉 Бот работает! Команда /start обработана через @On text!");
+                this._logger.log("✅ Тестовое сообщение отправлено через @On text", "BotUpdate");
+            }
+            catch (error) {
+                this._logger.error(`❌ Ошибка отправки тестового сообщения через @On text: ${error}`, undefined, "BotUpdate");
+            }
+            try {
+                await this._users.upsertFromContext(ctx);
+                this._logger.debug("Пользователь обновлен в базе данных", "BotUpdate");
+                await this._menu.sendMainMenu(ctx);
+                this._logger.debug("Главное меню отправлено", "BotUpdate");
+            }
+            catch (error) {
+                this._logger.error(`Ошибка при обработке команды /start через @On text: ${error}`, undefined, "BotUpdate");
+                await ctx.reply("❌ Произошла ошибка при запуске бота. Попробуйте еще раз.");
+            }
+            return;
+        }
         if (ctx.message && "text" in ctx.message && ctx.message.text?.startsWith("/")) {
             this._logger.debug(`[@On text] Пропускаем команду: "${ctx.message.text}"`, "BotUpdate");
             return;

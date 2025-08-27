@@ -61,6 +61,11 @@ async function bootstrap() {
     `NODE_ENV: ${process.env.NODE_ENV || "development"}`,
     "Bootstrap",
   );
+  
+  // Логируем переменные окружения для диагностики
+  logger.debug(`BOT_TOKEN: ${process.env.BOT_TOKEN ? "установлен" : "НЕ УСТАНОВЛЕН"}`, "Bootstrap");
+  logger.debug(`WEBHOOK_URL: ${process.env.WEBHOOK_URL || "не установлен"}`, "Bootstrap");
+  logger.debug(`PORT: ${process.env.PORT || "не установлен, используется 3000"}`, "Bootstrap");
 
   // Запускаем приложение
   const port = Number(process.env.PORT) || 3000;

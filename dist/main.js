@@ -43,6 +43,9 @@ async function bootstrap() {
     logger.log("🚀 Запуск Telegram бота...", "Bootstrap");
     logger.debug(`Node.js версия: ${process.version}`, "Bootstrap");
     logger.debug(`NODE_ENV: ${process.env.NODE_ENV || "development"}`, "Bootstrap");
+    logger.debug(`BOT_TOKEN: ${process.env.BOT_TOKEN ? "установлен" : "НЕ УСТАНОВЛЕН"}`, "Bootstrap");
+    logger.debug(`WEBHOOK_URL: ${process.env.WEBHOOK_URL || "не установлен"}`, "Bootstrap");
+    logger.debug(`PORT: ${process.env.PORT || "не установлен, используется 3000"}`, "Bootstrap");
     const port = Number(process.env.PORT) || 3000;
     logger.log(`🚀 Запуск приложения на порту ${port}`, "Bootstrap");
     await app.listen(port);

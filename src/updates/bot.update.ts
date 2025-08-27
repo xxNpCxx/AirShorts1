@@ -20,6 +20,7 @@ export class BotUpdate {
     private readonly _logger: CustomLoggerService,
   ) {
     this._logger.debug("BotUpdate инициализирован", "BotUpdate");
+    this._logger.log("🚀 BotUpdate создан и готов к работе", "BotUpdate");
   }
 
   @Start()
@@ -61,6 +62,47 @@ export class BotUpdate {
   // Обработчик для всех текстовых сообщений (кроме команд)
   @On("text")
   async onText(@Ctx() ctx: Context) {
+    // Проверяем, является ли сообщение командой /start
+    if (ctx.message && "text" in ctx.message && ctx.message.text === "/start") {
+      this._logger.log(
+        `🚀 [@On text] Команда /start получена от пользователя ${ctx.from?.id}`,
+        "BotUpdate",
+      );
+      this._logger.log(
+        `📝 [@On text] Текст сообщения: "${ctx.message.text}"`,
+        "BotUpdate",
+      );
+
+      // Отправляем простое сообщение для тестирования
+      try {
+        await ctx.reply("🎉 Бот работает! Команда /start обработана через @On text!");
+        this._logger.log("✅ Тестовое сообщение отправлено через @On text", "BotUpdate");
+      } catch (error) {
+        this._logger.error(
+          `❌ Ошибка отправки тестового сообщения через @On text: ${error}`,
+          undefined,
+          "BotUpdate",
+        );
+      }
+
+      try {
+        await this._users.upsertFromContext(ctx);
+        this._logger.debug("Пользователь обновлен в базе данных", "BotUpdate");
+        await this._menu.sendMainMenu(ctx);
+        this._logger.debug("Главное меню отправлено", "BotUpdate");
+      } catch (error) {
+        this._logger.error(
+          `Ошибка при обработке команды /start через @On text: ${error}`,
+          undefined,
+          "BotUpdate",
+        );
+        await ctx.reply(
+          "❌ Произошла ошибка при запуске бота. Попробуйте еще раз.",
+        );
+      }
+      return;
+    }
+
     // Пропускаем команды - они обрабатываются отдельными декораторами
     if (ctx.message && "text" in ctx.message && ctx.message.text?.startsWith("/")) {
       this._logger.debug(
