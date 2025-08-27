@@ -293,11 +293,39 @@ export class VideoGenerationScene {
           "Это может занять несколько минут. Пожалуйста, подождите.",
       );
 
-      // Здесь должна быть логика загрузки файлов и генерации видео
-      // Пока что используем заглушку
+      // Получаем URL файлов из Telegram
+      let photoUrl = "";
+      let audioUrl = "";
+
+      if (session.photoFileId) {
+        try {
+          const photoFile = await ctx.telegram.getFile(session.photoFileId);
+          if (photoFile.file_path) {
+            photoUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${photoFile.file_path}`;
+          }
+        } catch (error) {
+          this.logger.error("Error getting photo URL:", error);
+          await ctx.reply("❌ Ошибка получения фото. Попробуйте загрузить фото заново.");
+          return;
+        }
+      }
+
+      if (session.audioFileId) {
+        try {
+          const audioFile = await ctx.telegram.getFile(session.audioFileId);
+          if (audioFile.file_path) {
+            audioUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${audioFile.file_path}`;
+          }
+        } catch (error) {
+          this.logger.error("Error getting audio URL:", error);
+          await ctx.reply("❌ Ошибка получения аудио. Попробуйте загрузить аудио заново.");
+          return;
+        }
+      }
+
       const request = {
-        photoUrl: session.photoFileId || "",
-        audioUrl: session.audioFileId || "",
+        photoUrl: photoUrl,
+        audioUrl: audioUrl,
         script: session.script || "",
         platform: session.platform || "youtube-shorts",
         duration: session.duration || 30,
@@ -305,6 +333,8 @@ export class VideoGenerationScene {
         textPrompt: session.textPrompt,
       };
 
+      this.logger.log(`Starting D-ID generation with photoUrl: ${photoUrl ? 'PROVIDED' : 'MISSING'}, audioUrl: ${audioUrl ? 'PROVIDED' : 'MISSING'}`);
+      
       const result = await this.didService.generateVideo(request);
 
       await ctx.reply(

@@ -46,7 +46,7 @@ let DidService = DidService_1 = class DidService {
                     motion_factor: 1,
                     result_format: "mp4",
                     quality: request.quality === "1080p" ? "full" : "medium",
-                    output_resolution: request.quality === "1080p" ? "1080p" : "720p",
+                    output_resolution: request.quality === "1080p" ? 1080 : 720,
                 },
                 presenter_id: "d-u-01H7YFp1q8uYbH9sgX2J9Z4",
                 driver_id: "d-u-01H7YFp1q8uYbH9sgX2J9Z4",
