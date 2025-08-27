@@ -45,6 +45,12 @@ exports.AppModule = AppModule = __decorate([
                 token: process.env.BOT_TOKEN || "",
                 botName: "AirShortsBot",
                 middlewares: [(0, telegraf_1.session)()],
+                launchOptions: {
+                    webhook: {
+                        domain: process.env.WEBHOOK_URL || "https://airshorts1.onrender.com",
+                        hookPath: "/webhook",
+                    },
+                },
                 options: {
                     telegram: {
                         webhookReply: false,

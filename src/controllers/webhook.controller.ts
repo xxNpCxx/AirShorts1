@@ -9,10 +9,16 @@ import {
 } from "@nestjs/common";
 import { Request, Response } from "express";
 import { CustomLoggerService } from "../logger/logger.service";
+import { Telegraf } from "telegraf";
 
 @Controller("webhook")
 export class WebhookController {
-  constructor(private readonly _logger: CustomLoggerService) {}
+  private bot: Telegraf;
+
+  constructor(private readonly _logger: CustomLoggerService) {
+    // Создаем экземпляр бота для обработки webhook
+    this.bot = new Telegraf(process.env.BOT_TOKEN || "");
+  }
 
   @Get()
   async getWebhook(@Req() req: Request, @Res() res: Response) {
@@ -65,11 +71,14 @@ export class WebhookController {
         "WebhookController",
       );
 
-      // Логируем, что webhook получен и будет обработан Telegraf
+      // Обрабатываем обновление через бота
       this._logger.log(
-        `✅ Webhook получен, передаем в Telegraf для обработки`,
+        `✅ Webhook получен, обрабатываем через бота`,
         "WebhookController",
       );
+
+      // Передаем обновление в бота для обработки
+      await this.bot.handleUpdate(req.body);
 
       // Отправляем успешный ответ
       res.status(HttpStatus.OK).json({

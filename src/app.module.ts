@@ -33,6 +33,12 @@ import { VideoGenerationScene } from "./scenes/video-generation.scene";
       token: process.env.BOT_TOKEN || "",
       botName: "AirShortsBot",
       middlewares: [session()],
+      launchOptions: {
+        webhook: {
+          domain: process.env.WEBHOOK_URL || "https://airshorts1.onrender.com",
+          hookPath: "/webhook",
+        },
+      },
       options: {
         telegram: {
           webhookReply: false,
