@@ -15,6 +15,7 @@ import { MenuUpdate } from "./updates/menu.update";
 import { LoggerModule } from "./logger/logger.module";
 import { DidModule } from "./d-id/did.module";
 import { VideoGenerationScene } from "./scenes/video-generation.scene";
+import { WebhookModule } from "./webhook/webhook.module";
 
 @Module({
   imports: [
@@ -30,23 +31,16 @@ import { VideoGenerationScene } from "./scenes/video-generation.scene";
     MenuModule,
     RedisModule,
     DidModule,
-    TelegrafModule.forRootAsync({
-      useFactory: () => ({
-        token: process.env.BOT_TOKEN || "",
-        botName: "AirShortsBot",
-        middlewares: [session()],
-        launchOptions: {
-          webhook: {
-            domain: process.env.WEBHOOK_URL || "https://airshorts1.onrender.com",
-            hookPath: "/webhook",
-          },
+    WebhookModule,
+    TelegrafModule.forRoot({
+      token: process.env.BOT_TOKEN || "",
+      botName: "AirShortsBot",
+      middlewares: [session()],
+      options: {
+        telegram: {
+          webhookReply: false,
         },
-        options: {
-          telegram: {
-            webhookReply: false,
-          },
-        },
-      }),
+      },
     }),
   ],
   providers: [BotUpdate, MenuUpdate, VideoGenerationScene],
