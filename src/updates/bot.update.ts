@@ -64,14 +64,16 @@ export class BotUpdate {
   // Обработчик для всех текстовых сообщений (кроме команд)
   @On("text")
   async onText(@Ctx() ctx: Context) {
+    const messageText = ctx.message && "text" in ctx.message ? ctx.message.text : "";
+
     // Проверяем, является ли сообщение командой /start
-    if (ctx.message && "text" in ctx.message && ctx.message.text === "/start") {
+    if (messageText === "/start") {
       this._logger.log(
         `🚀 [@On text] Команда /start получена от пользователя ${ctx.from?.id}`,
         "BotUpdate",
       );
       this._logger.log(
-        `📝 [@On text] Текст сообщения: "${ctx.message.text}"`,
+        `📝 [@On text] Текст сообщения: "${messageText}"`,
         "BotUpdate",
       );
 
@@ -106,30 +108,55 @@ export class BotUpdate {
     }
 
     // Пропускаем команды - они обрабатываются отдельными декораторами
-    if (ctx.message && "text" in ctx.message && ctx.message.text?.startsWith("/")) {
+    if (messageText?.startsWith("/")) {
       this._logger.debug(
-        `[@On text] Пропускаем команду: "${ctx.message.text}"`,
+        `[@On text] Пропускаем команду: "${messageText}"`,
+        "BotUpdate",
+      );
+      return;
+    }
+
+    // Пропускаем сообщения, которые должны обрабатываться @Hears
+    const hearsMessages = ["🏠 Главное меню", "Главное меню"];
+    if (hearsMessages.includes(messageText)) {
+      this._logger.debug(
+        `[@On text] Пропускаем @Hears сообщение: "${messageText}"`,
         "BotUpdate",
       );
       return;
     }
 
     this._logger.debug(
-      `[@On text] Текстовое сообщение получено: "${ctx.message && "text" in ctx.message ? ctx.message.text : ""}" от пользователя ${ctx.from?.id}`,
+      `[@On text] Текстовое сообщение получено: "${messageText}" от пользователя ${ctx.from?.id}`,
       "BotUpdate",
     );
 
     // Для других сообщений просто логируем
     this._logger.debug(
-      `[@On text] Неизвестное сообщение: "${ctx.message && "text" in ctx.message ? ctx.message.text : ""}"`,
+      `[@On text] Неизвестное сообщение: "${messageText}"`,
       "BotUpdate",
     );
   }
 
   @Hears(["🏠 Главное меню", "Главное меню"])
   async onMainMenu(@Ctx() ctx: Context) {
-    await this._users.upsertFromContext(ctx);
-    await this._menu.sendMainMenu(ctx);
+    this._logger.log(
+      `🏠 [@Hears] Главное меню запрошено пользователем ${ctx.from?.id}`,
+      "BotUpdate",
+    );
+    
+    try {
+      await this._users.upsertFromContext(ctx);
+      await this._menu.sendMainMenu(ctx);
+      this._logger.debug("Главное меню отправлено через @Hears", "BotUpdate");
+    } catch (error) {
+      this._logger.error(
+        `❌ Ошибка при обработке главного меню: ${error}`,
+        undefined,
+        "BotUpdate",
+      );
+      await ctx.reply("❌ Произошла ошибка при загрузке главного меню");
+    }
   }
 
   @Action("main_menu")
