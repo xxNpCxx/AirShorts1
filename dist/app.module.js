@@ -44,6 +44,7 @@ exports.AppModule = AppModule = __decorate([
             did_module_1.DidModule,
             nestjs_telegraf_1.TelegrafModule.forRoot({
                 token: process.env.BOT_TOKEN || "",
+                botName: "AirShortsBot",
                 middlewares: [(0, telegraf_1.session)()],
                 launchOptions: {
                     webhook: {

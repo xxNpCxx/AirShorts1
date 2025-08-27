@@ -10,23 +10,7 @@ import {
 import { UsersService } from "../users/users.service";
 import { MenuService } from "../menu/menu.service";
 import { CustomLoggerService } from "../logger/logger.service";
-
-interface TelegramContext {
-  from?: {
-    id: number;
-    username?: string;
-    first_name?: string;
-    last_name?: string;
-  };
-  message?: {
-    text?: string;
-  };
-  reply: (
-    _text: string,
-    _options?: { parse_mode?: string; reply_markup?: unknown },
-  ) => Promise<void>;
-  answerCbQuery: () => Promise<void>;
-}
+import { Context } from "telegraf";
 
 @Update()
 export class BotUpdate {
@@ -39,7 +23,7 @@ export class BotUpdate {
   }
 
   @Start()
-  async onStart(@Ctx() ctx: TelegramContext) {
+  async onStart(@Ctx() ctx: Context) {
     this._logger.log(
       `🚀 [@Start] Команда /start получена от пользователя ${ctx.from?.id}`,
       "BotUpdate",
@@ -76,9 +60,9 @@ export class BotUpdate {
 
   // Обработчик для всех текстовых сообщений (кроме команд)
   @On("text")
-  async onText(@Ctx() ctx: TelegramContext) {
+  async onText(@Ctx() ctx: Context) {
     // Пропускаем команды - они обрабатываются отдельными декораторами
-    if (ctx.message?.text?.startsWith("/")) {
+    if (ctx.message && "text" in ctx.message && ctx.message.text?.startsWith("/")) {
       this._logger.debug(
         `[@On text] Пропускаем команду: "${ctx.message.text}"`,
         "BotUpdate",
@@ -87,25 +71,25 @@ export class BotUpdate {
     }
 
     this._logger.debug(
-      `[@On text] Текстовое сообщение получено: "${ctx.message?.text}" от пользователя ${ctx.from?.id}`,
+      `[@On text] Текстовое сообщение получено: "${ctx.message && "text" in ctx.message ? ctx.message.text : ""}" от пользователя ${ctx.from?.id}`,
       "BotUpdate",
     );
 
     // Для других сообщений просто логируем
     this._logger.debug(
-      `[@On text] Неизвестное сообщение: "${ctx.message?.text}"`,
+      `[@On text] Неизвестное сообщение: "${ctx.message && "text" in ctx.message ? ctx.message.text : ""}"`,
       "BotUpdate",
     );
   }
 
   @Hears(["🏠 Главное меню", "Главное меню"])
-  async onMainMenu(@Ctx() ctx: TelegramContext) {
+  async onMainMenu(@Ctx() ctx: Context) {
     await this._users.upsertFromContext(ctx);
     await this._menu.sendMainMenu(ctx);
   }
 
   @Action("main_menu")
-  async onMainMenuAction(@Ctx() ctx: TelegramContext) {
+  async onMainMenuAction(@Ctx() ctx: Context) {
     await ctx.answerCbQuery();
     await this._menu.sendMainMenu(ctx);
   }
@@ -114,7 +98,7 @@ export class BotUpdate {
   // @Command('operator') - УДАЛЕНО для предотвращения конфликтов
 
   @Command("myid")
-  async onMyId(@Ctx() ctx: TelegramContext) {
+  async onMyId(@Ctx() ctx: Context) {
     if (!ctx.from) {
       await ctx.reply("❌ Не удалось получить данные пользователя");
       return;
@@ -134,12 +118,12 @@ export class BotUpdate {
 
   // Вариант без слеша, чтобы не дублировать с @Command('myid')
   @Hears(/^myid$/i)
-  async onMyIdHears(@Ctx() ctx: TelegramContext) {
+  async onMyIdHears(@Ctx() ctx: Context) {
     return this.onMyId(ctx);
   }
 
   @Action("create_video")
-  async onCreateVideo(@Ctx() ctx: TelegramContext) {
+  async onCreateVideo(@Ctx() ctx: Context) {
     await ctx.answerCbQuery();
     await (
       ctx as unknown as {

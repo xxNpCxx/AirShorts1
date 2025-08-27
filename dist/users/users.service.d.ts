@@ -1,14 +1,6 @@
 import { Pool } from "pg";
-interface TelegramUser {
-    id: number;
-    username?: string;
-    first_name?: string;
-    last_name?: string;
-    language_code?: string;
-    is_bot?: boolean;
-}
-interface TelegramContext {
-    from?: TelegramUser;
+import { Context } from "telegraf";
+interface TelegramContext extends Context {
 }
 export declare class UsersService {
     private readonly pool;

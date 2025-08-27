@@ -17,6 +17,7 @@ const nestjs_telegraf_1 = require("nestjs-telegraf");
 const users_service_1 = require("../users/users.service");
 const menu_service_1 = require("../menu/menu.service");
 const logger_service_1 = require("../logger/logger.service");
+const telegraf_1 = require("telegraf");
 let BotUpdate = class BotUpdate {
     constructor(_users, _menu, _logger) {
         this._users = _users;
@@ -45,12 +46,12 @@ let BotUpdate = class BotUpdate {
         }
     }
     async onText(ctx) {
-        if (ctx.message?.text?.startsWith("/")) {
+        if (ctx.message && "text" in ctx.message && ctx.message.text?.startsWith("/")) {
             this._logger.debug(`[@On text] Пропускаем команду: "${ctx.message.text}"`, "BotUpdate");
             return;
         }
-        this._logger.debug(`[@On text] Текстовое сообщение получено: "${ctx.message?.text}" от пользователя ${ctx.from?.id}`, "BotUpdate");
-        this._logger.debug(`[@On text] Неизвестное сообщение: "${ctx.message?.text}"`, "BotUpdate");
+        this._logger.debug(`[@On text] Текстовое сообщение получено: "${ctx.message && "text" in ctx.message ? ctx.message.text : ""}" от пользователя ${ctx.from?.id}`, "BotUpdate");
+        this._logger.debug(`[@On text] Неизвестное сообщение: "${ctx.message && "text" in ctx.message ? ctx.message.text : ""}"`, "BotUpdate");
     }
     async onMainMenu(ctx) {
         await this._users.upsertFromContext(ctx);
@@ -89,49 +90,49 @@ __decorate([
     (0, nestjs_telegraf_1.Start)(),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onStart", null);
 __decorate([
     (0, nestjs_telegraf_1.On)("text"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onText", null);
 __decorate([
     (0, nestjs_telegraf_1.Hears)(["🏠 Главное меню", "Главное меню"]),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onMainMenu", null);
 __decorate([
     (0, nestjs_telegraf_1.Action)("main_menu"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onMainMenuAction", null);
 __decorate([
     (0, nestjs_telegraf_1.Command)("myid"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onMyId", null);
 __decorate([
     (0, nestjs_telegraf_1.Hears)(/^myid$/i),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onMyIdHears", null);
 __decorate([
     (0, nestjs_telegraf_1.Action)("create_video"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onCreateVideo", null);
 exports.BotUpdate = BotUpdate = __decorate([

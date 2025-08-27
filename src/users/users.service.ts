@@ -11,9 +11,9 @@ interface TelegramUser {
   is_bot?: boolean;
 }
 
-interface TelegramContext {
-  from?: TelegramUser;
-}
+import { Context } from "telegraf";
+
+interface TelegramContext extends Context {}
 
 @Injectable()
 export class UsersService {

@@ -32,6 +32,7 @@ import { VideoGenerationScene } from "./scenes/video-generation.scene";
     DidModule,
     TelegrafModule.forRoot({
       token: process.env.BOT_TOKEN || "",
+      botName: "AirShortsBot",
       middlewares: [session()],
       launchOptions: {
         webhook: {

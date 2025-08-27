@@ -65,7 +65,7 @@ async function bootstrap() {
     "Bootstrap",
   );
 
-  // Middleware для бота
+  // Получаем экземпляр бота для настройки webhook
   const bot = app.get<Telegraf>(getBotToken());
 
 
