@@ -13,6 +13,7 @@ const nestjs_telegraf_1 = require("nestjs-telegraf");
 const telegraf_1 = require("telegraf");
 const bot_update_1 = require("./updates/bot.update");
 const health_controller_1 = require("./health.controller");
+const webhook_controller_1 = require("./controllers/webhook.controller");
 const database_module_1 = require("./database/database.module");
 const settings_module_1 = require("./settings/settings.module");
 const users_module_1 = require("./users/users.module");
@@ -45,12 +46,6 @@ exports.AppModule = AppModule = __decorate([
                 token: process.env.BOT_TOKEN || "",
                 botName: "AirShortsBot",
                 middlewares: [(0, telegraf_1.session)()],
-                launchOptions: {
-                    webhook: {
-                        domain: process.env.WEBHOOK_URL || "https://airshorts1.onrender.com",
-                        hookPath: "/webhook",
-                    },
-                },
                 options: {
                     telegram: {
                         webhookReply: false,
@@ -59,7 +54,7 @@ exports.AppModule = AppModule = __decorate([
             }),
         ],
         providers: [bot_update_1.BotUpdate, menu_update_1.MenuUpdate, video_generation_scene_1.VideoGenerationScene],
-        controllers: [health_controller_1.HealthController],
+        controllers: [health_controller_1.HealthController, webhook_controller_1.WebhookController],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

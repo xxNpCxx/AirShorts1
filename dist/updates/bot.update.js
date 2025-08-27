@@ -26,6 +26,31 @@ let BotUpdate = class BotUpdate {
         this._logger.debug("BotUpdate инициализирован", "BotUpdate");
         this._logger.log("🚀 BotUpdate создан и готов к работе", "BotUpdate");
     }
+    async handleUpdate(update) {
+        this._logger.log(`📥 [handleUpdate] Получено обновление: ${JSON.stringify(update)}`, "BotUpdate");
+        try {
+            if (update.message && update.message.text) {
+                const text = update.message.text;
+                const fromId = update.message.from?.id;
+                this._logger.log(`📝 [handleUpdate] Текст: "${text}" от пользователя ${fromId}`, "BotUpdate");
+                if (text === "/start") {
+                    this._logger.log(`🚀 [handleUpdate] Обрабатываем команду /start`, "BotUpdate");
+                    const mockCtx = {
+                        message: update.message,
+                        from: update.message.from,
+                        reply: async (text) => {
+                            this._logger.log(`💬 [handleUpdate] Ответ: ${text}`, "BotUpdate");
+                        }
+                    };
+                    await this.onStart(mockCtx);
+                }
+            }
+            this._logger.log(`✅ [handleUpdate] Обновление обработано успешно`, "BotUpdate");
+        }
+        catch (error) {
+            this._logger.error(`❌ [handleUpdate] Ошибка обработки обновления: ${error}`, undefined, "BotUpdate");
+        }
+    }
     async onStart(ctx) {
         this._logger.log(`🚀 [@Start] Команда /start получена от пользователя ${ctx.from?.id}`, "BotUpdate");
         try {

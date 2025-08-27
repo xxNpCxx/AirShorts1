@@ -7,6 +7,7 @@ export declare class BotUpdate {
     private readonly _menu;
     private readonly _logger;
     constructor(_users: UsersService, _menu: MenuService, _logger: CustomLoggerService);
+    handleUpdate(update: any): Promise<void>;
     onStart(ctx: Context): Promise<void>;
     onText(ctx: Context): Promise<void>;
     onMainMenu(ctx: Context): Promise<void>;

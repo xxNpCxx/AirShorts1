@@ -15,11 +15,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.WebhookController = void 0;
 const common_1 = require("@nestjs/common");
 const logger_service_1 = require("../logger/logger.service");
-const telegraf_1 = require("telegraf");
+const bot_update_1 = require("../updates/bot.update");
 let WebhookController = class WebhookController {
-    constructor(_logger) {
+    constructor(_logger, _botUpdate) {
         this._logger = _logger;
-        this.bot = new telegraf_1.Telegraf(process.env.BOT_TOKEN || "");
+        this._botUpdate = _botUpdate;
     }
     async getWebhook(req, res) {
         this._logger.log(`📡 Webhook GET запрос от ${req.ip}`, "WebhookController");
@@ -45,8 +45,8 @@ let WebhookController = class WebhookController {
             const updateType = this.getUpdateType(req.body);
             this._logger.log(`📋 Тип обновления: ${updateType}`, "WebhookController");
             this._logger.debug(`Update ID: ${req.body.update_id}`, "WebhookController");
-            this._logger.log(`✅ Webhook получен, обрабатываем через бота`, "WebhookController");
-            await this.bot.handleUpdate(req.body);
+            this._logger.log(`✅ Webhook получен, передаем в BotUpdate для обработки`, "WebhookController");
+            await this._botUpdate.handleUpdate(req.body);
             res.status(common_1.HttpStatus.OK).json({
                 status: "ok",
                 updateType,
@@ -147,6 +147,7 @@ __decorate([
 ], WebhookController.prototype, "getStatus", null);
 exports.WebhookController = WebhookController = __decorate([
     (0, common_1.Controller)("webhook"),
-    __metadata("design:paramtypes", [logger_service_1.CustomLoggerService])
+    __metadata("design:paramtypes", [logger_service_1.CustomLoggerService,
+        bot_update_1.BotUpdate])
 ], WebhookController);
 //# sourceMappingURL=webhook.controller.js.map
