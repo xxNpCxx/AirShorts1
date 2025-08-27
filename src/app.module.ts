@@ -36,6 +36,13 @@ import { WebhookModule } from "./webhook/webhook.module";
       token: process.env.BOT_TOKEN || "",
       botName: "airshorts1_bot",
       middlewares: [session()],
+      launchOptions: {
+        dropPendingUpdates: true,
+        webhook: {
+          domain: process.env.WEBHOOK_URL || "https://airshorts1.onrender.com",
+          path: "/webhook",
+        },
+      },
       options: {
         telegram: {
           webhookReply: false,
