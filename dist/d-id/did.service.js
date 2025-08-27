@@ -28,13 +28,9 @@ let DidService = DidService_1 = class DidService {
             this.logger.log(`[${requestId}] 🚀 Starting video generation with D-ID API`);
             this.logger.debug(`[${requestId}] Request params: platform=${request.platform}, quality=${request.quality}, duration=${request.duration}`);
             this.logger.debug(`[${requestId}] Audio provided: ${!!request.audioUrl}, Script length: ${request.script?.length || 0} chars`);
-            const useCustomAudio = request.audioUrl && request.audioUrl.trim() !== '';
             const payload = {
                 source_url: request.photoUrl,
-                script: useCustomAudio ? {
-                    type: "audio",
-                    audio_url: request.audioUrl,
-                } : {
+                script: {
                     type: "text",
                     input: request.script,
                     provider: {
@@ -64,7 +60,7 @@ let DidService = DidService_1 = class DidService {
             };
             this.logger.debug(`[${requestId}] 📤 Sending request to ${this.baseUrl}/talks`);
             this.logger.debug(`[${requestId}] Payload config: quality=${payload.config.quality}, resolution=${payload.config.output_resolution}`);
-            this.logger.log(`[${requestId}] 🎵 Script type: ${payload.script.type}${useCustomAudio ? ` (using custom audio: ${request.audioUrl})` : ` (using TTS: ${payload.script.provider?.voice_id})`}`);
+            this.logger.log(`[${requestId}] 🎵 Script type: ${payload.script.type} (using TTS: ${payload.script.provider.voice_id})`);
             const response = await fetch(`${this.baseUrl}/talks`, {
                 method: "POST",
                 headers: {
