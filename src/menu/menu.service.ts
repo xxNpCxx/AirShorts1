@@ -133,25 +133,38 @@ export class MenuService {
    */
   private async sendReplyKeyboard(ctx: TelegramContext): Promise<void> {
     try {
-      // Путь к баннеру для reply-клавиатуры
+      // Путь к баннеру для reply-клавиатуры (работает в dev и prod)
       const imagePath = path.join(__dirname, "../images/banner.jpg");
+      const alternativePath = path.join(process.cwd(), "dist/images/banner.jpg");
+      const devPath = path.join(process.cwd(), "src/images/banner.jpg");
+      
+      // Пробуем найти файл по разным путям
+      let finalImagePath: string | null = null;
       
       if (fs.existsSync(imagePath)) {
+        finalImagePath = imagePath;
+      } else if (fs.existsSync(alternativePath)) {
+        finalImagePath = alternativePath;
+      } else if (fs.existsSync(devPath)) {
+        finalImagePath = devPath;
+      }
+
+      if (finalImagePath) {
         // Отправляем фото с reply-клавиатурой (без подписи)
         await ctx.sendPhoto(
-          { source: imagePath },
+          { source: finalImagePath },
           {
             reply_markup: this._kb.mainReply().reply_markup,
           }
         );
         this._logger.debug(
-          `Reply-клавиатура с фото отправлена пользователю ${ctx.from?.id}`,
+          `Reply-клавиатура с фото отправлена пользователю ${ctx.from?.id}, путь: ${finalImagePath}`,
           "MenuService",
         );
       } else {
         // Временно: отправляем эмодзи как изображение без текста
-        this._logger.debug(
-          `Баннер не найден, используем эмодзи вместо фото: ${imagePath}`,
+        this._logger.warn(
+          `Баннер не найден по всем путям: [${imagePath}, ${alternativePath}, ${devPath}]`,
           "MenuService",
         );
         await ctx.reply("🎬", {

@@ -108,14 +108,26 @@ let MenuService = class MenuService {
     async sendReplyKeyboard(ctx) {
         try {
             const imagePath = path.join(__dirname, "../images/banner.jpg");
+            const alternativePath = path.join(process.cwd(), "dist/images/banner.jpg");
+            const devPath = path.join(process.cwd(), "src/images/banner.jpg");
+            let finalImagePath = null;
             if (fs.existsSync(imagePath)) {
-                await ctx.sendPhoto({ source: imagePath }, {
+                finalImagePath = imagePath;
+            }
+            else if (fs.existsSync(alternativePath)) {
+                finalImagePath = alternativePath;
+            }
+            else if (fs.existsSync(devPath)) {
+                finalImagePath = devPath;
+            }
+            if (finalImagePath) {
+                await ctx.sendPhoto({ source: finalImagePath }, {
                     reply_markup: this._kb.mainReply().reply_markup,
                 });
-                this._logger.debug(`Reply-клавиатура с фото отправлена пользователю ${ctx.from?.id}`, "MenuService");
+                this._logger.debug(`Reply-клавиатура с фото отправлена пользователю ${ctx.from?.id}, путь: ${finalImagePath}`, "MenuService");
             }
             else {
-                this._logger.debug(`Баннер не найден, используем эмодзи вместо фото: ${imagePath}`, "MenuService");
+                this._logger.warn(`Баннер не найден по всем путям: [${imagePath}, ${alternativePath}, ${devPath}]`, "MenuService");
                 await ctx.reply("🎬", {
                     reply_markup: this._kb.mainReply().reply_markup,
                 });
