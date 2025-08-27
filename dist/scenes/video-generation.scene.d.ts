@@ -28,6 +28,9 @@ export declare class VideoGenerationScene {
     constructor(didService: DidService);
     onSceneEnter(ctx: Context): Promise<void>;
     onPhoto(ctx: PhotoContext): Promise<void>;
+    onDocument(ctx: Context): Promise<void>;
+    onVideo(ctx: Context): Promise<void>;
+    onAudio(ctx: Context): Promise<void>;
     onVoice(ctx: VoiceContext): Promise<void>;
     onText(ctx: TextContext): Promise<void>;
     private showPlatformSelection;

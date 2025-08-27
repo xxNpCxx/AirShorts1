@@ -36,7 +36,8 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             "• Формат: JPG, PNG, WebP\n" +
             "• Разрешение: минимум 512x512 пикселей\n" +
             "• Хорошее освещение, четкость\n" +
-            "• Лицо смотрит прямо в камеру\n\n" +
+            "• Лицо смотрит прямо в камеру\n" +
+            "• ⚠️ ВАЖНО: отправьте как ФОТО, а не как файл!\n\n" +
             "💡 **Рекомендации:**\n" +
             "• Портретная ориентация (9:16)\n" +
             "• Лицо занимает 30-50% кадра\n" +
@@ -105,6 +106,42 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             this.logger.error("Error processing photo:", error);
             await ctx.reply("❌ Ошибка при обработке фото. Попробуйте еще раз.");
         }
+    }
+    async onDocument(ctx) {
+        try {
+            const message = ctx.message;
+            if (message && "document" in message && message.document) {
+                const document = message.document;
+                const isImage = document.mime_type && (document.mime_type.startsWith("image/") ||
+                    ["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(document.mime_type));
+                if (isImage) {
+                    await ctx.reply("📸 Обнаружено изображение, отправленное как файл!\n\n" +
+                        "❌ Пожалуйста, отправьте фото как изображение, а не как документ.\n\n" +
+                        "💡 Как правильно отправить:\n" +
+                        "• Нажмите на значок 📎 (скрепка)\n" +
+                        "• Выберите 'Фото или видео'\n" +
+                        "• Выберите фото из галереи\n" +
+                        "• НЕ нажимайте 'Отправить как файл'\n\n" +
+                        "🔄 Попробуйте отправить фото заново:");
+                }
+                else {
+                    await ctx.reply("❌ Документы не поддерживаются.\n\n" +
+                        "📸 Пожалуйста, отправьте фото с человеком.");
+                }
+            }
+        }
+        catch (error) {
+            this.logger.error("Error processing document:", error);
+            await ctx.reply("❌ Ошибка при обработке файла. Отправьте фото как изображение.");
+        }
+    }
+    async onVideo(ctx) {
+        await ctx.reply("🎥 Видео не поддерживается.\n\n" +
+            "📸 Пожалуйста, отправьте фото с человеком (как изображение).");
+    }
+    async onAudio(ctx) {
+        await ctx.reply("🎵 Обычные аудиофайлы не поддерживаются.\n\n" +
+            "🎤 Пожалуйста, отправьте голосовое сообщение (удерживайте кнопку микрофона).");
     }
     async onVoice(ctx) {
         try {
@@ -324,6 +361,27 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], VideoGenerationScene.prototype, "onPhoto", null);
+__decorate([
+    (0, nestjs_telegraf_1.On)("document"),
+    __param(0, (0, nestjs_telegraf_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
+    __metadata("design:returntype", Promise)
+], VideoGenerationScene.prototype, "onDocument", null);
+__decorate([
+    (0, nestjs_telegraf_1.On)("video"),
+    __param(0, (0, nestjs_telegraf_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
+    __metadata("design:returntype", Promise)
+], VideoGenerationScene.prototype, "onVideo", null);
+__decorate([
+    (0, nestjs_telegraf_1.On)("audio"),
+    __param(0, (0, nestjs_telegraf_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
+    __metadata("design:returntype", Promise)
+], VideoGenerationScene.prototype, "onAudio", null);
 __decorate([
     (0, nestjs_telegraf_1.On)("voice"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
