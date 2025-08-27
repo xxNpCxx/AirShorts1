@@ -49,7 +49,6 @@ exports.AppModule = AppModule = __decorate([
                     webhook: {
                         domain: process.env.WEBHOOK_URL || "https://airshorts1.onrender.com",
                         hookPath: "/webhook",
-                        port: Number(process.env.PORT) || 3000,
                     },
                 },
                 options: {
