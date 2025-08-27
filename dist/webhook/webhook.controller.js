@@ -52,7 +52,7 @@ __decorate([
 ], WebhookController.prototype, "handleWebhook", null);
 exports.WebhookController = WebhookController = __decorate([
     (0, common_1.Controller)('webhook'),
-    __param(1, (0, common_1.Inject)((0, nestjs_telegraf_1.getBotToken)())),
+    __param(1, (0, common_1.Inject)((0, nestjs_telegraf_1.getBotToken)("airshorts1_bot"))),
     __metadata("design:paramtypes", [logger_service_1.CustomLoggerService,
         telegraf_1.Telegraf])
 ], WebhookController);

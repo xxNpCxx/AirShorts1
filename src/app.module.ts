@@ -34,7 +34,7 @@ import { WebhookModule } from "./webhook/webhook.module";
     WebhookModule,
     TelegrafModule.forRoot({
       token: process.env.BOT_TOKEN || "",
-      botName: "AirShortsBot",
+      botName: "airshorts1_bot",
       middlewares: [session()],
       options: {
         telegram: {

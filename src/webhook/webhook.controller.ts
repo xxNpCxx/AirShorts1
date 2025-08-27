@@ -8,7 +8,7 @@ import { getBotToken } from 'nestjs-telegraf';
 export class WebhookController {
   constructor(
     private readonly logger: CustomLoggerService,
-    @Inject(getBotToken()) private readonly bot: Telegraf,
+    @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
   ) {}
 
   @Post()
