@@ -2,7 +2,9 @@ import { Ctx, Scene, SceneEnter, On, Action } from "nestjs-telegraf";
 import { Context } from "telegraf";
 import type { Message } from "@telegraf/types";
 import { DidService } from "../d-id/did.service";
-import { Logger } from "@nestjs/common";
+import { Logger, Inject } from "@nestjs/common";
+import { Telegraf } from "telegraf";
+import { getBotToken } from "nestjs-telegraf";
 
 interface SessionData {
   photoFileId?: string;
@@ -34,7 +36,10 @@ type TextContext = Context & {
 export class VideoGenerationScene {
   private readonly logger = new Logger(VideoGenerationScene.name);
 
-  constructor(private readonly didService: DidService) {}
+  constructor(
+    private readonly didService: DidService,
+    @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
+  ) {}
 
   @SceneEnter()
   async onSceneEnter(@Ctx() ctx: Context) {
@@ -387,9 +392,12 @@ export class VideoGenerationScene {
         "✅ Видео успешно создано!\n\n" +
           `🆔 ID: ${result.id}\n` +
           `📊 Статус: ${result.status}\n\n` +
-          "Видео будет готово через несколько минут. " +
-          "Вы получите уведомление когда оно будет готово.",
+          "🎬 Генерация началась! Это может занять 2-5 минут.\n" +
+          "📬 Готовое видео будет отправлено вам автоматически.",
       );
+
+      // Запускаем polling в фоне
+      this.pollVideoStatus(result.id, ctx.from?.id);
 
       // Возвращаемся в главное меню
       await (ctx as { scene?: { leave: () => Promise<void> } }).scene?.leave();
@@ -490,5 +498,80 @@ export class VideoGenerationScene {
   async onCancel(@Ctx() ctx: Context) {
     await ctx.reply("❌ Создание видео отменено.");
     await (ctx as { scene?: { leave: () => Promise<void> } }).scene?.leave();
+  }
+
+  /**
+   * Отслеживает статус генерации видео и автоматически отправляет готовое видео пользователю
+   */
+  private async pollVideoStatus(videoId: string, userId?: number): Promise<void> {
+    if (!userId) return;
+    
+    const maxAttempts = 20; // 10 минут максимум
+    const interval = 30000; // 30 секунд между проверками
+    
+    this.logger.log(`🔄 Начинаем отслеживание статуса видео ${videoId} для пользователя ${userId}`);
+    
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        // Ждем перед проверкой
+        await new Promise(resolve => setTimeout(resolve, interval));
+        
+        const status = await this.didService.getVideoStatus(videoId);
+        this.logger.log(`📊 Статус видео ${videoId}: ${status.status} (попытка ${attempt + 1}/${maxAttempts})`);
+        
+        if (status.status === 'done' && status.result_url) {
+          this.logger.log(`✅ Видео ${videoId} готово! Отправляем пользователю ${userId}`);
+          
+          try {
+            await this.bot.telegram.sendVideo(userId, status.result_url, {
+              caption: "🎉 Ваше видео готово!\n\n✨ Спасибо за использование нашего сервиса!\n🎬 Создавайте новые видео когда захотите."
+            });
+          } catch (sendError) {
+            this.logger.warn(`⚠️ Не удалось отправить видео файлом, отправляем ссылкой: ${sendError}`);
+            // Fallback: отправляем ссылку текстом
+            await this.bot.telegram.sendMessage(userId,
+              `🎉 Ваше видео готово!\n\n` +
+              `📹 Ссылка для скачивания:\n${status.result_url}\n\n` +
+              `✨ Спасибо за использование нашего сервиса!`
+            );
+          }
+          return;
+        }
+        
+        if (status.status === 'error' || status.error) {
+          this.logger.error(`❌ Ошибка генерации видео ${videoId}: ${status.error}`);
+          await this.bot.telegram.sendMessage(userId, 
+            `❌ К сожалению, произошла ошибка при создании видео.\n\n` +
+            `💡 Попробуйте:\n` +
+            `• Создать видео заново\n` +
+            `• Использовать другое фото\n` +
+            `• Обратиться к администратору`
+          );
+          return;
+        }
+        
+      } catch (error) {
+        this.logger.error(`Ошибка при проверке статуса видео ${videoId}:`, error);
+        
+        // Если слишком много ошибок подряд, прерываем
+        if (attempt > 5) {
+          await this.bot.telegram.sendMessage(userId,
+            `❌ Возникли технические проблемы при проверке статуса видео.\n\n` +
+            `🔄 Попробуйте создать видео заново.`
+          );
+          return;
+        }
+      }
+    }
+    
+    // Таймаут
+    this.logger.warn(`⏰ Таймаут ожидания видео ${videoId} для пользователя ${userId}`);
+    await this.bot.telegram.sendMessage(userId,
+      `⏰ Генерация видео заняла больше времени чем ожидалось.\n\n` +
+      `💡 Возможные причины:\n` +
+      `• Высокая нагрузка на сервер D-ID\n` +
+      `• Сложность обработки изображения\n\n` +
+      `🔄 Попробуйте создать видео заново.`
+    );
   }
 }

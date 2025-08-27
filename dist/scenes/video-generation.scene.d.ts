@@ -1,6 +1,7 @@
 import { Context } from "telegraf";
 import type { Message } from "@telegraf/types";
 import { DidService } from "../d-id/did.service";
+import { Telegraf } from "telegraf";
 interface SessionData {
     photoFileId?: string;
     audioFileId?: string;
@@ -24,8 +25,9 @@ type TextContext = Context & {
 };
 export declare class VideoGenerationScene {
     private readonly didService;
+    private readonly bot;
     private readonly logger;
-    constructor(didService: DidService);
+    constructor(didService: DidService, bot: Telegraf);
     onSceneEnter(ctx: Context): Promise<void>;
     onPhoto(ctx: PhotoContext): Promise<void>;
     onDocument(ctx: Context): Promise<void>;
@@ -45,6 +47,7 @@ export declare class VideoGenerationScene {
     onQuality1080Selected(ctx: Context): Promise<void>;
     onCancelVideoGeneration(ctx: Context): Promise<void>;
     onCancel(ctx: Context): Promise<void>;
+    private pollVideoStatus;
 }
 export {};
 //# sourceMappingURL=video-generation.scene.d.ts.map
