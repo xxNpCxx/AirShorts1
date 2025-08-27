@@ -176,13 +176,13 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             reply_markup: {
                 inline_keyboard: [
                     [
-                        { text: "📱 YouTube Shorts", callback_data: "platform_youtube_shorts" }
+                        { text: "📱 Короткие вертикальные видео", callback_data: "platform_youtube_shorts" }
                     ],
                     [
-                        { text: "📺 TikTok", callback_data: "platform_tiktok" }
+                        { text: "📺 Социальные сети (скоро)", callback_data: "platform_tiktok" }
                     ],
                     [
-                        { text: "📸 Instagram Reels", callback_data: "platform_instagram_reels" }
+                        { text: "📸 Истории и рилс (скоро)", callback_data: "platform_instagram_reels" }
                     ],
                     [
                         { text: "❌ Отмена", callback_data: "cancel_video_generation" }
@@ -204,7 +204,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
     }
     async showTextPromptInput(ctx) {
         await ctx.reply("✅ Качество выбрано! Теперь добавьте текстовый промпт для улучшения генерации:\n\n" +
-            '💡 Например: "Создай видео в стиле YouTube Shorts с динамичными движениями"\n\n' +
+            '💡 Например: "Создай видео с динамичными движениями и яркими переходами"\n\n' +
             'Или просто напишите "нет" если промпт не нужен:');
     }
     async startVideoGeneration(ctx) {
@@ -240,7 +240,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             await ctx.answerCbQuery();
             const session = ctx.session;
             session.platform = "youtube-shorts";
-            await ctx.editMessageText("✅ Платформа выбрана: YouTube Shorts");
+            await ctx.editMessageText("✅ Платформа выбрана: Короткие вертикальные видео");
             await this.showDurationSelection(ctx);
         }
         catch (error) {
@@ -250,7 +250,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
     }
     async onTikTokSelected(ctx) {
         try {
-            await ctx.answerCbQuery("❌ TikTok пока не поддерживается");
+            await ctx.answerCbQuery("❌ Эта платформа пока не поддерживается");
         }
         catch (error) {
             this.logger.error("Error selecting TikTok:", error);
@@ -258,7 +258,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
     }
     async onInstagramReelsSelected(ctx) {
         try {
-            await ctx.answerCbQuery("❌ Instagram Reels пока не поддерживается");
+            await ctx.answerCbQuery("❌ Эта платформа пока не поддерживается");
         }
         catch (error) {
             this.logger.error("Error selecting Instagram Reels:", error);
