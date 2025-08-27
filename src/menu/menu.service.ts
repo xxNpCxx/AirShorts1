@@ -136,7 +136,7 @@ export class MenuService {
   private async sendReplyKeyboard(ctx: TelegramContext): Promise<void> {
     try {
       // Отправляем reply-клавиатуру с минимальным текстом
-      await ctx.reply("⌨️", {
+      await ctx.reply(".", {
         reply_markup: this._kb.mainReply().reply_markup,
       });
       this._logger.debug(
@@ -154,7 +154,7 @@ export class MenuService {
         "MenuService",
       );
       // Fallback: отправляем reply-клавиатуру с минимальным текстом
-      await ctx.reply("⌨️", {
+      await ctx.reply(".", {
         reply_markup: this._kb.mainReply().reply_markup,
       });
     }

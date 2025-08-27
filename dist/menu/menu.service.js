@@ -107,7 +107,7 @@ let MenuService = class MenuService {
     }
     async sendReplyKeyboard(ctx) {
         try {
-            await ctx.reply("⌨️", {
+            await ctx.reply(".", {
                 reply_markup: this._kb.mainReply().reply_markup,
             });
             this._logger.debug(`Reply-клавиатура отправлена пользователю ${ctx.from?.id}`, "MenuService");
@@ -115,7 +115,7 @@ let MenuService = class MenuService {
         catch (error) {
             this._logger.error(`Ошибка при отправке reply-клавиатуры: ${error}`, undefined, "MenuService");
             this._logger.debug(`Детали ошибки: ${error instanceof Error ? error.stack : error}`, "MenuService");
-            await ctx.reply("⌨️", {
+            await ctx.reply(".", {
                 reply_markup: this._kb.mainReply().reply_markup,
             });
         }
