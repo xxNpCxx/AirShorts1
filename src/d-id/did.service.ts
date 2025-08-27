@@ -53,15 +53,22 @@ export class DidService {
     try {
       this.logger.log(`[${requestId}] 🚀 Starting video generation with D-ID API`);
       this.logger.debug(`[${requestId}] Request params: platform=${request.platform}, quality=${request.quality}, duration=${request.duration}`);
+      this.logger.debug(`[${requestId}] Audio provided: ${!!request.audioUrl}, Script length: ${request.script?.length || 0} chars`);
 
+      // Определяем тип скрипта: если есть аудио URL, используем его, иначе TTS
+      const useCustomAudio = request.audioUrl && request.audioUrl.trim() !== '';
+      
       const payload = {
         source_url: request.photoUrl,
-        script: {
+        script: useCustomAudio ? {
+          type: "audio",
+          audio_url: request.audioUrl,
+        } : {
           type: "text",
           input: request.script,
           provider: {
             type: "microsoft",
-            voice_id: "en-US-JennyNeural",
+            voice_id: "ru-RU-SvetlanaNeural", // Русский женский голос для TTS
           },
         },
         config: {
@@ -87,6 +94,7 @@ export class DidService {
 
       this.logger.debug(`[${requestId}] 📤 Sending request to ${this.baseUrl}/talks`);
       this.logger.debug(`[${requestId}] Payload config: quality=${payload.config.quality}, resolution=${payload.config.output_resolution}`);
+      this.logger.log(`[${requestId}] 🎵 Script type: ${payload.script.type}${useCustomAudio ? ` (using custom audio: ${request.audioUrl})` : ` (using TTS: ${payload.script.provider?.voice_id})`}`);
 
       const response = await fetch(`${this.baseUrl}/talks`, {
         method: "POST",
