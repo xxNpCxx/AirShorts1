@@ -47,7 +47,7 @@ import { VideoGenerationScene } from "./scenes/video-generation.scene";
       },
     }),
   ],
-  providers: [BotUpdate, MenuUpdate, VideoGenerationScene],
+  providers: [],
   controllers: [HealthController, WebhookController],
 })
 export class AppModule {}

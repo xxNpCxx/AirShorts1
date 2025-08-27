@@ -59,7 +59,7 @@ exports.AppModule = AppModule = __decorate([
                 },
             }),
         ],
-        providers: [bot_update_1.BotUpdate, menu_update_1.MenuUpdate, video_generation_scene_1.VideoGenerationScene],
+        providers: [],
         controllers: [health_controller_1.HealthController, webhook_controller_1.WebhookController],
     })
 ], AppModule);
