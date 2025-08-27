@@ -120,7 +120,7 @@ export class BotUpdate {
     const hearsMessages = ["🏠 Главное меню", "Главное меню"];
     if (hearsMessages.includes(messageText)) {
       this._logger.debug(
-        `[@On text] Обнаружено сообщение главного меню: "${messageText}" - вызываем onMainMenu напрямую`,
+        `[@On text] Обнаружено сообщение главного меню: "${messageText}" - выход из сцены и показ главного меню`,
         "BotUpdate",
       );
       await this.onMainMenu(ctx);
@@ -148,6 +148,23 @@ export class BotUpdate {
     );
     
     try {
+      // Проверяем, находится ли пользователь в сцене
+      const sceneContext = ctx as unknown as {
+        scene: { 
+          current?: { id: string };
+          leave: () => Promise<void>;
+        };
+      };
+      
+      if (sceneContext.scene?.current) {
+        this._logger.log(
+          `🚪 Выходим из сцены "${sceneContext.scene.current.id}" для пользователя ${ctx.from?.id}`,
+          "BotUpdate",
+        );
+        await sceneContext.scene.leave();
+        this._logger.debug("Сцена успешно завершена", "BotUpdate");
+      }
+
       await this._users.upsertFromContext(ctx);
       await this._menu.sendMainMenu(ctx);
       this._logger.debug("Главное меню отправлено через @Hears", "BotUpdate");
@@ -163,8 +180,41 @@ export class BotUpdate {
 
   @Action("main_menu")
   async onMainMenuAction(@Ctx() ctx: Context) {
-    await ctx.answerCbQuery();
-    await this._menu.sendMainMenu(ctx);
+    this._logger.log(
+      `🏠 [@Action] Главное меню запрошено через inline кнопку пользователем ${ctx.from?.id}`,
+      "BotUpdate",
+    );
+    
+    try {
+      await ctx.answerCbQuery();
+      
+      // Проверяем, находится ли пользователь в сцене
+      const sceneContext = ctx as unknown as {
+        scene: { 
+          current?: { id: string };
+          leave: () => Promise<void>;
+        };
+      };
+      
+      if (sceneContext.scene?.current) {
+        this._logger.log(
+          `🚪 Выходим из сцены "${sceneContext.scene.current.id}" для пользователя ${ctx.from?.id}`,
+          "BotUpdate",
+        );
+        await sceneContext.scene.leave();
+        this._logger.debug("Сцена успешно завершена через @Action", "BotUpdate");
+      }
+      
+      await this._menu.sendMainMenu(ctx);
+      this._logger.debug("Главное меню отправлено через @Action", "BotUpdate");
+    } catch (error) {
+      this._logger.error(
+        `❌ Ошибка при обработке главного меню через @Action: ${error}`,
+        undefined,
+        "BotUpdate",
+      );
+      await ctx.answerCbQuery("❌ Произошла ошибка");
+    }
   }
 
   // Удаляем дублирующую команду operator - она уже есть в OperatorModule
