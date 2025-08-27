@@ -10,12 +10,13 @@ exports.WebhookModule = void 0;
 const common_1 = require("@nestjs/common");
 const webhook_controller_1 = require("./webhook.controller");
 const logger_module_1 = require("../logger/logger.module");
+const nestjs_telegraf_1 = require("nestjs-telegraf");
 let WebhookModule = class WebhookModule {
 };
 exports.WebhookModule = WebhookModule;
 exports.WebhookModule = WebhookModule = __decorate([
     (0, common_1.Module)({
-        imports: [logger_module_1.LoggerModule],
+        imports: [logger_module_1.LoggerModule, nestjs_telegraf_1.TelegrafModule],
         controllers: [webhook_controller_1.WebhookController],
     })
 ], WebhookModule);

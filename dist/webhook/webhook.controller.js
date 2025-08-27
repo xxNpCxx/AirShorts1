@@ -16,6 +16,7 @@ exports.WebhookController = void 0;
 const common_1 = require("@nestjs/common");
 const logger_service_1 = require("../logger/logger.service");
 const telegraf_1 = require("telegraf");
+const nestjs_telegraf_1 = require("nestjs-telegraf");
 let WebhookController = class WebhookController {
     constructor(logger, bot) {
         this.logger = logger;
@@ -51,6 +52,7 @@ __decorate([
 ], WebhookController.prototype, "handleWebhook", null);
 exports.WebhookController = WebhookController = __decorate([
     (0, common_1.Controller)('webhook'),
+    __param(1, (0, common_1.Inject)((0, nestjs_telegraf_1.getBotToken)())),
     __metadata("design:paramtypes", [logger_service_1.CustomLoggerService,
         telegraf_1.Telegraf])
 ], WebhookController);
