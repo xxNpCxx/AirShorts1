@@ -116,13 +116,14 @@ export class BotUpdate {
       return;
     }
 
-    // Пропускаем сообщения, которые должны обрабатываться @Hears
+    // Обрабатываем сообщения главного меню напрямую
     const hearsMessages = ["🏠 Главное меню", "Главное меню"];
     if (hearsMessages.includes(messageText)) {
       this._logger.debug(
-        `[@On text] Пропускаем @Hears сообщение: "${messageText}"`,
+        `[@On text] Обнаружено сообщение главного меню: "${messageText}" - вызываем onMainMenu напрямую`,
         "BotUpdate",
       );
+      await this.onMainMenu(ctx);
       return;
     }
 
@@ -140,8 +141,9 @@ export class BotUpdate {
 
   @Hears(["🏠 Главное меню", "Главное меню"])
   async onMainMenu(@Ctx() ctx: Context) {
+    const messageText = ctx.message && "text" in ctx.message ? ctx.message.text : "";
     this._logger.log(
-      `🏠 [@Hears] Главное меню запрошено пользователем ${ctx.from?.id}`,
+      `🏠 [@Hears] Главное меню запрошено пользователем ${ctx.from?.id}, текст: "${messageText}"`,
       "BotUpdate",
     );
     

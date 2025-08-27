@@ -76,14 +76,16 @@ let BotUpdate = class BotUpdate {
         }
         const hearsMessages = ["🏠 Главное меню", "Главное меню"];
         if (hearsMessages.includes(messageText)) {
-            this._logger.debug(`[@On text] Пропускаем @Hears сообщение: "${messageText}"`, "BotUpdate");
+            this._logger.debug(`[@On text] Обнаружено сообщение главного меню: "${messageText}" - вызываем onMainMenu напрямую`, "BotUpdate");
+            await this.onMainMenu(ctx);
             return;
         }
         this._logger.debug(`[@On text] Текстовое сообщение получено: "${messageText}" от пользователя ${ctx.from?.id}`, "BotUpdate");
         this._logger.debug(`[@On text] Неизвестное сообщение: "${messageText}"`, "BotUpdate");
     }
     async onMainMenu(ctx) {
-        this._logger.log(`🏠 [@Hears] Главное меню запрошено пользователем ${ctx.from?.id}`, "BotUpdate");
+        const messageText = ctx.message && "text" in ctx.message ? ctx.message.text : "";
+        this._logger.log(`🏠 [@Hears] Главное меню запрошено пользователем ${ctx.from?.id}, текст: "${messageText}"`, "BotUpdate");
         try {
             await this._users.upsertFromContext(ctx);
             await this._menu.sendMainMenu(ctx);
