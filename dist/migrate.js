@@ -120,8 +120,8 @@ async function runMigrations() {
         else {
             console.log("✅ Таблица migrations уже имеет правильную структуру");
         }
-        const migrationsDir = process.env.NODE_ENV === 'production'
-            ? (0, path_1.join)(process.cwd(), "migrations")
+        const migrationsDir = process.cwd().includes('/opt/render/project')
+            ? (0, path_1.join)(process.cwd(), "..", "migrations")
             : (0, path_1.join)(__dirname, "../../migrations");
         console.log(`📁 Ищем миграции в: ${migrationsDir}`);
         if (!(0, fs_1.existsSync)(migrationsDir)) {

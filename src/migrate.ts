@@ -93,10 +93,10 @@ async function runMigrations() {
     }
 
     // Читаем все SQL файлы миграций
-    // В production (Render) папка migrations находится в корне проекта
-    // В development папка migrations находится относительно src/
-    const migrationsDir = process.env.NODE_ENV === 'production' 
-      ? join(process.cwd(), "migrations")
+    // На Render папка migrations находится в корне проекта (/opt/render/project/migrations)
+    // В локальной разработке папка migrations находится относительно src/
+    const migrationsDir = process.cwd().includes('/opt/render/project')
+      ? join(process.cwd(), "..", "migrations")  // process.cwd() = /opt/render/project/src, нужен /opt/render/project/migrations
       : join(__dirname, "../../migrations");
     
     console.log(`📁 Ищем миграции в: ${migrationsDir}`);
