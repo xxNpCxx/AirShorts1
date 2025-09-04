@@ -73,7 +73,7 @@ export class HeyGenService {
           {
             character: {
               type: "avatar",
-              avatar_id: "Lina_Dress_Sitting_Side_public", // Используем аватар из документации
+              avatar_id: "Josh", // Простой аватар для бесплатного плана
               avatar_style: "normal"
             },
             voice: {

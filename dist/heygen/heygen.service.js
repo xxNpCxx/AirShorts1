@@ -38,7 +38,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     {
                         character: {
                             type: "avatar",
-                            avatar_id: "Lina_Dress_Sitting_Side_public",
+                            avatar_id: "Josh",
                             avatar_style: "normal"
                         },
                         voice: {
