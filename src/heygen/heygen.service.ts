@@ -91,18 +91,22 @@ export class HeyGenService {
         }
       };
 
-      // Если есть пользовательское фото, используем его вместо предустановленного аватара
-      if (request.imageUrl && request.imageUrl.trim() !== "" && request.imageUrl !== "undefined" && request.imageUrl !== "null") {
-        this.logger.log(`[${requestId}] 📸 Using custom user photo: ${request.imageUrl}`);
+      // Если есть пользовательское фото, используем созданный кастомный аватар
+      if (request.imageUrl && request.imageUrl.trim() !== "" && request.imageUrl !== "undefined" && request.imageUrl !== "null" && request.imageUrl !== "heygen_placeholder_image_url") {
+        this.logger.log(`[${requestId}] 📸 Using custom avatar: ${request.imageUrl}`);
         payload.video_inputs[0].character = {
           type: "avatar",
-          avatar_id: "Josh", // Базовый аватар
-          avatar_style: "normal",
-          // Добавляем пользовательское изображение
-          avatar_image_url: request.imageUrl
+          avatar_id: request.imageUrl, // Используем ID созданного кастомного аватара
+          avatar_style: "normal"
         };
       } else {
         this.logger.log(`[${requestId}] 📸 Using default avatar: Josh`);
+        // Используем доступный аватар для бесплатного плана
+        payload.video_inputs[0].character = {
+          type: "avatar",
+          avatar_id: "Josh",
+          avatar_style: "normal"
+        };
       }
 
       // Если используется пользовательское аудио, HeyGen пока не поддерживает загрузку файлов
@@ -243,12 +247,14 @@ export class HeyGenService {
     const uploadId = `heygen_image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
     try {
-      this.logger.log(`[${uploadId}] 🖼️ Starting image upload to HeyGen (${imageBuffer.length} bytes)`);
+      this.logger.log(`[${uploadId}] 🖼️ Creating custom avatar from user photo (${imageBuffer.length} bytes)`);
       
+      // Создаем кастомный аватар из пользовательского фото
       const formData = new FormData();
       formData.append('image', new Blob([imageBuffer]), 'user_photo.jpg');
+      formData.append('avatar_name', `custom_avatar_${uploadId}`);
       
-      const response = await fetch(`${this.baseUrl}/v1/image/upload`, {
+      const response = await fetch(`${this.baseUrl}/v1/avatar.create`, {
         method: 'POST',
         headers: {
           'X-API-KEY': this.apiKey,
@@ -258,18 +264,55 @@ export class HeyGenService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`[${uploadId}] ❌ Image upload failed: ${response.status} ${response.statusText}`);
+        this.logger.error(`[${uploadId}] ❌ Custom avatar creation failed: ${response.status} ${response.statusText}`);
         this.logger.error(`[${uploadId}] Error details: ${errorText}`);
-        throw new Error(`Image upload failed: ${response.status} ${response.statusText}`);
+        
+        // Fallback: попробуем загрузить как обычное изображение
+        this.logger.log(`[${uploadId}] 🔄 Trying fallback image upload...`);
+        return await this.uploadImageFallback(imageBuffer, uploadId);
       }
 
       const result = await response.json() as any;
-      this.logger.log(`[${uploadId}] ✅ Image uploaded successfully: ${result.image_url || result.url || result.image}`);
+      const avatarId = result.data?.avatar_id || result.avatar_id;
+      this.logger.log(`[${uploadId}] ✅ Custom avatar created successfully: ${avatarId}`);
       
-      return result.image_url || result.url || result.image || result.data?.image_url;
+      return avatarId;
     } catch (error) {
-      this.logger.error(`[${uploadId}] ❌ Error uploading image to HeyGen:`, error);
-      // Возвращаем placeholder для совместимости
+      this.logger.error(`[${uploadId}] ❌ Error creating custom avatar:`, error);
+      // Fallback: попробуем загрузить как обычное изображение
+      return await this.uploadImageFallback(imageBuffer, uploadId);
+    }
+  }
+
+  private async uploadImageFallback(imageBuffer: Buffer, uploadId: string): Promise<string> {
+    try {
+      this.logger.log(`[${uploadId}] 🔄 Fallback: trying direct image upload...`);
+      
+      const formData = new FormData();
+      formData.append('image', new Blob([imageBuffer]), 'user_photo.jpg');
+      
+      const response = await fetch(`${this.baseUrl}/v1/image.upload`, {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': this.apiKey,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(`[${uploadId}] ❌ Fallback image upload failed: ${response.status} ${response.statusText}`);
+        this.logger.error(`[${uploadId}] Error details: ${errorText}`);
+        return "heygen_placeholder_image_url";
+      }
+
+      const result = await response.json() as any;
+      const imageUrl = result.data?.image_url || result.image_url || result.url;
+      this.logger.log(`[${uploadId}] ✅ Fallback image upload successful: ${imageUrl}`);
+      
+      return imageUrl;
+    } catch (error) {
+      this.logger.error(`[${uploadId}] ❌ Fallback image upload error:`, error);
       return "heygen_placeholder_image_url";
     }
   }

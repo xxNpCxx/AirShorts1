@@ -25,5 +25,6 @@ export declare class HeyGenService {
     getVideoStatus(videoId: string): Promise<HeyGenVideoResponse>;
     uploadAudio(audioBuffer: Buffer): Promise<string>;
     uploadImage(imageBuffer: Buffer): Promise<string>;
+    private uploadImageFallback;
 }
 //# sourceMappingURL=heygen.service.d.ts.map
