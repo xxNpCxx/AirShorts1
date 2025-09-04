@@ -66,7 +66,8 @@ export class HeyGenService {
       const useCustomAudio = request.audioUrl && 
                             request.audioUrl.trim() !== "" && 
                             request.audioUrl !== "undefined" && 
-                            request.audioUrl !== "null";
+                            request.audioUrl !== "null" &&
+                            !request.audioUrl.includes('avatar_iv_tts_required');
 
       // Получаем список доступных аватаров для дефолтного значения
       const availableAvatars = await this.getAvailableAvatars();
@@ -161,12 +162,12 @@ export class HeyGenService {
         }
       }
 
-      // Если есть пользовательское аудио, используем AudioVoiceSettings с asset_id
-      if (useCustomAudio && request.audioUrl) {
+      // Если есть валидное пользовательское аудио, используем его
+      if (useCustomAudio) {
         this.logger.log(`[${requestId}] 🎵 Используем пользовательское аудио asset: ${request.audioUrl}`);
         payload.video_inputs[0].voice = {
           type: "audio",
-          audio_asset_id: request.audioUrl // Теперь это asset_id, а не URL
+          audio_asset_id: request.audioUrl
         };
       }
 
@@ -176,15 +177,7 @@ export class HeyGenService {
         // defaultAvatarId уже установлен в payload выше
       }
 
-      // Если используется пользовательское аудио, но не было обработано выше
-      if (useCustomAudio && payload.video_inputs[0].voice.type === "text") {
-        this.logger.warn(`[${requestId}] Пользовательское аудио не было обработано, используем TTS`);
-        // Используем TTS с текстом вместо аудио
-        payload.video_inputs[0].voice.input_text = request.script;
-        payload.video_inputs[0].voice.voice_id = "119caed25533477ba63822d5d1552d25";
-        this.logger.log(`[${requestId}] 🎵 Fallback to TTS with script: ${request.script?.substring(0, 50)}...`);
-      }
-
+      // Логируем финальный тип голоса
       if (useCustomAudio) {
         this.logger.log(`[${requestId}] 🎵 Using custom user audio from: ${request.audioUrl}`);
       } else {

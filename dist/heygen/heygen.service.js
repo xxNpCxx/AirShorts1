@@ -32,7 +32,8 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             const useCustomAudio = request.audioUrl &&
                 request.audioUrl.trim() !== "" &&
                 request.audioUrl !== "undefined" &&
-                request.audioUrl !== "null";
+                request.audioUrl !== "null" &&
+                !request.audioUrl.includes('avatar_iv_tts_required');
             const availableAvatars = await this.getAvailableAvatars();
             const defaultAvatarId = availableAvatars[0] || "1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b";
             let payload = {
@@ -113,7 +114,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     }
                 }
             }
-            if (useCustomAudio && request.audioUrl) {
+            if (useCustomAudio) {
                 this.logger.log(`[${requestId}] 🎵 Используем пользовательское аудио asset: ${request.audioUrl}`);
                 payload.video_inputs[0].voice = {
                     type: "audio",
@@ -122,12 +123,6 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             }
             if (!request.imageUrl || request.imageUrl === "heygen_use_available_avatar" || request.imageUrl === "heygen_placeholder_image_url") {
                 this.logger.log(`[${requestId}] 📸 Using available avatar: ${defaultAvatarId}`);
-            }
-            if (useCustomAudio && payload.video_inputs[0].voice.type === "text") {
-                this.logger.warn(`[${requestId}] Пользовательское аудио не было обработано, используем TTS`);
-                payload.video_inputs[0].voice.input_text = request.script;
-                payload.video_inputs[0].voice.voice_id = "119caed25533477ba63822d5d1552d25";
-                this.logger.log(`[${requestId}] 🎵 Fallback to TTS with script: ${request.script?.substring(0, 50)}...`);
             }
             if (useCustomAudio) {
                 this.logger.log(`[${requestId}] 🎵 Using custom user audio from: ${request.audioUrl}`);
