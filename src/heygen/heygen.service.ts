@@ -19,31 +19,32 @@ export interface HeyGenVideoResponse {
 }
 
 interface HeyGenApiResponse {
-  code: number;
+  error: null | string;
   data?: {
     video_id: string;
-    status?: string;
-    video_url?: string;
   };
-  message?: string;
 }
 
 interface HeyGenStatusResponse {
   code: number;
   data?: {
-    video_id: string;
+    id: string;
     status: string;
     video_url?: string;
-    error?: string;
+    error?: any;
+    duration?: number;
+    thumbnail_url?: string;
+    gif_url?: string;
+    caption_url?: string;
   };
-  message?: string;
+  message: string;
 }
 
 @Injectable()
 export class HeyGenService {
   private readonly logger = new Logger(HeyGenService.name);
   private readonly apiKey: string;
-  private readonly baseUrl = "https://api.heygen.com/v1";
+  private readonly baseUrl = "https://api.heygen.com";
 
   constructor(private readonly configService: ConfigService) {
     this.apiKey = this.configService.get<string>("HEYGEN_API_KEY") || "";
@@ -68,14 +69,25 @@ export class HeyGenService {
 
       // HeyGen API v2 структура согласно документации
       let payload: any = {
-        background: "#000000",
-        clips: [
+        video_inputs: [
           {
-            avatar_id: "default_avatar", // Нужно получить из списка доступных аватаров
-            input_text: request.script,
-            voice_id: useCustomAudio ? "custom_voice" : "ru-RU-SvetlanaNeural", // Русский голос
+            character: {
+              type: "avatar",
+              avatar_id: "Lina_Dress_Sitting_Side_public", // Используем аватар из документации
+              avatar_style: "normal"
+            },
+            voice: {
+              type: "text",
+              input_text: request.script,
+              voice_id: "119caed25533477ba63822d5d1552d25", // Голос из документации
+              speed: 1.0
+            }
           }
-        ]
+        ],
+        dimension: {
+          width: 1280,
+          height: 720
+        }
       };
 
       // Если используется пользовательское аудио, HeyGen пока не поддерживает загрузку файлов
@@ -83,8 +95,8 @@ export class HeyGenService {
       if (useCustomAudio) {
         this.logger.warn(`[${requestId}] HeyGen API пока не поддерживает загрузку пользовательских аудиофайлов`);
         // Используем TTS с текстом вместо аудио
-        payload.clips[0].input_text = request.script;
-        payload.clips[0].voice_id = "ru-RU-SvetlanaNeural";
+        payload.video_inputs[0].voice.input_text = request.script;
+        payload.video_inputs[0].voice.voice_id = "119caed25533477ba63822d5d1552d25";
         this.logger.log(`[${requestId}] 🎵 Fallback to TTS with script: ${request.script?.substring(0, 50)}...`);
       }
 
@@ -94,9 +106,9 @@ export class HeyGenService {
         this.logger.log(`[${requestId}] 🎵 Using TTS with script: ${request.script?.substring(0, 50)}...`);
       }
 
-      this.logger.debug(`[${requestId}] 📤 Sending request to ${this.baseUrl}/video/generate`);
+      this.logger.debug(`[${requestId}] 📤 Sending request to ${this.baseUrl}/v2/video/generate`);
 
-      const response = await fetch(`${this.baseUrl}/video/generate`, {
+      const response = await fetch(`${this.baseUrl}/v2/video/generate`, {
         method: "POST",
         headers: {
           "X-API-KEY": this.apiKey,
@@ -112,7 +124,7 @@ export class HeyGenService {
         this.logger.error(`[${requestId}] ❌ HeyGen API Error:`, {
           status: response.status,
           statusText: response.statusText,
-          url: `${this.baseUrl}/video/generate`,
+          url: `${this.baseUrl}/v2/video/generate`,
           method: "POST",
           errorBody: errorText,
         });
@@ -148,7 +160,7 @@ export class HeyGenService {
     try {
       this.logger.debug(`🔍 Checking status for HeyGen video: ${videoId}`);
       
-      const response = await fetch(`${this.baseUrl}/video_status/${videoId}`, {
+      const response = await fetch(`${this.baseUrl}/v1/video_status.get?video_id=${videoId}`, {
         headers: {
           "X-API-KEY": this.apiKey,
         },
@@ -161,7 +173,7 @@ export class HeyGenService {
         this.logger.error(`❌ Failed to get video status for ${videoId}:`, {
           status: response.status,
           statusText: response.statusText,
-          url: `${this.baseUrl}/video/${videoId}`,
+          url: `${this.baseUrl}/v1/video_status.get?video_id=${videoId}`,
           errorBody: errorText
         });
         throw new Error(`Failed to get video status: ${response.status} - ${errorText}`);
@@ -187,7 +199,7 @@ export class HeyGenService {
       }
 
       return {
-        id: result.data?.video_id || videoId,
+        id: result.data?.id || videoId,
         status: result.data?.status || "unknown",
         result_url: result.data?.video_url,
         error: result.data?.error,
