@@ -445,11 +445,11 @@ export class VideoGenerationScene {
       }
 
       const preferredService = await this.usersService.getUserPreferredService(userId);
-      const serviceName = preferredService === 'did' ? '🤖 ИИ-Аватар (D-ID)' : '👤 Цифровой двойник (HeyGen)';
+      const initialServiceName = preferredService === 'did' ? '🤖 ИИ-Аватар (D-ID)' : '👤 Цифровой двойник (HeyGen)';
 
       await ctx.reply(
         `🚀 Начинаю генерацию видео...\n\n` +
-        `🔧 Используется: ${serviceName}\n` +
+        `🔧 Используется: ${initialServiceName}\n` +
         `⏱️ Это может занять несколько минут. Пожалуйста, подождите.`,
       );
 
@@ -550,13 +550,31 @@ export class VideoGenerationScene {
       this.logger.log(`Starting ${preferredService.toUpperCase()} generation with photoUrl: ${photoUrl ? 'PROVIDED' : 'MISSING'}, voiceUrl: ${voiceUrl ? `PROVIDED (${voiceUrl.substring(0, 50)}...)` : `MISSING (${voiceUrl})`}`);
       
       // Выбираем сервис для генерации
-      const result = preferredService === 'did' 
+      // Если есть пользовательские фото и голос, используем D-ID для лучшего качества
+      const hasUserContent = (session.photoFileId && session.voiceFileId);
+      const requestId = `video_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      
+      let actualService = preferredService;
+      if (hasUserContent && preferredService === 'heygen') {
+        this.logger.log(`[${requestId}] 📸 Пользователь выбрал HeyGen, но есть пользовательские фото и голос`);
+        this.logger.log(`[${requestId}] 🎯 Переключаемся на D-ID для лучшего качества с пользовательским контентом`);
+        actualService = 'did';
+      }
+      
+      const result = actualService === 'did' 
         ? await this.didService.generateVideo(request)
         : await this.heygenService.generateVideo(request);
 
+      const finalServiceName = actualService === 'did' ? 'D-ID (AI Avatar)' : 'HeyGen (Digital Twin)';
+      const serviceExplanation = actualService === 'did' 
+        ? "🎭 Используется ваш голос и фото для создания персонализированного аватара"
+        : "🤖 Используется предустановленный аватар и TTS (ваш голос и фото не поддерживаются)";
+      
       await ctx.reply(
-          "🎬 Генерация началась! Это может занять 2-5 минут.\n" +
-          "📬 Готовое видео будет отправлено вам автоматически.",
+          `🎬 Генерация началась! Это может занять 2-5 минут.\n\n` +
+          `🔧 Сервис: ${finalServiceName}\n` +
+          `${serviceExplanation}\n\n` +
+          `📬 Готовое видео будет отправлено вам автоматически.`,
       );
 
       // Запускаем polling в фоне
