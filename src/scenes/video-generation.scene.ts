@@ -1,7 +1,6 @@
 import { Ctx, Scene, SceneEnter, On, Action } from "nestjs-telegraf";
 import { Context } from "telegraf";
 import type { Message } from "@telegraf/types";
-import { DidService } from "../d-id/did.service";
 import { HeyGenService } from "../heygen/heygen.service";
 import { ElevenLabsService } from "../elevenlabs/elevenlabs.service";
 import { VoiceNotificationService } from "../elevenlabs/voice-notification.service";
@@ -43,7 +42,6 @@ export class VideoGenerationScene {
   private readonly logger = new Logger(VideoGenerationScene.name);
 
   constructor(
-    private readonly didService: DidService,
     private readonly heygenService: HeyGenService,
     private readonly elevenLabsService: ElevenLabsService,
     private readonly voiceNotificationService: VoiceNotificationService,
@@ -464,24 +462,18 @@ export class VideoGenerationScene {
           if (photoFile.file_path) {
             photoUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${photoFile.file_path}`;
             
-            // Если используется HeyGen, загружаем изображение в HeyGen
-            if (preferredService === 'heygen') {
-              try {
-                const photoBuffer = await ctx.telegram.getFileLink(session.photoFileId);
-                const response = await fetch(photoBuffer.href);
-                const imageBuffer = Buffer.from(await response.arrayBuffer());
-                imageUrl = await this.heygenService.uploadImage(imageBuffer);
-                this.logger.log(`Image uploaded to HeyGen: ${imageUrl}`);
-                
-                // Если загрузка не удалась, уведомляем пользователя
-                if (imageUrl === "heygen_placeholder_image_url") {
-                  await ctx.reply("⚠️ Не удалось создать кастомный аватар из вашего фото. Будет использован стандартный аватар.");
-                }
-              } catch (error) {
-                this.logger.error("Error uploading image to HeyGen:", error);
-                await ctx.reply("⚠️ Ошибка загрузки фото в HeyGen. Будет использован стандартный аватар.");
-                // Продолжаем без пользовательского изображения
-              }
+            // Загружаем изображение в HeyGen и создаем TalkingPhoto
+            try {
+              const photoBuffer = await ctx.telegram.getFileLink(session.photoFileId);
+              const response = await fetch(photoBuffer.href);
+              const imageBuffer = Buffer.from(await response.arrayBuffer());
+              await ctx.reply("📤 Создаю ваш TalkingPhoto аватар...");
+              imageUrl = await this.heygenService.uploadImage(imageBuffer);
+              this.logger.log(`TalkingPhoto created in HeyGen: ${imageUrl}`);
+            } catch (error) {
+              this.logger.error("Error creating TalkingPhoto in HeyGen:", error);
+              await ctx.reply("❌ Ошибка создания TalkingPhoto. Попробуйте загрузить фото заново.");
+              return;
             }
           }
         } catch (error) {
@@ -511,23 +503,10 @@ export class VideoGenerationScene {
           const voiceBuffer = Buffer.from(await response.arrayBuffer());
           this.logger.log(`Downloaded voice file: ${voiceBuffer.length} bytes`);
           
-          // Для HeyGen используем ElevenLabs клонированный голос
-          if (preferredService === 'did') {
-            voiceUrl = await this.didService.uploadAudio(voiceBuffer);
-            this.logger.log(`Voice uploaded to D-ID: ${voiceUrl}`);
-          } else {
-            // Для HeyGen используем D-ID с оригинальным голосом (так как ElevenLabs заблокирован)
-            this.logger.log("HeyGen selected, but using D-ID with original voice due to ElevenLabs limitations");
-            
-            await ctx.reply(
-              "🔄 HeyGen выбран, но из-за ограничений ElevenLabs API\n" +
-              "будет использован D-ID с вашим оригинальным голосом.\n\n" +
-              "📤 Загружаю ваш голос в D-ID..."
-            );
-            
-            voiceUrl = await this.didService.uploadAudio(voiceBuffer);
-            this.logger.log(`Original voice uploaded to D-ID for HeyGen: ${voiceUrl}`);
-          }
+                  // Загружаем голос в HeyGen Assets
+        await ctx.reply("📤 Загружаю ваш голос в HeyGen...");
+        voiceUrl = await this.heygenService.uploadAudio(voiceBuffer);
+        this.logger.log(`Voice uploaded to HeyGen: ${voiceUrl}`);
           
         } catch (error) {
           this.logger.error("Error processing voice file:", error);
@@ -549,36 +528,27 @@ export class VideoGenerationScene {
 
       this.logger.log(`Starting ${preferredService.toUpperCase()} generation with photoUrl: ${photoUrl ? 'PROVIDED' : 'MISSING'}, voiceUrl: ${voiceUrl ? `PROVIDED (${voiceUrl.substring(0, 50)}...)` : `MISSING (${voiceUrl})`}`);
       
-      // Выбираем сервис для генерации
-      // Если есть пользовательские фото и голос, используем D-ID для лучшего качества
-      const hasUserContent = (session.photoFileId && session.voiceFileId);
+      // Используем только HeyGen для генерации
       const requestId = `video_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
       
-      let actualService = preferredService;
-      if (hasUserContent && preferredService === 'heygen') {
-        this.logger.log(`[${requestId}] 📸 Пользователь выбрал HeyGen, но есть пользовательские фото и голос`);
-        this.logger.log(`[${requestId}] 🎯 Переключаемся на D-ID для лучшего качества с пользовательским контентом`);
-        actualService = 'did';
-      }
+      this.logger.log(`[${requestId}] 🎯 Генерируем видео через HeyGen с пользовательским контентом`);
       
-      const result = actualService === 'did' 
-        ? await this.didService.generateVideo(request)
-        : await this.heygenService.generateVideo(request);
+      const result = await this.heygenService.generateVideo(request);
 
-      const finalServiceName = actualService === 'did' ? 'D-ID (AI Avatar)' : 'HeyGen (Digital Twin)';
-      const serviceExplanation = actualService === 'did' 
-        ? "🎭 Используется ваш голос и фото для создания персонализированного аватара"
-        : "🤖 Используется предустановленный аватар и TTS (ваш голос и фото не поддерживаются)";
+      const hasUserContent = (session.photoFileId && session.voiceFileId);
+      const serviceExplanation = hasUserContent 
+        ? "🎭 Используется ваш голос и фото для создания персонализированного TalkingPhoto аватара"
+        : "🤖 Используется предустановленный аватар и TTS";
       
       await ctx.reply(
           `🎬 Генерация началась! Это может занять 2-5 минут.\n\n` +
-          `🔧 Сервис: ${finalServiceName}\n` +
+          `🔧 Сервис: HeyGen (Digital Twin)\n` +
           `${serviceExplanation}\n\n` +
           `📬 Готовое видео будет отправлено вам автоматически.`,
       );
 
       // Запускаем polling в фоне
-      this.pollVideoStatus(result.id, ctx.from?.id, actualService);
+      this.pollVideoStatus(result.id, ctx.from?.id, 'heygen');
 
       // Возвращаемся в главное меню
       await (ctx as { scene?: { leave: () => Promise<void> } }).scene?.leave();
@@ -701,16 +671,13 @@ export class VideoGenerationScene {
         // Ждем перед проверкой
         await new Promise(resolve => setTimeout(resolve, interval));
         
-        // Выбираем сервис для проверки статуса
-        const status = service === 'did' 
-          ? await this.didService.getVideoStatus(videoId)
-          : await this.heygenService.getVideoStatus(videoId);
+        // Проверяем статус через HeyGen (единственный используемый сервис)
+        const status = await this.heygenService.getVideoStatus(videoId);
         
         this.logger.log(`📊 Статус видео ${videoId}: ${status.status} (попытка ${attempt + 1}/${maxAttempts}, сервис: ${service.toUpperCase()})`);
         
-        // Проверяем статус в зависимости от сервиса
-        const isCompleted = (service === 'did' && status.status === 'done') || 
-                           (service === 'heygen' && status.status === 'completed');
+        // Проверяем статус HeyGen видео
+        const isCompleted = status.status === 'completed';
         
         if (isCompleted && status.result_url) {
           this.logger.log(`✅ Видео ${videoId} готово! Отправляем пользователю ${userId}`);
@@ -731,9 +698,8 @@ export class VideoGenerationScene {
           return;
         }
         
-        // Проверяем ошибки в зависимости от сервиса
-        const isError = (service === 'did' && (status.status === 'error' || status.error)) || 
-                       (service === 'heygen' && (status.status === 'failed' || status.error));
+        // Проверяем ошибки HeyGen видео
+        const isError = status.status === 'failed' || status.error;
         
         if (isError) {
           this.logger.error(`❌ Ошибка генерации видео ${videoId}: ${status.error}`, {

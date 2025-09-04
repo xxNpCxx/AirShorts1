@@ -9,13 +9,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScenesModule = void 0;
 const common_1 = require("@nestjs/common");
 const video_generation_scene_1 = require("./video-generation.scene");
-const did_module_1 = require("../d-id/did.module");
 let ScenesModule = class ScenesModule {
 };
 exports.ScenesModule = ScenesModule;
 exports.ScenesModule = ScenesModule = __decorate([
     (0, common_1.Module)({
-        imports: [did_module_1.DidModule],
+        imports: [],
         providers: [video_generation_scene_1.VideoGenerationScene],
         exports: [video_generation_scene_1.VideoGenerationScene],
     })

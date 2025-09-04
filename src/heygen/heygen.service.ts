@@ -109,12 +109,12 @@ export class HeyGenService {
         };
       }
 
-      // Если есть пользовательское аудио, используем AudioVoiceSettings
-      if (useCustomAudio) {
-        this.logger.log(`[${requestId}] 🎵 Используем пользовательское аудио: ${request.audioUrl}`);
+      // Если есть пользовательское аудио, используем AudioVoiceSettings с asset_id
+      if (useCustomAudio && request.audioUrl) {
+        this.logger.log(`[${requestId}] 🎵 Используем пользовательское аудио asset: ${request.audioUrl}`);
         payload.video_inputs[0].voice = {
           type: "audio",
-          audio_url: request.audioUrl
+          audio_asset_id: request.audioUrl // Теперь это asset_id, а не URL
         };
       }
 
@@ -249,26 +249,15 @@ export class HeyGenService {
   async uploadAudio(audioBuffer: Buffer): Promise<string> {
     const uploadId = `heygen_audio_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
-    this.logger.log(`[${uploadId}] HeyGen будет использовать ElevenLabs для клонирования голоса`);
-    this.logger.log(`[${uploadId}] Возвращаем специальный маркер для ElevenLabs`);
-    
-    // Возвращаем специальный маркер, который будет обработан в сцене
-    // Фактическое клонирование голоса будет происходить через ElevenLabs
-    return `elevenlabs_clone_required:${uploadId}`;
-  }
-
-  async uploadImage(imageBuffer: Buffer): Promise<string> {
-    const uploadId = `heygen_image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    
     try {
-      this.logger.log(`[${uploadId}] 🖼️ Создаем TalkingPhoto из пользовательского фото (${imageBuffer.length} bytes)`);
+      this.logger.log(`[${uploadId}] 🎵 Загружаем пользовательское аудио в HeyGen Assets (${audioBuffer.length} bytes)`);
       
-      // Создаем TalkingPhoto из пользовательского фото
+      // Создаем FormData для загрузки аудио
       const formData = new FormData();
-      formData.append('image', new Blob([imageBuffer]), 'user_photo.jpg');
-      formData.append('name', `talking_photo_${uploadId}`);
+      formData.append('file', new Blob([audioBuffer], { type: 'audio/wav' }), 'user_audio.wav');
+      formData.append('type', 'audio');
       
-      const response = await fetch(`${this.baseUrl}/v1/talking_photo/generate`, {
+      const response = await fetch(`${this.baseUrl}/v1/asset`, {
         method: 'POST',
         headers: {
           'X-API-KEY': this.apiKey,
@@ -278,24 +267,104 @@ export class HeyGenService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`[${uploadId}] ❌ TalkingPhoto creation failed: ${response.status} ${response.statusText}`);
+        this.logger.error(`[${uploadId}] ❌ Audio upload failed: ${response.status} ${response.statusText}`);
         this.logger.error(`[${uploadId}] Error details: ${errorText}`);
-        
-        // Fallback: используем доступный аватар
-        this.logger.log(`[${uploadId}] 🔄 Fallback: используем доступный аватар`);
-        return "heygen_use_available_avatar";
+        throw new Error(`Audio upload failed: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json() as any;
-      const talkingPhotoId = result.data?.talking_photo_id || result.talking_photo_id;
-      this.logger.log(`[${uploadId}] ✅ TalkingPhoto created successfully: ${talkingPhotoId}`);
+      const audioAssetId = result.data?.asset_id || result.asset_id;
       
+      if (!audioAssetId) {
+        this.logger.error(`[${uploadId}] ❌ No asset_id in response:`, result);
+        throw new Error('No asset_id returned from HeyGen API');
+      }
+      
+      this.logger.log(`[${uploadId}] ✅ Audio uploaded successfully: ${audioAssetId}`);
+      return audioAssetId;
+      
+    } catch (error) {
+      this.logger.error(`[${uploadId}] ❌ Error uploading audio:`, error);
+      throw error;
+    }
+  }
+
+  async uploadImage(imageBuffer: Buffer): Promise<string> {
+    const uploadId = `heygen_image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    
+    try {
+      this.logger.log(`[${uploadId}] 🖼️ Загружаем пользовательское фото в HeyGen Assets (${imageBuffer.length} bytes)`);
+      
+      // Сначала загружаем изображение как Asset
+      const formData = new FormData();
+      formData.append('file', new Blob([imageBuffer], { type: 'image/jpeg' }), 'user_photo.jpg');
+      formData.append('type', 'image');
+      
+      const uploadResponse = await fetch(`${this.baseUrl}/v1/asset`, {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': this.apiKey,
+        },
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        this.logger.error(`[${uploadId}] ❌ Image upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
+        this.logger.error(`[${uploadId}] Error details: ${errorText}`);
+        throw new Error(`Image upload failed: ${uploadResponse.status} - ${errorText}`);
+      }
+
+      const uploadResult = await uploadResponse.json() as any;
+      const imageAssetId = uploadResult.data?.asset_id || uploadResult.asset_id;
+      
+      if (!imageAssetId) {
+        this.logger.error(`[${uploadId}] ❌ No asset_id in upload response:`, uploadResult);
+        throw new Error('No asset_id returned from image upload');
+      }
+      
+      this.logger.log(`[${uploadId}] ✅ Image uploaded as asset: ${imageAssetId}`);
+      
+      // Теперь создаем TalkingPhoto из загруженного изображения
+      const talkingPhotoPayload = {
+        image_asset_id: imageAssetId,
+        name: `talking_photo_${uploadId}`,
+        crop_style: "square",
+        talking_style: "expressive",
+        expression: "default",
+        super_resolution: true
+      };
+      
+      const talkingPhotoResponse = await fetch(`${this.baseUrl}/v1/talking_photo/generate`, {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': this.apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(talkingPhotoPayload),
+      });
+
+      if (!talkingPhotoResponse.ok) {
+        const errorText = await talkingPhotoResponse.text();
+        this.logger.error(`[${uploadId}] ❌ TalkingPhoto creation failed: ${talkingPhotoResponse.status} ${talkingPhotoResponse.statusText}`);
+        this.logger.error(`[${uploadId}] Error details: ${errorText}`);
+        throw new Error(`TalkingPhoto creation failed: ${talkingPhotoResponse.status} - ${errorText}`);
+      }
+
+      const talkingPhotoResult = await talkingPhotoResponse.json() as any;
+      const talkingPhotoId = talkingPhotoResult.data?.talking_photo_id || talkingPhotoResult.talking_photo_id;
+      
+      if (!talkingPhotoId) {
+        this.logger.error(`[${uploadId}] ❌ No talking_photo_id in response:`, talkingPhotoResult);
+        throw new Error('No talking_photo_id returned from TalkingPhoto creation');
+      }
+      
+      this.logger.log(`[${uploadId}] ✅ TalkingPhoto created successfully: ${talkingPhotoId}`);
       return talkingPhotoId;
+      
     } catch (error) {
       this.logger.error(`[${uploadId}] ❌ Error creating TalkingPhoto:`, error);
-      // Fallback: используем доступный аватар
-      this.logger.log(`[${uploadId}] 🔄 Fallback: используем доступный аватар`);
-      return "heygen_use_available_avatar";
+      throw error;
     }
   }
 
