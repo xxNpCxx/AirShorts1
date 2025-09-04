@@ -33,12 +33,14 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 request.audioUrl.trim() !== "" &&
                 request.audioUrl !== "undefined" &&
                 request.audioUrl !== "null";
+            const availableAvatars = await this.getAvailableAvatars();
+            const defaultAvatarId = availableAvatars[0] || "1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b";
             let payload = {
                 video_inputs: [
                     {
                         character: {
                             type: "avatar",
-                            avatar_id: "Josh",
+                            avatar_id: defaultAvatarId,
                             avatar_style: "normal"
                         },
                         voice: {
@@ -56,19 +58,10 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             };
             if (request.imageUrl && request.imageUrl.trim() !== "" && request.imageUrl !== "undefined" && request.imageUrl !== "null" && request.imageUrl !== "heygen_placeholder_image_url") {
                 this.logger.log(`[${requestId}] 📸 Using custom avatar: ${request.imageUrl}`);
-                payload.video_inputs[0].character = {
-                    type: "avatar",
-                    avatar_id: request.imageUrl,
-                    avatar_style: "normal"
-                };
+                payload.video_inputs[0].character.avatar_id = request.imageUrl;
             }
             else {
-                this.logger.log(`[${requestId}] 📸 Using default avatar: Josh`);
-                payload.video_inputs[0].character = {
-                    type: "avatar",
-                    avatar_id: "Josh",
-                    avatar_style: "normal"
-                };
+                this.logger.log(`[${requestId}] 📸 Using default avatar: ${defaultAvatarId}`);
             }
             if (useCustomAudio) {
                 this.logger.warn(`[${requestId}] HeyGen API пока не поддерживает загрузку пользовательских аудиофайлов`);
@@ -190,7 +183,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             const formData = new FormData();
             formData.append('image', new Blob([imageBuffer]), 'user_photo.jpg');
             formData.append('avatar_name', `custom_avatar_${uploadId}`);
-            const response = await fetch(`${this.baseUrl}/v1/avatar.create`, {
+            const response = await fetch(`${this.baseUrl}/v2/avatar/create`, {
                 method: 'POST',
                 headers: {
                     'X-API-KEY': this.apiKey,
@@ -219,7 +212,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             this.logger.log(`[${uploadId}] 🔄 Fallback: trying direct image upload...`);
             const formData = new FormData();
             formData.append('image', new Blob([imageBuffer]), 'user_photo.jpg');
-            const response = await fetch(`${this.baseUrl}/v1/image.upload`, {
+            const response = await fetch(`${this.baseUrl}/v2/image/upload`, {
                 method: 'POST',
                 headers: {
                     'X-API-KEY': this.apiKey,
@@ -230,6 +223,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 const errorText = await response.text();
                 this.logger.error(`[${uploadId}] ❌ Fallback image upload failed: ${response.status} ${response.statusText}`);
                 this.logger.error(`[${uploadId}] Error details: ${errorText}`);
+                this.logger.warn(`[${uploadId}] ⚠️ Will use default avatar instead of custom photo`);
                 return "heygen_placeholder_image_url";
             }
             const result = await response.json();
@@ -239,7 +233,34 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
         }
         catch (error) {
             this.logger.error(`[${uploadId}] ❌ Fallback image upload error:`, error);
+            this.logger.warn(`[${uploadId}] ⚠️ Will use default avatar instead of custom photo`);
             return "heygen_placeholder_image_url";
+        }
+    }
+    async getAvailableAvatars() {
+        try {
+            const response = await fetch(`${this.baseUrl}/v1/avatar.list`, {
+                headers: {
+                    'X-API-KEY': this.apiKey,
+                },
+            });
+            if (!response.ok) {
+                this.logger.warn('Failed to get available avatars, using hardcoded fallback');
+                return ["1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b"];
+            }
+            const result = await response.json();
+            const avatars = result.data?.avatars || [];
+            const avatarIds = avatars.map((avatar) => avatar.avatar_id).filter(Boolean);
+            if (avatarIds.length === 0) {
+                this.logger.warn('No avatars found, using hardcoded fallback');
+                return ["1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b"];
+            }
+            this.logger.log(`Found ${avatarIds.length} available avatars: ${avatarIds.slice(0, 3).join(', ')}...`);
+            return avatarIds;
+        }
+        catch (error) {
+            this.logger.error('Error getting available avatars:', error);
+            return ["1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b"];
         }
     }
 };

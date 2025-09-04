@@ -472,8 +472,14 @@ export class VideoGenerationScene {
                 const imageBuffer = Buffer.from(await response.arrayBuffer());
                 imageUrl = await this.heygenService.uploadImage(imageBuffer);
                 this.logger.log(`Image uploaded to HeyGen: ${imageUrl}`);
+                
+                // Если загрузка не удалась, уведомляем пользователя
+                if (imageUrl === "heygen_placeholder_image_url") {
+                  await ctx.reply("⚠️ Не удалось создать кастомный аватар из вашего фото. Будет использован стандартный аватар.");
+                }
               } catch (error) {
                 this.logger.error("Error uploading image to HeyGen:", error);
+                await ctx.reply("⚠️ Ошибка загрузки фото в HeyGen. Будет использован стандартный аватар.");
                 // Продолжаем без пользовательского изображения
               }
             }

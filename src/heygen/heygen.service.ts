@@ -68,13 +68,17 @@ export class HeyGenService {
                             request.audioUrl !== "undefined" && 
                             request.audioUrl !== "null";
 
+      // Получаем список доступных аватаров для дефолтного значения
+      const availableAvatars = await this.getAvailableAvatars();
+      const defaultAvatarId = availableAvatars[0] || "1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b";
+
       // HeyGen API v2 структура согласно документации
       let payload: any = {
         video_inputs: [
           {
             character: {
               type: "avatar",
-              avatar_id: "Josh", // Простой аватар для бесплатного плана
+              avatar_id: defaultAvatarId, // Рабочий аватар для бесплатного плана
               avatar_style: "normal"
             },
             voice: {
@@ -94,19 +98,10 @@ export class HeyGenService {
       // Если есть пользовательское фото, используем созданный кастомный аватар
       if (request.imageUrl && request.imageUrl.trim() !== "" && request.imageUrl !== "undefined" && request.imageUrl !== "null" && request.imageUrl !== "heygen_placeholder_image_url") {
         this.logger.log(`[${requestId}] 📸 Using custom avatar: ${request.imageUrl}`);
-        payload.video_inputs[0].character = {
-          type: "avatar",
-          avatar_id: request.imageUrl, // Используем ID созданного кастомного аватара
-          avatar_style: "normal"
-        };
+        payload.video_inputs[0].character.avatar_id = request.imageUrl;
       } else {
-        this.logger.log(`[${requestId}] 📸 Using default avatar: Josh`);
-        // Используем доступный аватар для бесплатного плана
-        payload.video_inputs[0].character = {
-          type: "avatar",
-          avatar_id: "Josh",
-          avatar_style: "normal"
-        };
+        this.logger.log(`[${requestId}] 📸 Using default avatar: ${defaultAvatarId}`);
+        // defaultAvatarId уже установлен в payload выше
       }
 
       // Если используется пользовательское аудио, HeyGen пока не поддерживает загрузку файлов
@@ -254,7 +249,7 @@ export class HeyGenService {
       formData.append('image', new Blob([imageBuffer]), 'user_photo.jpg');
       formData.append('avatar_name', `custom_avatar_${uploadId}`);
       
-      const response = await fetch(`${this.baseUrl}/v1/avatar.create`, {
+      const response = await fetch(`${this.baseUrl}/v2/avatar/create`, {
         method: 'POST',
         headers: {
           'X-API-KEY': this.apiKey,
@@ -291,7 +286,7 @@ export class HeyGenService {
       const formData = new FormData();
       formData.append('image', new Blob([imageBuffer]), 'user_photo.jpg');
       
-      const response = await fetch(`${this.baseUrl}/v1/image.upload`, {
+      const response = await fetch(`${this.baseUrl}/v2/image/upload`, {
         method: 'POST',
         headers: {
           'X-API-KEY': this.apiKey,
@@ -303,6 +298,7 @@ export class HeyGenService {
         const errorText = await response.text();
         this.logger.error(`[${uploadId}] ❌ Fallback image upload failed: ${response.status} ${response.statusText}`);
         this.logger.error(`[${uploadId}] Error details: ${errorText}`);
+        this.logger.warn(`[${uploadId}] ⚠️ Will use default avatar instead of custom photo`);
         return "heygen_placeholder_image_url";
       }
 
@@ -313,7 +309,39 @@ export class HeyGenService {
       return imageUrl;
     } catch (error) {
       this.logger.error(`[${uploadId}] ❌ Fallback image upload error:`, error);
+      this.logger.warn(`[${uploadId}] ⚠️ Will use default avatar instead of custom photo`);
       return "heygen_placeholder_image_url";
+    }
+  }
+
+  // Получаем список доступных аватаров для fallback
+  private async getAvailableAvatars(): Promise<string[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/v1/avatar.list`, {
+        headers: {
+          'X-API-KEY': this.apiKey,
+        },
+      });
+
+      if (!response.ok) {
+        this.logger.warn('Failed to get available avatars, using hardcoded fallback');
+        return ["1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b"];
+      }
+
+      const result = await response.json() as any;
+      const avatars = result.data?.avatars || [];
+      const avatarIds = avatars.map((avatar: any) => avatar.avatar_id).filter(Boolean);
+      
+      if (avatarIds.length === 0) {
+        this.logger.warn('No avatars found, using hardcoded fallback');
+        return ["1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b"];
+      }
+
+      this.logger.log(`Found ${avatarIds.length} available avatars: ${avatarIds.slice(0, 3).join(', ')}...`);
+      return avatarIds;
+    } catch (error) {
+      this.logger.error('Error getting available avatars:', error);
+      return ["1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b"];
     }
   }
 }

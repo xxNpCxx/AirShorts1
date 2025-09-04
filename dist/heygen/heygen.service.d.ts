@@ -26,5 +26,6 @@ export declare class HeyGenService {
     uploadAudio(audioBuffer: Buffer): Promise<string>;
     uploadImage(imageBuffer: Buffer): Promise<string>;
     private uploadImageFallback;
+    private getAvailableAvatars;
 }
 //# sourceMappingURL=heygen.service.d.ts.map
