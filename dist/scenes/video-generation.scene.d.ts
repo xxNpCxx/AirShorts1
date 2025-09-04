@@ -3,6 +3,7 @@ import type { Message } from "@telegraf/types";
 import { DidService } from "../d-id/did.service";
 import { HeyGenService } from "../heygen/heygen.service";
 import { ElevenLabsService } from "../elevenlabs/elevenlabs.service";
+import { VoiceNotificationService } from "../elevenlabs/voice-notification.service";
 import { UsersService } from "../users/users.service";
 import { Telegraf } from "telegraf";
 interface SessionData {
@@ -32,10 +33,11 @@ export declare class VideoGenerationScene {
     private readonly didService;
     private readonly heygenService;
     private readonly elevenLabsService;
+    private readonly voiceNotificationService;
     private readonly usersService;
     private readonly bot;
     private readonly logger;
-    constructor(didService: DidService, heygenService: HeyGenService, elevenLabsService: ElevenLabsService, usersService: UsersService, bot: Telegraf);
+    constructor(didService: DidService, heygenService: HeyGenService, elevenLabsService: ElevenLabsService, voiceNotificationService: VoiceNotificationService, usersService: UsersService, bot: Telegraf);
     private calculateVideoDuration;
     onSceneEnter(ctx: Context): Promise<void>;
     onPhoto(ctx: PhotoContext): Promise<void>;

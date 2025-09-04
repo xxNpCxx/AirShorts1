@@ -8,6 +8,7 @@ export interface VoiceCloneResponse {
     voice_id: string;
     name: string;
     status: string;
+    message?: string;
 }
 export interface TextToSpeechRequest {
     text: string;
@@ -82,9 +83,15 @@ export declare class ElevenLabsService {
     private readonly apiKey;
     private readonly baseUrl;
     constructor(configService: ConfigService);
+    cloneVoiceAsync(request: VoiceCloneRequest): Promise<VoiceCloneResponse>;
     cloneVoice(request: VoiceCloneRequest): Promise<VoiceCloneResponse>;
     textToSpeech(request: TextToSpeechRequest): Promise<Buffer>;
     getVoices(): Promise<ElevenLabsVoiceResponse[]>;
+    getVoiceStatus(voiceId: string): Promise<{
+        status: string;
+        ready: boolean;
+        error?: string;
+    }>;
     deleteVoice(voiceId: string): Promise<boolean>;
 }
 //# sourceMappingURL=elevenlabs.service.d.ts.map

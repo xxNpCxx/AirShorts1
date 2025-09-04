@@ -4,6 +4,7 @@ import type { Message } from "@telegraf/types";
 import { DidService } from "../d-id/did.service";
 import { HeyGenService } from "../heygen/heygen.service";
 import { ElevenLabsService } from "../elevenlabs/elevenlabs.service";
+import { VoiceNotificationService } from "../elevenlabs/voice-notification.service";
 import { UsersService } from "../users/users.service";
 import { Logger, Inject } from "@nestjs/common";
 import { Telegraf } from "telegraf";
@@ -45,6 +46,7 @@ export class VideoGenerationScene {
     private readonly didService: DidService,
     private readonly heygenService: HeyGenService,
     private readonly elevenLabsService: ElevenLabsService,
+    private readonly voiceNotificationService: VoiceNotificationService,
     private readonly usersService: UsersService,
     @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
   ) {}
@@ -314,21 +316,32 @@ export class VideoGenerationScene {
         const voiceBuffer = Buffer.from(await response.arrayBuffer());
         this.logger.log(`Downloaded voice file for cloning: ${voiceBuffer.length} bytes`);
         
-        // Клонируем голос в ElevenLabs
+        // Запускаем асинхронное клонирование голоса в ElevenLabs
         const voiceName = `User_${ctx.from?.id}_${Date.now()}`;
-        const cloneResult = await this.elevenLabsService.cloneVoice({
+        const cloneResult = await this.elevenLabsService.cloneVoiceAsync({
           name: voiceName,
           audioBuffer: voiceBuffer,
           description: "Клонированный голос пользователя для видео"
         });
         
         session.clonedVoiceId = cloneResult.voice_id;
-        this.logger.log(`Voice cloned successfully: ${cloneResult.voice_id}`);
+        this.logger.log(`Voice cloning started: ${cloneResult.voice_id}`);
+
+        // Регистрируем уведомление о готовности голоса
+        this.voiceNotificationService.registerVoiceNotification(
+          ctx.from?.id || 0,
+          ctx.chat?.id || 0,
+          cloneResult.voice_id,
+          voiceName
+        );
 
         await ctx.reply(
-          "🎉 Голос успешно клонирован!\n\n" +
-          `🎤 ID клонированного голоса: ${cloneResult.voice_id.substring(0, 8)}...\n\n` +
-          "📝 Теперь введите текст сценария для озвучки:\n\n" +
+          "🔄 Клонирование голоса запущено!\n\n" +
+          `🎤 ID голоса: ${cloneResult.voice_id.substring(0, 8)}...\n` +
+          `📊 Статус: ${cloneResult.status}\n\n` +
+          "⏳ Клонирование может занять несколько минут.\n" +
+          "📱 Вы получите уведомление, когда голос будет готов.\n\n" +
+          "📝 Пока можете ввести текст сценария для озвучки:\n\n" +
           "💡 **Советы:**\n" +
           "• Используйте понятный и интересный текст\n" +
           "• Длина текста должна соответствовать длительности видео\n" +
@@ -524,23 +537,40 @@ export class VideoGenerationScene {
             if (session.clonedVoiceId) {
               this.logger.log(`Using cloned voice from ElevenLabs: ${session.clonedVoiceId}`);
               
-              // Генерируем аудио с клонированным голосом
-              await ctx.reply("🎤 Генерирую аудио с вашим клонированным голосом...");
+              // Проверяем готовность клонированного голоса
+              await ctx.reply("🔍 Проверяю готовность вашего клонированного голоса...");
               
-              const clonedAudioBuffer = await this.elevenLabsService.textToSpeech({
-                text: session.script || "",
-                voice_id: session.clonedVoiceId,
-                voice_settings: {
-                  stability: 0.5,
-                  similarity_boost: 0.75,
-                  style: 0.0,
-                  use_speaker_boost: true
-                }
-              });
+              const voiceStatus = await this.elevenLabsService.getVoiceStatus(session.clonedVoiceId);
               
-              // Загружаем сгенерированное аудио в D-ID (так как HeyGen не поддерживает прямую загрузку)
-              voiceUrl = await this.didService.uploadAudio(clonedAudioBuffer);
-              this.logger.log(`Cloned voice audio uploaded to D-ID: ${voiceUrl}`);
+              if (voiceStatus.ready) {
+                this.logger.log(`Cloned voice is ready: ${session.clonedVoiceId}`);
+                
+                // Генерируем аудио с клонированным голосом
+                await ctx.reply("🎤 Генерирую аудио с вашим клонированным голосом...");
+                
+                const clonedAudioBuffer = await this.elevenLabsService.textToSpeech({
+                  text: session.script || "",
+                  voice_id: session.clonedVoiceId,
+                  voice_settings: {
+                    stability: 0.5,
+                    similarity_boost: 0.75,
+                    style: 0.0,
+                    use_speaker_boost: true
+                  }
+                });
+                
+                // Загружаем сгенерированное аудио в D-ID (так как HeyGen не поддерживает прямую загрузку)
+                voiceUrl = await this.didService.uploadAudio(clonedAudioBuffer);
+                this.logger.log(`Cloned voice audio uploaded to D-ID: ${voiceUrl}`);
+              } else {
+                this.logger.warn(`Cloned voice not ready yet: ${voiceStatus.status}`);
+                await ctx.reply(
+                  `⏳ Ваш клонированный голос еще не готов.\n` +
+                  `📊 Статус: ${voiceStatus.status}\n\n` +
+                  `🔄 Продолжаю с оригинальным голосом...`
+                );
+                voiceUrl = await this.didService.uploadAudio(voiceBuffer);
+              }
             } else {
               this.logger.warn("No cloned voice available, falling back to original audio");
               voiceUrl = await this.didService.uploadAudio(voiceBuffer);

@@ -23,6 +23,53 @@ let ElevenLabsService = ElevenLabsService_1 = class ElevenLabsService {
             this.logger.warn("ELEVENLABS_API_KEY не найден в переменных окружения");
         }
     }
+    async cloneVoiceAsync(request) {
+        const cloneId = `clone_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        try {
+            this.logger.log(`[${cloneId}] 🎤 Starting async voice cloning with ElevenLabs`);
+            this.logger.debug(`[${cloneId}] Voice name: ${request.name}, Audio size: ${request.audioBuffer.length} bytes`);
+            const formData = new FormData();
+            formData.append("name", request.name);
+            formData.append("description", request.description || "Клонированный голос пользователя");
+            formData.append("files", new Blob([request.audioBuffer], { type: "audio/wav" }), "voice_sample.wav");
+            const response = await fetch(`${this.baseUrl}/voices/add`, {
+                method: "POST",
+                headers: {
+                    "xi-api-key": this.apiKey,
+                },
+                body: formData,
+            });
+            this.logger.debug(`[${cloneId}] 📥 Voice cloning response: ${response.status} ${response.statusText}`);
+            if (!response.ok) {
+                const errorText = await response.text();
+                this.logger.error(`[${cloneId}] ❌ Failed to clone voice:`, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    url: `${this.baseUrl}/voices/add`,
+                    audioSize: request.audioBuffer.length,
+                    errorBody: errorText
+                });
+                throw new Error(`Failed to clone voice: ${response.status} - ${errorText}`);
+            }
+            const result = await response.json();
+            this.logger.log(`[${cloneId}] ✅ Voice cloning started successfully with ID: ${result.voice_id}`);
+            this.logger.debug(`[${cloneId}] Full response:`, result);
+            return {
+                voice_id: result.voice_id,
+                name: result.name,
+                status: "processing",
+                message: "Клонирование голоса запущено. Вы получите уведомление, когда оно будет готово."
+            };
+        }
+        catch (error) {
+            this.logger.error(`[${cloneId}] 💥 Critical error cloning voice:`, {
+                error: error instanceof Error ? error.message : String(error),
+                audioSize: request.audioBuffer.length,
+                stack: error instanceof Error ? error.stack : undefined
+            });
+            throw error;
+        }
+    }
     async cloneVoice(request) {
         const cloneId = `clone_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         try {
@@ -144,6 +191,45 @@ let ElevenLabsService = ElevenLabsService_1 = class ElevenLabsService {
                 stack: error instanceof Error ? error.stack : undefined
             });
             throw error;
+        }
+    }
+    async getVoiceStatus(voiceId) {
+        try {
+            this.logger.debug(`🔍 Checking voice status: ${voiceId}`);
+            const response = await fetch(`${this.baseUrl}/voices/${voiceId}`, {
+                headers: {
+                    "xi-api-key": this.apiKey,
+                },
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                this.logger.error(`❌ Failed to get voice status for ${voiceId}:`, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    errorBody: errorText
+                });
+                return { status: "error", ready: false, error: errorText };
+            }
+            const result = await response.json();
+            const isReady = result.fine_tuning?.finetuning_state === "completed" ||
+                result.fine_tuning?.finetuning_state === "ready";
+            this.logger.debug(`📊 Voice ${voiceId} status:`, {
+                finetuning_state: result.fine_tuning?.finetuning_state,
+                isReady,
+                hasSamples: result.samples?.length > 0
+            });
+            return {
+                status: result.fine_tuning?.finetuning_state || "unknown",
+                ready: isReady,
+                error: result.fine_tuning?.verification_failures?.join(", ")
+            };
+        }
+        catch (error) {
+            this.logger.error(`💥 Critical error getting voice status for ${voiceId}:`, {
+                error: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined
+            });
+            return { status: "error", ready: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async deleteVoice(voiceId) {

@@ -9,15 +9,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ElevenLabsModule = void 0;
 const common_1 = require("@nestjs/common");
 const elevenlabs_controller_1 = require("./elevenlabs.controller");
+const elevenlabs_webhook_controller_1 = require("./elevenlabs-webhook.controller");
 const elevenlabs_service_1 = require("./elevenlabs.service");
+const voice_notification_service_1 = require("./voice-notification.service");
 let ElevenLabsModule = class ElevenLabsModule {
 };
 exports.ElevenLabsModule = ElevenLabsModule;
 exports.ElevenLabsModule = ElevenLabsModule = __decorate([
     (0, common_1.Module)({
-        controllers: [elevenlabs_controller_1.ElevenLabsController],
-        providers: [elevenlabs_service_1.ElevenLabsService],
-        exports: [elevenlabs_service_1.ElevenLabsService],
+        controllers: [elevenlabs_controller_1.ElevenLabsController, elevenlabs_webhook_controller_1.ElevenLabsWebhookController],
+        providers: [elevenlabs_service_1.ElevenLabsService, voice_notification_service_1.VoiceNotificationService],
+        exports: [elevenlabs_service_1.ElevenLabsService, voice_notification_service_1.VoiceNotificationService],
     })
 ], ElevenLabsModule);
 //# sourceMappingURL=elevenlabs.module.js.map
