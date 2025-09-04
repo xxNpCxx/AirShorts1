@@ -129,6 +129,31 @@ async function runMigrations() {
             console.log(`📁 Текущая рабочая директория: ${process.cwd()}`);
             console.log(`📁 __dirname: ${__dirname}`);
             console.log(`📁 NODE_ENV: ${process.env.NODE_ENV}`);
+            const possiblePaths = [
+                (0, path_1.join)(process.cwd(), "migrations"),
+                (0, path_1.join)(process.cwd(), "..", "migrations"),
+                (0, path_1.join)(__dirname, "migrations"),
+                (0, path_1.join)(__dirname, "..", "migrations"),
+                (0, path_1.join)(__dirname, "..", "..", "migrations"),
+                (0, path_1.join)(__dirname, "..", "..", "..", "migrations"),
+                "/opt/render/project/migrations",
+                "/opt/render/project/src/migrations",
+                "/opt/render/project/src/dist/migrations"
+            ];
+            console.log(`🔍 Проверяем возможные пути к миграциям:`);
+            for (const path of possiblePaths) {
+                const exists = (0, fs_1.existsSync)(path);
+                console.log(`  ${exists ? '✅' : '❌'} ${path}`);
+                if (exists) {
+                    try {
+                        const files = (0, fs_1.readdirSync)(path);
+                        console.log(`    📁 Файлы: ${files.join(', ')}`);
+                    }
+                    catch (e) {
+                        console.log(`    ❌ Ошибка чтения: ${e}`);
+                    }
+                }
+            }
             return;
         }
         const migrationFiles = (0, fs_1.readdirSync)(migrationsDir)
