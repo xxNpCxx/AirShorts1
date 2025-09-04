@@ -467,12 +467,12 @@ export class VideoGenerationScene {
               const photoBuffer = await ctx.telegram.getFileLink(session.photoFileId);
               const response = await fetch(photoBuffer.href);
               const imageBuffer = Buffer.from(await response.arrayBuffer());
-              await ctx.reply("📤 Создаю ваш TalkingPhoto аватар...");
+              await ctx.reply("📤 Создаю ваш Avatar IV из фото...");
               imageUrl = await this.heygenService.uploadImage(imageBuffer);
-              this.logger.log(`TalkingPhoto created in HeyGen: ${imageUrl}`);
+              this.logger.log(`Avatar IV image uploaded in HeyGen: ${imageUrl}`);
             } catch (error) {
-              this.logger.error("Error creating TalkingPhoto in HeyGen:", error);
-              await ctx.reply("❌ Ошибка создания TalkingPhoto. Попробуйте загрузить фото заново.");
+              this.logger.error("Error creating Avatar IV in HeyGen:", error);
+              await ctx.reply("❌ Ошибка создания Avatar IV. Попробуйте загрузить фото заново.");
               return;
             }
           }
@@ -503,10 +503,10 @@ export class VideoGenerationScene {
           const voiceBuffer = Buffer.from(await response.arrayBuffer());
           this.logger.log(`Downloaded voice file: ${voiceBuffer.length} bytes`);
           
-                  // Загружаем голос в HeyGen Assets
-        await ctx.reply("📤 Загружаю ваш голос в HeyGen...");
+                  // Avatar IV пока не поддерживает пользовательское аудио
+        await ctx.reply("📝 Avatar IV будет использовать TTS для озвучки вашего текста...");
         voiceUrl = await this.heygenService.uploadAudio(voiceBuffer);
-        this.logger.log(`Voice uploaded to HeyGen: ${voiceUrl}`);
+        this.logger.log(`Audio processing for Avatar IV: ${voiceUrl}`);
           
         } catch (error) {
           this.logger.error("Error processing voice file:", error);
@@ -536,8 +536,8 @@ export class VideoGenerationScene {
       const result = await this.heygenService.generateVideo(request);
 
       const hasUserContent = (session.photoFileId && session.voiceFileId);
-      const serviceExplanation = hasUserContent 
-        ? "🎭 Используется ваш голос и фото для создания персонализированного TalkingPhoto аватара"
+      const serviceExplanation = session.photoFileId 
+        ? "📸 Используется ваше фото для создания Avatar IV с TTS озвучкой"
         : "🤖 Используется предустановленный аватар и TTS";
       
       await ctx.reply(
