@@ -7,6 +7,7 @@ export interface HeyGenVideoRequest {
     duration: number;
     quality: "720p" | "1080p";
     textPrompt?: string;
+    imageUrl?: string;
 }
 export interface HeyGenVideoResponse {
     id: string;

@@ -9,6 +9,7 @@ export interface HeyGenVideoRequest {
   duration: number;
   quality: "720p" | "1080p";
   textPrompt?: string;
+  imageUrl?: string; // URL загруженного изображения
 }
 
 export interface HeyGenVideoResponse {
@@ -89,6 +90,20 @@ export class HeyGenService {
           height: 720
         }
       };
+
+      // Если есть пользовательское фото, используем его вместо предустановленного аватара
+      if (request.imageUrl && request.imageUrl.trim() !== "" && request.imageUrl !== "undefined" && request.imageUrl !== "null") {
+        this.logger.log(`[${requestId}] 📸 Using custom user photo: ${request.imageUrl}`);
+        payload.video_inputs[0].character = {
+          type: "avatar",
+          avatar_id: "Josh", // Базовый аватар
+          avatar_style: "normal",
+          // Добавляем пользовательское изображение
+          avatar_image_url: request.imageUrl
+        };
+      } else {
+        this.logger.log(`[${requestId}] 📸 Using default avatar: Josh`);
+      }
 
       // Если используется пользовательское аудио, HeyGen пока не поддерживает загрузку файлов
       // Нужно использовать предварительно загруженный голос или TTS
@@ -227,10 +242,35 @@ export class HeyGenService {
   async uploadImage(imageBuffer: Buffer): Promise<string> {
     const uploadId = `heygen_image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
-    this.logger.warn(`[${uploadId}] HeyGen API использует предустановленные аватары`);
-    this.logger.log(`[${uploadId}] Возвращаем placeholder URL для совместимости`);
-    
-    // HeyGen использует предустановленные аватары, а не пользовательские изображения
-    return "heygen_placeholder_image_url";
+    try {
+      this.logger.log(`[${uploadId}] 🖼️ Starting image upload to HeyGen (${imageBuffer.length} bytes)`);
+      
+      const formData = new FormData();
+      formData.append('image', new Blob([imageBuffer]), 'user_photo.jpg');
+      
+      const response = await fetch(`${this.baseUrl}/v1/image/upload`, {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': this.apiKey,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(`[${uploadId}] ❌ Image upload failed: ${response.status} ${response.statusText}`);
+        this.logger.error(`[${uploadId}] Error details: ${errorText}`);
+        throw new Error(`Image upload failed: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json() as any;
+      this.logger.log(`[${uploadId}] ✅ Image uploaded successfully: ${result.image_url || result.url || result.image}`);
+      
+      return result.image_url || result.url || result.image || result.data?.image_url;
+    } catch (error) {
+      this.logger.error(`[${uploadId}] ❌ Error uploading image to HeyGen:`, error);
+      // Возвращаем placeholder для совместимости
+      return "heygen_placeholder_image_url";
+    }
   }
 }

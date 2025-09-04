@@ -324,11 +324,24 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 `⏱️ Это может занять несколько минут. Пожалуйста, подождите.`);
             let photoUrl = "";
             let voiceUrl = "";
+            let imageUrl = "";
             if (session.photoFileId) {
                 try {
                     const photoFile = await ctx.telegram.getFile(session.photoFileId);
                     if (photoFile.file_path) {
                         photoUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${photoFile.file_path}`;
+                        if (preferredService === 'heygen') {
+                            try {
+                                const photoBuffer = await ctx.telegram.getFileLink(session.photoFileId);
+                                const response = await fetch(photoBuffer.href);
+                                const imageBuffer = Buffer.from(await response.arrayBuffer());
+                                imageUrl = await this.heygenService.uploadImage(imageBuffer);
+                                this.logger.log(`Image uploaded to HeyGen: ${imageUrl}`);
+                            }
+                            catch (error) {
+                                this.logger.error("Error uploading image to HeyGen:", error);
+                            }
+                        }
                     }
                 }
                 catch (error) {
@@ -378,6 +391,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 duration: session.duration || 30,
                 quality: session.quality || "720p",
                 textPrompt: session.textPrompt,
+                imageUrl: imageUrl,
             };
             this.logger.log(`Starting ${preferredService.toUpperCase()} generation with photoUrl: ${photoUrl ? 'PROVIDED' : 'MISSING'}, voiceUrl: ${voiceUrl ? `PROVIDED (${voiceUrl.substring(0, 50)}...)` : `MISSING (${voiceUrl})`}`);
             const result = preferredService === 'did'
