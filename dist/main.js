@@ -5,6 +5,7 @@ const core_1 = require("@nestjs/core");
 const app_module_1 = require("./app.module");
 const logger_service_1 = require("./logger/logger.service");
 const express_1 = require("express");
+const migrate_1 = require("./migrate");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         logger: ["error", "warn", "log", "debug", "verbose"],
@@ -46,6 +47,14 @@ async function bootstrap() {
     logger.debug(`BOT_TOKEN: ${process.env.BOT_TOKEN ? "установлен" : "НЕ УСТАНОВЛЕН"}`, "Bootstrap");
     logger.debug(`WEBHOOK_URL: ${process.env.WEBHOOK_URL || "не установлен"}`, "Bootstrap");
     logger.debug(`PORT: ${process.env.PORT || "не установлен, используется 3000"}`, "Bootstrap");
+    try {
+        logger.log("🔧 Запуск миграций базы данных...", "Bootstrap");
+        await (0, migrate_1.runMigrations)();
+        logger.log("✅ Миграции базы данных выполнены успешно", "Bootstrap");
+    }
+    catch (error) {
+        logger.error("❌ Ошибка при выполнении миграций:", error instanceof Error ? error.message : String(error), "Bootstrap");
+    }
     const port = Number(process.env.PORT) || 3000;
     logger.log(`🚀 Запуск приложения на порту ${port}`, "Bootstrap");
     await app.listen(port);

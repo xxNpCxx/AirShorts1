@@ -5,7 +5,6 @@ interface TelegramContext extends Context {
 export declare class UsersService {
     private readonly pool;
     private readonly logger;
-    private readonly temporaryPreferences;
     constructor(pool: Pool);
     upsertFromContext(ctx: TelegramContext): Promise<boolean>;
     getUserPreferredService(telegramId: number): Promise<'did' | 'heygen'>;
