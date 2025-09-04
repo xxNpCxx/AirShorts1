@@ -15,6 +15,7 @@ import { MenuUpdate } from "./updates/menu.update";
 import { LoggerModule } from "./logger/logger.module";
 import { DidModule } from "./d-id/did.module";
 import { HeyGenModule } from "./heygen/heygen.module";
+import { ElevenLabsModule } from "./elevenlabs/elevenlabs.module";
 import { VideoGenerationScene } from "./scenes/video-generation.scene";
 import { WebhookModule } from "./webhook/webhook.module";
 
@@ -33,6 +34,7 @@ import { WebhookModule } from "./webhook/webhook.module";
     RedisModule,
     DidModule,
     HeyGenModule,
+    ElevenLabsModule,
     WebhookModule,
     TelegrafModule.forRoot({
       token: process.env.BOT_TOKEN || "",

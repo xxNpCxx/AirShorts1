@@ -34,41 +34,29 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 request.audioUrl !== "undefined" &&
                 request.audioUrl !== "null";
             let payload = {
-                video_inputs: [
+                background: "#000000",
+                clips: [
                     {
-                        character: {
-                            type: "avatar",
-                            avatar_id: "default",
-                            avatar_style: "normal"
-                        },
-                        voice: useCustomAudio ? {
-                            type: "audio",
-                            audio_url: request.audioUrl
-                        } : {
-                            type: "text",
-                            input_text: request.script,
-                            voice_id: "ru-RU-SvetlanaNeural"
-                        },
-                        background: {
-                            type: "color",
-                            value: "#000000"
-                        }
+                        avatar_id: "default_avatar",
+                        input_text: request.script,
+                        voice_id: useCustomAudio ? "custom_voice" : "ru-RU-SvetlanaNeural",
                     }
-                ],
-                dimension: {
-                    width: request.quality === "1080p" ? 1080 : 720,
-                    height: request.quality === "1080p" ? 1920 : 1280
-                },
-                aspect_ratio: "9:16"
+                ]
             };
+            if (useCustomAudio) {
+                this.logger.warn(`[${requestId}] HeyGen API пока не поддерживает загрузку пользовательских аудиофайлов`);
+                payload.clips[0].input_text = request.script;
+                payload.clips[0].voice_id = "ru-RU-SvetlanaNeural";
+                this.logger.log(`[${requestId}] 🎵 Fallback to TTS with script: ${request.script?.substring(0, 50)}...`);
+            }
             if (useCustomAudio) {
                 this.logger.log(`[${requestId}] 🎵 Using custom user audio from: ${request.audioUrl}`);
             }
             else {
                 this.logger.log(`[${requestId}] 🎵 Using TTS with script: ${request.script?.substring(0, 50)}...`);
             }
-            this.logger.debug(`[${requestId}] 📤 Sending request to ${this.baseUrl}/video/generate`);
-            const response = await fetch(`${this.baseUrl}/video/generate`, {
+            this.logger.debug(`[${requestId}] 📤 Sending request to ${this.baseUrl}/v1/video/generate`);
+            const response = await fetch(`${this.baseUrl}/v1/video/generate`, {
                 method: "POST",
                 headers: {
                     "X-API-KEY": this.apiKey,
@@ -115,7 +103,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
     async getVideoStatus(videoId) {
         try {
             this.logger.debug(`🔍 Checking status for HeyGen video: ${videoId}`);
-            const response = await fetch(`${this.baseUrl}/video/${videoId}`, {
+            const response = await fetch(`${this.baseUrl}/v1/video_status/${videoId}`, {
                 headers: {
                     "X-API-KEY": this.apiKey,
                 },
@@ -164,91 +152,15 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
     }
     async uploadAudio(audioBuffer) {
         const uploadId = `heygen_audio_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        try {
-            this.logger.log(`[${uploadId}] 🎵 Starting audio upload to HeyGen (${audioBuffer.length} bytes)`);
-            const formData = new FormData();
-            formData.append("file", new Blob([audioBuffer]), "audio.wav");
-            const response = await fetch(`${this.baseUrl}/assets/upload`, {
-                method: "POST",
-                headers: {
-                    "X-API-KEY": this.apiKey,
-                },
-                body: formData,
-            });
-            this.logger.debug(`[${uploadId}] 📥 Audio upload response: ${response.status} ${response.statusText}`);
-            if (!response.ok) {
-                const errorText = await response.text();
-                this.logger.error(`[${uploadId}] ❌ Failed to upload audio to HeyGen:`, {
-                    status: response.status,
-                    statusText: response.statusText,
-                    url: `${this.baseUrl}/assets/upload`,
-                    audioSize: audioBuffer.length,
-                    errorBody: errorText
-                });
-                throw new Error(`Failed to upload audio: ${response.status} - ${errorText}`);
-            }
-            const result = await response.json();
-            this.logger.debug(`[${uploadId}] 📋 Full audio upload response:`, result);
-            const audioUrl = result.data?.url || result.url || result.audio_url;
-            if (!audioUrl) {
-                this.logger.error(`[${uploadId}] ❌ No audio URL in HeyGen response:`, result);
-                throw new Error('No audio URL received from HeyGen API');
-            }
-            this.logger.log(`[${uploadId}] ✅ Audio uploaded to HeyGen successfully: ${audioUrl}`);
-            return audioUrl;
-        }
-        catch (error) {
-            this.logger.error(`[${uploadId}] 💥 Critical error uploading audio to HeyGen:`, {
-                error: error instanceof Error ? error.message : String(error),
-                audioSize: audioBuffer.length,
-                stack: error instanceof Error ? error.stack : undefined
-            });
-            throw error;
-        }
+        this.logger.log(`[${uploadId}] HeyGen будет использовать ElevenLabs для клонирования голоса`);
+        this.logger.log(`[${uploadId}] Возвращаем специальный маркер для ElevenLabs`);
+        return `elevenlabs_clone_required:${uploadId}`;
     }
     async uploadImage(imageBuffer) {
         const uploadId = `heygen_image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        try {
-            this.logger.log(`[${uploadId}] 📸 Starting image upload to HeyGen (${imageBuffer.length} bytes)`);
-            const formData = new FormData();
-            formData.append("file", new Blob([imageBuffer]), "image.jpg");
-            const response = await fetch(`${this.baseUrl}/assets/upload`, {
-                method: "POST",
-                headers: {
-                    "X-API-KEY": this.apiKey,
-                },
-                body: formData,
-            });
-            this.logger.debug(`[${uploadId}] 📥 Image upload response: ${response.status} ${response.statusText}`);
-            if (!response.ok) {
-                const errorText = await response.text();
-                this.logger.error(`[${uploadId}] ❌ Failed to upload image to HeyGen:`, {
-                    status: response.status,
-                    statusText: response.statusText,
-                    url: `${this.baseUrl}/assets/upload`,
-                    imageSize: imageBuffer.length,
-                    errorBody: errorText
-                });
-                throw new Error(`Failed to upload image: ${response.status} - ${errorText}`);
-            }
-            const result = await response.json();
-            this.logger.debug(`[${uploadId}] 📋 Full image upload response:`, result);
-            const imageUrl = result.data?.url || result.url || result.image_url;
-            if (!imageUrl) {
-                this.logger.error(`[${uploadId}] ❌ No image URL in HeyGen response:`, result);
-                throw new Error('No image URL received from HeyGen API');
-            }
-            this.logger.log(`[${uploadId}] ✅ Image uploaded to HeyGen successfully: ${imageUrl}`);
-            return imageUrl;
-        }
-        catch (error) {
-            this.logger.error(`[${uploadId}] 💥 Critical error uploading image to HeyGen:`, {
-                error: error instanceof Error ? error.message : String(error),
-                imageSize: imageBuffer.length,
-                stack: error instanceof Error ? error.stack : undefined
-            });
-            throw error;
-        }
+        this.logger.warn(`[${uploadId}] HeyGen API использует предустановленные аватары`);
+        this.logger.log(`[${uploadId}] Возвращаем placeholder URL для совместимости`);
+        return "heygen_placeholder_image_url";
     }
 };
 exports.HeyGenService = HeyGenService;

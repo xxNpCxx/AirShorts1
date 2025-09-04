@@ -18,14 +18,16 @@ const nestjs_telegraf_1 = require("nestjs-telegraf");
 const telegraf_1 = require("telegraf");
 const did_service_1 = require("../d-id/did.service");
 const heygen_service_1 = require("../heygen/heygen.service");
+const elevenlabs_service_1 = require("../elevenlabs/elevenlabs.service");
 const users_service_1 = require("../users/users.service");
 const common_1 = require("@nestjs/common");
 const telegraf_2 = require("telegraf");
 const nestjs_telegraf_2 = require("nestjs-telegraf");
 let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
-    constructor(didService, heygenService, usersService, bot) {
+    constructor(didService, heygenService, elevenLabsService, usersService, bot) {
         this.didService = didService;
         this.heygenService = heygenService;
+        this.elevenLabsService = elevenLabsService;
         this.usersService = usersService;
         this.bot = bot;
         this.logger = new common_1.Logger(VideoGenerationScene_1.name);
@@ -200,13 +202,43 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 `📊 Информация:\n` +
                 `• Длительность: ${voice.duration || '?'} сек.\n` +
                 `• Размер: ${voice.file_size ? Math.round(voice.file_size / 1024) + ' КБ' : 'неизвестен'}\n\n` +
-                "📝 Теперь введите текст сценария для озвучки:\n\n" +
-                "💡 **Советы:**\n" +
-                "• Используйте понятный и интересный текст\n" +
-                "• Длина текста должна соответствовать длительности видео\n" +
-                "• Избегайте сложных слов и терминов\n" +
-                "• Пишите так, как говорите\n\n" +
-                "✍️ Введите текст сценария:");
+                "🔄 Начинаю клонирование вашего голоса через ElevenLabs...\n" +
+                "Это может занять несколько секунд.");
+            try {
+                const voiceFile = await ctx.telegram.getFile(session.voiceFileId);
+                if (!voiceFile.file_path) {
+                    throw new Error("No file path received from Telegram");
+                }
+                const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${voiceFile.file_path}`;
+                const response = await fetch(fileUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to download voice file: ${response.status}`);
+                }
+                const voiceBuffer = Buffer.from(await response.arrayBuffer());
+                this.logger.log(`Downloaded voice file for cloning: ${voiceBuffer.length} bytes`);
+                const voiceName = `User_${ctx.from?.id}_${Date.now()}`;
+                const cloneResult = await this.elevenLabsService.cloneVoice({
+                    name: voiceName,
+                    audioBuffer: voiceBuffer,
+                    description: "Клонированный голос пользователя для видео"
+                });
+                session.clonedVoiceId = cloneResult.voice_id;
+                this.logger.log(`Voice cloned successfully: ${cloneResult.voice_id}`);
+                await ctx.reply("🎉 Голос успешно клонирован!\n\n" +
+                    `🎤 ID клонированного голоса: ${cloneResult.voice_id.substring(0, 8)}...\n\n` +
+                    "📝 Теперь введите текст сценария для озвучки:\n\n" +
+                    "💡 **Советы:**\n" +
+                    "• Используйте понятный и интересный текст\n" +
+                    "• Длина текста должна соответствовать длительности видео\n" +
+                    "• Избегайте сложных слов и терминов\n" +
+                    "• Пишите так, как говорите\n\n" +
+                    "✍️ Введите текст сценария:");
+            }
+            catch (cloneError) {
+                this.logger.error("Error cloning voice:", cloneError);
+                await ctx.reply("⚠️ Не удалось клонировать голос, но можно продолжить с синтетическим голосом.\n\n" +
+                    "📝 Введите текст сценария для озвучки:");
+            }
         }
         catch (error) {
             this.logger.error("Error processing voice:", error);
@@ -342,8 +374,26 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                         this.logger.log(`Voice uploaded to D-ID: ${voiceUrl}`);
                     }
                     else {
-                        voiceUrl = await this.heygenService.uploadAudio(voiceBuffer);
-                        this.logger.log(`Voice uploaded to HeyGen: ${voiceUrl}`);
+                        if (session.clonedVoiceId) {
+                            this.logger.log(`Using cloned voice from ElevenLabs: ${session.clonedVoiceId}`);
+                            await ctx.reply("🎤 Генерирую аудио с вашим клонированным голосом...");
+                            const clonedAudioBuffer = await this.elevenLabsService.textToSpeech({
+                                text: session.script || "",
+                                voice_id: session.clonedVoiceId,
+                                voice_settings: {
+                                    stability: 0.5,
+                                    similarity_boost: 0.75,
+                                    style: 0.0,
+                                    use_speaker_boost: true
+                                }
+                            });
+                            voiceUrl = await this.didService.uploadAudio(clonedAudioBuffer);
+                            this.logger.log(`Cloned voice audio uploaded to D-ID: ${voiceUrl}`);
+                        }
+                        else {
+                            this.logger.warn("No cloned voice available, falling back to original audio");
+                            voiceUrl = await this.didService.uploadAudio(voiceBuffer);
+                        }
                     }
                 }
                 catch (error) {
@@ -646,9 +696,10 @@ __decorate([
 ], VideoGenerationScene.prototype, "onCancel", null);
 exports.VideoGenerationScene = VideoGenerationScene = VideoGenerationScene_1 = __decorate([
     (0, nestjs_telegraf_1.Scene)("video-generation"),
-    __param(3, (0, common_1.Inject)((0, nestjs_telegraf_2.getBotToken)("airshorts1_bot"))),
+    __param(4, (0, common_1.Inject)((0, nestjs_telegraf_2.getBotToken)("airshorts1_bot"))),
     __metadata("design:paramtypes", [did_service_1.DidService,
         heygen_service_1.HeyGenService,
+        elevenlabs_service_1.ElevenLabsService,
         users_service_1.UsersService,
         telegraf_2.Telegraf])
 ], VideoGenerationScene);

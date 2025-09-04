@@ -3,6 +3,7 @@ import { Context } from "telegraf";
 import type { Message } from "@telegraf/types";
 import { DidService } from "../d-id/did.service";
 import { HeyGenService } from "../heygen/heygen.service";
+import { ElevenLabsService } from "../elevenlabs/elevenlabs.service";
 import { UsersService } from "../users/users.service";
 import { Logger, Inject } from "@nestjs/common";
 import { Telegraf } from "telegraf";
@@ -12,6 +13,7 @@ interface SessionData {
   photoFileId?: string;
   audioFileId?: string;
   voiceFileId?: string; // Добавляем для хранения голосового сообщения пользователя
+  clonedVoiceId?: string; // ID клонированного голоса в ElevenLabs
   script?: string;
   platform?: "youtube-shorts";
   duration?: number;
@@ -42,6 +44,7 @@ export class VideoGenerationScene {
   constructor(
     private readonly didService: DidService,
     private readonly heygenService: HeyGenService,
+    private readonly elevenLabsService: ElevenLabsService,
     private readonly usersService: UsersService,
     @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
   ) {}
@@ -290,14 +293,56 @@ export class VideoGenerationScene {
         `📊 Информация:\n` +
         `• Длительность: ${voice.duration || '?'} сек.\n` +
         `• Размер: ${voice.file_size ? Math.round(voice.file_size / 1024) + ' КБ' : 'неизвестен'}\n\n` +
-        "📝 Теперь введите текст сценария для озвучки:\n\n" +
-        "💡 **Советы:**\n" +
-        "• Используйте понятный и интересный текст\n" +
-        "• Длина текста должна соответствовать длительности видео\n" +
-        "• Избегайте сложных слов и терминов\n" +
-        "• Пишите так, как говорите\n\n" +
-        "✍️ Введите текст сценария:"
+        "🔄 Начинаю клонирование вашего голоса через ElevenLabs...\n" +
+        "Это может занять несколько секунд."
       );
+
+      // Клонируем голос через ElevenLabs
+      try {
+        // Получаем аудиофайл из Telegram
+        const voiceFile = await ctx.telegram.getFile(session.voiceFileId);
+        if (!voiceFile.file_path) {
+          throw new Error("No file path received from Telegram");
+        }
+        
+        const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${voiceFile.file_path}`;
+        const response = await fetch(fileUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to download voice file: ${response.status}`);
+        }
+        
+        const voiceBuffer = Buffer.from(await response.arrayBuffer());
+        this.logger.log(`Downloaded voice file for cloning: ${voiceBuffer.length} bytes`);
+        
+        // Клонируем голос в ElevenLabs
+        const voiceName = `User_${ctx.from?.id}_${Date.now()}`;
+        const cloneResult = await this.elevenLabsService.cloneVoice({
+          name: voiceName,
+          audioBuffer: voiceBuffer,
+          description: "Клонированный голос пользователя для видео"
+        });
+        
+        session.clonedVoiceId = cloneResult.voice_id;
+        this.logger.log(`Voice cloned successfully: ${cloneResult.voice_id}`);
+
+        await ctx.reply(
+          "🎉 Голос успешно клонирован!\n\n" +
+          `🎤 ID клонированного голоса: ${cloneResult.voice_id.substring(0, 8)}...\n\n` +
+          "📝 Теперь введите текст сценария для озвучки:\n\n" +
+          "💡 **Советы:**\n" +
+          "• Используйте понятный и интересный текст\n" +
+          "• Длина текста должна соответствовать длительности видео\n" +
+          "• Избегайте сложных слов и терминов\n" +
+          "• Пишите так, как говорите\n\n" +
+          "✍️ Введите текст сценария:"
+        );
+      } catch (cloneError) {
+        this.logger.error("Error cloning voice:", cloneError);
+        await ctx.reply(
+          "⚠️ Не удалось клонировать голос, но можно продолжить с синтетическим голосом.\n\n" +
+          "📝 Введите текст сценария для озвучки:"
+        );
+      }
     } catch (error) {
       this.logger.error("Error processing voice:", error);
       await ctx.reply("❌ Ошибка при обработке голосового сообщения. Попробуйте еще раз.");
@@ -470,13 +515,36 @@ export class VideoGenerationScene {
           const voiceBuffer = Buffer.from(await response.arrayBuffer());
           this.logger.log(`Downloaded voice file: ${voiceBuffer.length} bytes`);
           
-          // Загружаем аудио в выбранный сервис
+          // Для HeyGen используем ElevenLabs клонированный голос
           if (preferredService === 'did') {
             voiceUrl = await this.didService.uploadAudio(voiceBuffer);
             this.logger.log(`Voice uploaded to D-ID: ${voiceUrl}`);
           } else {
-            voiceUrl = await this.heygenService.uploadAudio(voiceBuffer);
-            this.logger.log(`Voice uploaded to HeyGen: ${voiceUrl}`);
+            // Для HeyGen используем клонированный голос из ElevenLabs
+            if (session.clonedVoiceId) {
+              this.logger.log(`Using cloned voice from ElevenLabs: ${session.clonedVoiceId}`);
+              
+              // Генерируем аудио с клонированным голосом
+              await ctx.reply("🎤 Генерирую аудио с вашим клонированным голосом...");
+              
+              const clonedAudioBuffer = await this.elevenLabsService.textToSpeech({
+                text: session.script || "",
+                voice_id: session.clonedVoiceId,
+                voice_settings: {
+                  stability: 0.5,
+                  similarity_boost: 0.75,
+                  style: 0.0,
+                  use_speaker_boost: true
+                }
+              });
+              
+              // Загружаем сгенерированное аудио в D-ID (так как HeyGen не поддерживает прямую загрузку)
+              voiceUrl = await this.didService.uploadAudio(clonedAudioBuffer);
+              this.logger.log(`Cloned voice audio uploaded to D-ID: ${voiceUrl}`);
+            } else {
+              this.logger.warn("No cloned voice available, falling back to original audio");
+              voiceUrl = await this.didService.uploadAudio(voiceBuffer);
+            }
           }
           
         } catch (error) {
