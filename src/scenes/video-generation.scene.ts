@@ -80,6 +80,7 @@ export class VideoGenerationScene {
 
   @SceneEnter()
   async onSceneEnter(@Ctx() ctx: Context) {
+    this.logger.log(`🎬 [@SceneEnter] Пользователь ${ctx.from?.id} вошел в сцену video-generation`);
     await ctx.reply(
       "🎬 Добро пожаловать в генератор видео!\n\n" +
         "Для создания видео мне понадобится:\n" +
@@ -108,11 +109,15 @@ export class VideoGenerationScene {
   @On("photo")
   async onPhoto(@Ctx() ctx: PhotoContext) {
     try {
+      this.logger.log("📸 Обработчик фото вызван");
       const photo = ctx.message?.photo;
       if (!photo || photo.length === 0) {
+        this.logger.warn("❌ Фото не найдено в ctx.message");
         await ctx.reply("❌ Не удалось получить фото. Попробуйте еще раз.");
         return;
       }
+      
+      this.logger.log(`📸 Получено фото: количество=${photo.length}, file_id=${photo[photo.length - 1].file_id}`);
 
       // Берем фото наилучшего качества (последнее в массиве)
       const bestPhoto = photo[photo.length - 1];
@@ -318,32 +323,6 @@ export class VideoGenerationScene {
     }
   }
 
-  @On("message")
-  async onMessage(@Ctx() ctx: Context) {
-    try {
-      const message = ctx.message;
-      this.logger.log(`📨 Обработчик сообщений вызван: type=${message ? Object.keys(message).join(', ') : 'no message'}`);
-      
-      if (message && "forward_from" in message && message.forward_from) {
-        this.logger.log("🔄 Обнаружено пересланное сообщение");
-        // Проверяем, есть ли голосовое сообщение в пересланном сообщении
-        if ("voice" in message && message.voice) {
-          this.logger.log("🔄 Обработка пересланного голосового сообщения");
-          // Обрабатываем как обычное голосовое сообщение
-          await this.onVoice(ctx as VoiceContext);
-        } else {
-          this.logger.log("❌ Пересланное сообщение не содержит голосовое сообщение");
-          await ctx.reply(
-            "❌ Пересланное сообщение не содержит голосовое сообщение.\n\n" +
-            "🎤 Пожалуйста, перешлите голосовое сообщение или запишите новое."
-          );
-        }
-      }
-    } catch (error) {
-      this.logger.error("Error processing forwarded message:", error);
-      await ctx.reply("❌ Ошибка при обработке пересланного сообщения. Попробуйте еще раз.");
-    }
-  }
 
   @On("text")
   async onText(@Ctx() ctx: TextContext) {

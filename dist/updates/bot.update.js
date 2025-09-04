@@ -90,6 +90,16 @@ let BotUpdate = class BotUpdate {
         this._logger.debug(`[@On text] Текстовое сообщение получено: "${messageText}" от пользователя ${ctx.from?.id} (вне сцены)`, "BotUpdate");
         this._logger.debug(`[@On text] Неизвестное сообщение: "${messageText}"`, "BotUpdate");
     }
+    async onPhoto(ctx) {
+        this._logger.log(`📸 [@On photo] Фото получено от пользователя ${ctx.from?.id}`, "BotUpdate");
+        const sceneContext = ctx;
+        if (sceneContext.scene?.current) {
+            this._logger.debug(`[@On photo] Пользователь ${ctx.from?.id} находится в сцене "${sceneContext.scene.current.id}", пропускаем обработку в BotUpdate`, "BotUpdate");
+            return;
+        }
+        await ctx.reply("📸 Фото получено!\n\n" +
+            "🎬 Для создания видео с этим фото нажмите кнопку 'Создать видео' в главном меню.");
+    }
     async onVoice(ctx) {
         this._logger.log(`🎤 [@On voice] Голосовое сообщение получено от пользователя ${ctx.from?.id}`, "BotUpdate");
         const sceneContext = ctx;
@@ -259,6 +269,13 @@ __decorate([
     __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onText", null);
+__decorate([
+    (0, nestjs_telegraf_1.On)("photo"),
+    __param(0, (0, nestjs_telegraf_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
+    __metadata("design:returntype", Promise)
+], BotUpdate.prototype, "onPhoto", null);
 __decorate([
     (0, nestjs_telegraf_1.On)("voice"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),

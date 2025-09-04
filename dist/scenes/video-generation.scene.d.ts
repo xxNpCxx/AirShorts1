@@ -45,7 +45,6 @@ export declare class VideoGenerationScene {
     onVideo(ctx: Context): Promise<void>;
     onAudio(ctx: Context): Promise<void>;
     onVoice(ctx: VoiceContext): Promise<void>;
-    onMessage(ctx: Context): Promise<void>;
     onText(ctx: TextContext): Promise<void>;
     private showPlatformSelection;
     private showDurationSelection;

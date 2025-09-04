@@ -11,6 +11,7 @@ export declare class BotUpdate {
     constructor(_users: UsersService, _menu: MenuService, _kb: KeyboardsService, _logger: CustomLoggerService);
     onStart(ctx: Context): Promise<void>;
     onText(ctx: Context): Promise<void>;
+    onPhoto(ctx: Context): Promise<void>;
     onVoice(ctx: Context): Promise<void>;
     onMainMenu(ctx: Context): Promise<void>;
     onMainMenuAction(ctx: Context): Promise<void>;

@@ -46,6 +46,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
         return duration;
     }
     async onSceneEnter(ctx) {
+        this.logger.log(`🎬 [@SceneEnter] Пользователь ${ctx.from?.id} вошел в сцену video-generation`);
         await ctx.reply("🎬 Добро пожаловать в генератор видео!\n\n" +
             "Для создания видео мне понадобится:\n" +
             "1. 📸 Фото с человеком\n" +
@@ -70,11 +71,14 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
     }
     async onPhoto(ctx) {
         try {
+            this.logger.log("📸 Обработчик фото вызван");
             const photo = ctx.message?.photo;
             if (!photo || photo.length === 0) {
+                this.logger.warn("❌ Фото не найдено в ctx.message");
                 await ctx.reply("❌ Не удалось получить фото. Попробуйте еще раз.");
                 return;
             }
+            this.logger.log(`📸 Получено фото: количество=${photo.length}, file_id=${photo[photo.length - 1].file_id}`);
             const bestPhoto = photo[photo.length - 1];
             const photoFileId = bestPhoto.file_id;
             if (bestPhoto.file_size && bestPhoto.file_size > 10 * 1024 * 1024) {
@@ -221,28 +225,6 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
         catch (error) {
             this.logger.error("Error processing voice:", error);
             await ctx.reply("❌ Ошибка при обработке голосового сообщения. Попробуйте еще раз.");
-        }
-    }
-    async onMessage(ctx) {
-        try {
-            const message = ctx.message;
-            this.logger.log(`📨 Обработчик сообщений вызван: type=${message ? Object.keys(message).join(', ') : 'no message'}`);
-            if (message && "forward_from" in message && message.forward_from) {
-                this.logger.log("🔄 Обнаружено пересланное сообщение");
-                if ("voice" in message && message.voice) {
-                    this.logger.log("🔄 Обработка пересланного голосового сообщения");
-                    await this.onVoice(ctx);
-                }
-                else {
-                    this.logger.log("❌ Пересланное сообщение не содержит голосовое сообщение");
-                    await ctx.reply("❌ Пересланное сообщение не содержит голосовое сообщение.\n\n" +
-                        "🎤 Пожалуйста, перешлите голосовое сообщение или запишите новое.");
-                }
-            }
-        }
-        catch (error) {
-            this.logger.error("Error processing forwarded message:", error);
-            await ctx.reply("❌ Ошибка при обработке пересланного сообщения. Попробуйте еще раз.");
         }
     }
     async onText(ctx) {
@@ -594,13 +576,6 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], VideoGenerationScene.prototype, "onVoice", null);
-__decorate([
-    (0, nestjs_telegraf_1.On)("message"),
-    __param(0, (0, nestjs_telegraf_1.Ctx)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [telegraf_1.Context]),
-    __metadata("design:returntype", Promise)
-], VideoGenerationScene.prototype, "onMessage", null);
 __decorate([
     (0, nestjs_telegraf_1.On)("text"),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
