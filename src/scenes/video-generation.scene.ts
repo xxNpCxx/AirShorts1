@@ -314,6 +314,29 @@ export class VideoGenerationScene {
     }
   }
 
+  @On("message")
+  async onMessage(@Ctx() ctx: Context) {
+    try {
+      const message = ctx.message;
+      if (message && "forward_from" in message && message.forward_from) {
+        // Проверяем, есть ли голосовое сообщение в пересланном сообщении
+        if ("voice" in message && message.voice) {
+          this.logger.log("🔄 Обработка пересланного голосового сообщения");
+          // Обрабатываем как обычное голосовое сообщение
+          await this.onVoice(ctx as VoiceContext);
+        } else {
+          await ctx.reply(
+            "❌ Пересланное сообщение не содержит голосовое сообщение.\n\n" +
+            "🎤 Пожалуйста, перешлите голосовое сообщение или запишите новое."
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error("Error processing forwarded message:", error);
+      await ctx.reply("❌ Ошибка при обработке пересланного сообщения. Попробуйте еще раз.");
+    }
+  }
+
   @On("text")
   async onText(@Ctx() ctx: TextContext) {
     try {
