@@ -578,7 +578,7 @@ export class VideoGenerationScene {
       );
 
       // Запускаем polling в фоне
-      this.pollVideoStatus(result.id, ctx.from?.id, preferredService);
+      this.pollVideoStatus(result.id, ctx.from?.id, actualService);
 
       // Возвращаемся в главное меню
       await (ctx as { scene?: { leave: () => Promise<void> } }).scene?.leave();

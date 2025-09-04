@@ -417,7 +417,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 `🔧 Сервис: ${finalServiceName}\n` +
                 `${serviceExplanation}\n\n` +
                 `📬 Готовое видео будет отправлено вам автоматически.`);
-            this.pollVideoStatus(result.id, ctx.from?.id, preferredService);
+            this.pollVideoStatus(result.id, ctx.from?.id, actualService);
             await ctx.scene?.leave();
         }
         catch (error) {
