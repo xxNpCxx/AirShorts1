@@ -80,7 +80,12 @@ let BotUpdate = class BotUpdate {
             await this.onMainMenu(ctx);
             return;
         }
-        this._logger.debug(`[@On text] Текстовое сообщение получено: "${messageText}" от пользователя ${ctx.from?.id}`, "BotUpdate");
+        const sceneContext = ctx;
+        if (sceneContext.scene?.current) {
+            this._logger.debug(`[@On text] Пользователь ${ctx.from?.id} находится в сцене "${sceneContext.scene.current.id}", пропускаем обработку в BotUpdate`, "BotUpdate");
+            return;
+        }
+        this._logger.debug(`[@On text] Текстовое сообщение получено: "${messageText}" от пользователя ${ctx.from?.id} (вне сцены)`, "BotUpdate");
         this._logger.debug(`[@On text] Неизвестное сообщение: "${messageText}"`, "BotUpdate");
     }
     async onMainMenu(ctx) {

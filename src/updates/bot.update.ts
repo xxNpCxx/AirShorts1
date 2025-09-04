@@ -127,8 +127,24 @@ export class BotUpdate {
       return;
     }
 
+    // Проверяем, находится ли пользователь в сцене
+    const sceneContext = ctx as unknown as {
+      scene: { 
+        current?: { id: string };
+      };
+    };
+    
+    if (sceneContext.scene?.current) {
+      this._logger.debug(
+        `[@On text] Пользователь ${ctx.from?.id} находится в сцене "${sceneContext.scene.current.id}", пропускаем обработку в BotUpdate`,
+        "BotUpdate",
+      );
+      // Не обрабатываем сообщение здесь, позволяем сцене его обработать
+      return;
+    }
+
     this._logger.debug(
-      `[@On text] Текстовое сообщение получено: "${messageText}" от пользователя ${ctx.from?.id}`,
+      `[@On text] Текстовое сообщение получено: "${messageText}" от пользователя ${ctx.from?.id} (вне сцены)`,
       "BotUpdate",
     );
 
