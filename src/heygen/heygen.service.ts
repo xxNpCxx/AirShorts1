@@ -95,12 +95,13 @@ export class HeyGenService {
         }
       };
 
-      // Если есть пользовательское фото, используем созданный кастомный аватар
-      if (request.imageUrl && request.imageUrl.trim() !== "" && request.imageUrl !== "undefined" && request.imageUrl !== "null" && request.imageUrl !== "heygen_placeholder_image_url") {
-        this.logger.log(`[${requestId}] 📸 Using custom avatar: ${request.imageUrl}`);
-        payload.video_inputs[0].character.avatar_id = request.imageUrl;
+      // Если есть пользовательское фото, но HeyGen не поддерживает кастомные аватары
+      if (request.imageUrl && request.imageUrl.trim() !== "" && request.imageUrl !== "undefined" && request.imageUrl !== "null" && request.imageUrl !== "heygen_placeholder_image_url" && request.imageUrl !== "heygen_use_available_avatar") {
+        this.logger.log(`[${requestId}] 📸 Пользовательское фото предоставлено, но HeyGen не поддерживает кастомные аватары`);
+        this.logger.log(`[${requestId}] 📸 Используем доступный аватар: ${defaultAvatarId}`);
+        payload.video_inputs[0].character.avatar_id = defaultAvatarId;
       } else {
-        this.logger.log(`[${requestId}] 📸 Using default avatar: ${defaultAvatarId}`);
+        this.logger.log(`[${requestId}] 📸 Using available avatar: ${defaultAvatarId}`);
         // defaultAvatarId уже установлен в payload выше
       }
 
@@ -241,42 +242,12 @@ export class HeyGenService {
   async uploadImage(imageBuffer: Buffer): Promise<string> {
     const uploadId = `heygen_image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
-    try {
-      this.logger.log(`[${uploadId}] 🖼️ Creating custom avatar from user photo (${imageBuffer.length} bytes)`);
-      
-      // Создаем кастомный аватар из пользовательского фото
-      const formData = new FormData();
-      formData.append('image', new Blob([imageBuffer]), 'user_photo.jpg');
-      formData.append('avatar_name', `custom_avatar_${uploadId}`);
-      
-      const response = await fetch(`${this.baseUrl}/v2/avatar/create`, {
-        method: 'POST',
-        headers: {
-          'X-API-KEY': this.apiKey,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        this.logger.error(`[${uploadId}] ❌ Custom avatar creation failed: ${response.status} ${response.statusText}`);
-        this.logger.error(`[${uploadId}] Error details: ${errorText}`);
-        
-        // Fallback: попробуем загрузить как обычное изображение
-        this.logger.log(`[${uploadId}] 🔄 Trying fallback image upload...`);
-        return await this.uploadImageFallback(imageBuffer, uploadId);
-      }
-
-      const result = await response.json() as any;
-      const avatarId = result.data?.avatar_id || result.avatar_id;
-      this.logger.log(`[${uploadId}] ✅ Custom avatar created successfully: ${avatarId}`);
-      
-      return avatarId;
-    } catch (error) {
-      this.logger.error(`[${uploadId}] ❌ Error creating custom avatar:`, error);
-      // Fallback: попробуем загрузить как обычное изображение
-      return await this.uploadImageFallback(imageBuffer, uploadId);
-    }
+    this.logger.log(`[${uploadId}] 🖼️ HeyGen не поддерживает создание кастомных аватаров из пользовательских фото`);
+    this.logger.log(`[${uploadId}] 📸 Будет использован доступный аватар из библиотеки HeyGen`);
+    
+    // HeyGen не поддерживает создание кастомных аватаров
+    // Возвращаем placeholder, который будет обработан в generateVideo
+    return "heygen_use_available_avatar";
   }
 
   private async uploadImageFallback(imageBuffer: Buffer, uploadId: string): Promise<string> {
@@ -325,7 +296,7 @@ export class HeyGenService {
 
       if (!response.ok) {
         this.logger.warn('Failed to get available avatars, using hardcoded fallback');
-        return ["1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b"];
+        return ["Abigail_expressive_2024112501", "Abigail_standing_office_front", "Abigail_sitting_sofa_front"];
       }
 
       const result = await response.json() as any;
@@ -334,14 +305,14 @@ export class HeyGenService {
       
       if (avatarIds.length === 0) {
         this.logger.warn('No avatars found, using hardcoded fallback');
-        return ["1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b"];
+        return ["Abigail_expressive_2024112501", "Abigail_standing_office_front", "Abigail_sitting_sofa_front"];
       }
 
       this.logger.log(`Found ${avatarIds.length} available avatars: ${avatarIds.slice(0, 3).join(', ')}...`);
       return avatarIds;
     } catch (error) {
       this.logger.error('Error getting available avatars:', error);
-      return ["1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b"];
+      return ["Abigail_expressive_2024112501", "Abigail_standing_office_front", "Abigail_sitting_sofa_front"];
     }
   }
 }

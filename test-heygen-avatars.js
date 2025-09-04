@@ -1,105 +1,104 @@
 #!/usr/bin/env node
 
-/**
- * Скрипт для тестирования доступных аватаров HeyGen
- * Запуск: node test-heygen-avatars.js
- */
-
+// Тестовый скрипт для проверки доступных аватаров в HeyGen
 const fetch = require('node-fetch');
 
 async function testHeyGenAvatars() {
   const apiKey = process.env.HEYGEN_API_KEY;
   
   if (!apiKey) {
-    console.error('❌ HEYGEN_API_KEY не найден в переменных окружения');
-    process.exit(1);
+    console.log('❌ HEYGEN_API_KEY не найден в переменных окружения');
+    return;
   }
 
-  console.log('🔍 Проверяем доступные аватары HeyGen...\n');
+  console.log('🔍 Тестируем HeyGen API для получения доступных аватаров...');
+  console.log(`🔑 API Key: ${apiKey.substring(0, 10)}...`);
 
-  try {
-    // Проверяем список аватаров
-    const response = await fetch('https://api.heygen.com/v1/avatar.list', {
-      headers: {
-        'X-API-KEY': apiKey,
-      },
-    });
+  // Тестируем разные endpoints
+  const endpoints = [
+    'https://api.heygen.com/v1/avatar.list',
+    'https://api.heygen.com/v2/avatar.list', 
+    'https://api.heygen.com/v1/avatars',
+    'https://api.heygen.com/v2/avatars',
+    'https://api.heygen.com/avatars'
+  ];
 
-    console.log(`📡 Статус ответа: ${response.status} ${response.statusText}`);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Ошибка получения списка аватаров:', errorText);
-      return;
-    }
-
-    const result = await response.json();
-    console.log('📋 Полный ответ API:', JSON.stringify(result, null, 2));
-
-    const avatars = result.data?.avatars || [];
-    console.log(`\n✅ Найдено аватаров: ${avatars.length}`);
-
-    if (avatars.length > 0) {
-      console.log('\n📝 Доступные аватары:');
-      avatars.forEach((avatar, index) => {
-        console.log(`${index + 1}. ID: ${avatar.avatar_id}`);
-        console.log(`   Название: ${avatar.avatar_name || 'Не указано'}`);
-        console.log(`   Статус: ${avatar.status || 'Не указано'}`);
-        console.log('');
+  for (const endpoint of endpoints) {
+    try {
+      console.log(`\n📡 Тестируем: ${endpoint}`);
+      
+      const response = await fetch(endpoint, {
+        headers: {
+          'X-API-KEY': apiKey,
+        },
       });
 
-      // Тестируем первый аватар
-      const firstAvatar = avatars[0];
-      console.log(`🧪 Тестируем аватар: ${firstAvatar.avatar_id}`);
+      console.log(`📊 Статус: ${response.status} ${response.statusText}`);
       
-      const testPayload = {
-        video_inputs: [
-          {
-            character: {
-              type: "avatar",
-              avatar_id: firstAvatar.avatar_id,
-              avatar_style: "normal"
-            },
-            voice: {
-              type: "text",
-              input_text: "Тестовое сообщение",
-              voice_id: "119caed25533477ba63822d5d1552d25",
-              speed: 1.0
-            }
-          }
-        ],
-        dimension: {
-          width: 1280,
-          height: 720
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Успешный ответ:');
+        console.log(JSON.stringify(data, null, 2));
+        
+        // Если нашли аватары, показываем их
+        if (data.data?.avatars || data.avatars) {
+          const avatars = data.data?.avatars || data.avatars;
+          console.log(`\n🎭 Найдено аватаров: ${avatars.length}`);
+          avatars.slice(0, 5).forEach((avatar, index) => {
+            console.log(`  ${index + 1}. ${avatar.avatar_id || avatar.id} - ${avatar.name || 'Без имени'}`);
+          });
         }
-      };
+        break; // Если нашли рабочий endpoint, прекращаем поиск
+      } else {
+        const errorText = await response.text();
+        console.log(`❌ Ошибка: ${errorText.substring(0, 200)}...`);
+      }
+    } catch (error) {
+      console.log(`💥 Исключение: ${error.message}`);
+    }
+  }
 
-      const testResponse = await fetch('https://api.heygen.com/v2/video/generate', {
+  // Тестируем создание аватара
+  console.log('\n🖼️ Тестируем создание аватара...');
+  
+  const createEndpoints = [
+    'https://api.heygen.com/v1/avatar.create',
+    'https://api.heygen.com/v2/avatar/create',
+    'https://api.heygen.com/v1/avatar',
+    'https://api.heygen.com/v2/avatar'
+  ];
+
+  for (const endpoint of createEndpoints) {
+    try {
+      console.log(`\n📡 Тестируем создание: ${endpoint}`);
+      
+      const formData = new FormData();
+      formData.append('avatar_name', 'test_avatar');
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'X-API-KEY': apiKey,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(testPayload),
+        body: formData,
       });
 
-      console.log(`📡 Тест генерации: ${testResponse.status} ${testResponse.statusText}`);
+      console.log(`📊 Статус: ${response.status} ${response.statusText}`);
       
-      if (testResponse.ok) {
-        const testResult = await testResponse.json();
-        console.log('✅ Аватар работает! Результат:', JSON.stringify(testResult, null, 2));
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Создание аватара работает:');
+        console.log(JSON.stringify(data, null, 2));
+        break;
       } else {
-        const errorText = await testResponse.text();
-        console.log('❌ Ошибка тестирования:', errorText);
+        const errorText = await response.text();
+        console.log(`❌ Ошибка: ${errorText.substring(0, 200)}...`);
       }
-    } else {
-      console.log('⚠️ Аватары не найдены');
+    } catch (error) {
+      console.log(`💥 Исключение: ${error.message}`);
     }
-
-  } catch (error) {
-    console.error('💥 Критическая ошибка:', error);
   }
 }
 
 // Запускаем тест
-testHeyGenAvatars();
+testHeyGenAvatars().catch(console.error);
