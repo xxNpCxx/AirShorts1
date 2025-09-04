@@ -94,9 +94,9 @@ export class HeyGenService {
         this.logger.log(`[${requestId}] 🎵 Using TTS with script: ${request.script?.substring(0, 50)}...`);
       }
 
-      this.logger.debug(`[${requestId}] 📤 Sending request to ${this.baseUrl}/video/generate`);
+      this.logger.debug(`[${requestId}] 📤 Sending request to ${this.baseUrl}/v3/video/generate`);
 
-      const response = await fetch(`${this.baseUrl}/video/generate`, {
+      const response = await fetch(`${this.baseUrl}/v3/video/generate`, {
         method: "POST",
         headers: {
           "X-API-KEY": this.apiKey,
@@ -148,7 +148,7 @@ export class HeyGenService {
     try {
       this.logger.debug(`🔍 Checking status for HeyGen video: ${videoId}`);
       
-      const response = await fetch(`${this.baseUrl}/video_status/${videoId}`, {
+      const response = await fetch(`${this.baseUrl}/v3/video_status/${videoId}`, {
         headers: {
           "X-API-KEY": this.apiKey,
         },
