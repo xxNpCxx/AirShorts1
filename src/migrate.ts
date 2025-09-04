@@ -7,6 +7,11 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 async function runMigrations() {
+  console.log("🚀 Запуск миграций базы данных...");
+  console.log(`📁 NODE_ENV: ${process.env.NODE_ENV}`);
+  console.log(`📁 process.cwd(): ${process.cwd()}`);
+  console.log(`📁 __dirname: ${__dirname}`);
+  
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
   });

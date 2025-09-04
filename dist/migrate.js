@@ -40,6 +40,10 @@ const pg_1 = require("pg");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
 async function runMigrations() {
+    console.log("🚀 Запуск миграций базы данных...");
+    console.log(`📁 NODE_ENV: ${process.env.NODE_ENV}`);
+    console.log(`📁 process.cwd(): ${process.cwd()}`);
+    console.log(`📁 __dirname: ${__dirname}`);
     const client = new pg_1.Client({
         connectionString: process.env.DATABASE_URL,
     });

@@ -54,16 +54,34 @@ let UsersService = UsersService_1 = class UsersService {
         }
     }
     async getUserPreferredService(telegramId) {
-        const res = await this.pool.query("SELECT preferred_service FROM users WHERE telegram_id = $1", [telegramId]);
-        if (res.rowCount === 0) {
-            return 'did';
+        try {
+            const res = await this.pool.query("SELECT preferred_service FROM users WHERE telegram_id = $1", [telegramId]);
+            if (res.rowCount === 0) {
+                return 'did';
+            }
+            return res.rows[0].preferred_service || 'did';
         }
-        return res.rows[0].preferred_service || 'did';
+        catch (error) {
+            if (error.code === '42703' && error.message.includes('preferred_service')) {
+                this.logger.warn(`[users][pg] Колонка preferred_service не существует, используем значение по умолчанию для пользователя ${telegramId}`);
+                return 'did';
+            }
+            throw error;
+        }
     }
     async setUserPreferredService(telegramId, service) {
-        await this.pool.query("UPDATE users SET preferred_service = $1 WHERE telegram_id = $2", [service, telegramId]);
-        this.logger.log(`Установлен предпочтительный сервис ${service} для пользователя ${telegramId}`);
-        return true;
+        try {
+            await this.pool.query("UPDATE users SET preferred_service = $1 WHERE telegram_id = $2", [service, telegramId]);
+            this.logger.log(`Установлен предпочтительный сервис ${service} для пользователя ${telegramId}`);
+            return true;
+        }
+        catch (error) {
+            if (error.code === '42703' && error.message.includes('preferred_service')) {
+                this.logger.warn(`[users][pg] Колонка preferred_service не существует, не можем сохранить предпочтение для пользователя ${telegramId}`);
+                return false;
+            }
+            throw error;
+        }
     }
 };
 exports.UsersService = UsersService;

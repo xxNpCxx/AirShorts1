@@ -58,22 +58,40 @@ export class UsersService {
   }
 
   async getUserPreferredService(telegramId: number): Promise<'did' | 'heygen'> {
-    const res = await this.pool.query(
-      "SELECT preferred_service FROM users WHERE telegram_id = $1",
-      [telegramId],
-    );
-    if (res.rowCount === 0) {
-      return 'did'; // По умолчанию D-ID для новых пользователей
+    try {
+      const res = await this.pool.query(
+        "SELECT preferred_service FROM users WHERE telegram_id = $1",
+        [telegramId],
+      );
+      if (res.rowCount === 0) {
+        return 'did'; // По умолчанию D-ID для новых пользователей
+      }
+      return res.rows[0].preferred_service || 'did';
+    } catch (error: any) {
+      // Если колонка не существует, возвращаем значение по умолчанию
+      if (error.code === '42703' && error.message.includes('preferred_service')) {
+        this.logger.warn(`[users][pg] Колонка preferred_service не существует, используем значение по умолчанию для пользователя ${telegramId}`);
+        return 'did';
+      }
+      throw error; // Перебрасываем другие ошибки
     }
-    return res.rows[0].preferred_service || 'did';
   }
 
   async setUserPreferredService(telegramId: number, service: 'did' | 'heygen'): Promise<boolean> {
-    await this.pool.query(
-      "UPDATE users SET preferred_service = $1 WHERE telegram_id = $2",
-      [service, telegramId],
-    );
-    this.logger.log(`Установлен предпочтительный сервис ${service} для пользователя ${telegramId}`);
-    return true;
+    try {
+      await this.pool.query(
+        "UPDATE users SET preferred_service = $1 WHERE telegram_id = $2",
+        [service, telegramId],
+      );
+      this.logger.log(`Установлен предпочтительный сервис ${service} для пользователя ${telegramId}`);
+      return true;
+    } catch (error: any) {
+      // Если колонка не существует, логируем предупреждение
+      if (error.code === '42703' && error.message.includes('preferred_service')) {
+        this.logger.warn(`[users][pg] Колонка preferred_service не существует, не можем сохранить предпочтение для пользователя ${telegramId}`);
+        return false;
+      }
+      throw error; // Перебрасываем другие ошибки
+    }
   }
 }
