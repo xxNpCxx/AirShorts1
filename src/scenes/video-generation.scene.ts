@@ -87,7 +87,7 @@ export class VideoGenerationScene {
         "2. 🎵 Голосовое сообщение (ваш голос)\n" +
         "3. 📝 Сценарий ролика (текст для озвучки)\n" +
         "4. ⚙️ Настройки видео\n\n" +
-        "🎵 **Голос:** Будет клонирован ваш голос из голосового сообщения!\n\n" +
+        "🎵 **Голос:** Будет использован ваш голос из голосового сообщения!\n\n" +
         "📸 **Требования к фото:**\n" +
         "• Один человек в кадре (лицо хорошо видно)\n" +
         "• Размер: до 10 МБ\n" +
@@ -190,6 +190,7 @@ export class VideoGenerationScene {
         "• Четкая речь на русском языке\n" +
         "• Минимум фонового шума\n" +
         "• Естественная интонация\n\n" +
+        "💡 **Ваш голос будет использован напрямую через D-ID API**\n" +
         "💡 **Советы для лучшего результата:**\n" +
         "• Говорите медленно и четко\n" +
         "• Используйте выразительную интонацию\n" +
@@ -295,76 +296,18 @@ export class VideoGenerationScene {
         `📊 Информация:\n` +
         `• Длительность: ${voice.duration || '?'} сек.\n` +
         `• Размер: ${voice.file_size ? Math.round(voice.file_size / 1024) + ' КБ' : 'неизвестен'}\n\n` +
-        "🔄 Начинаю клонирование вашего голоса через ElevenLabs...\n" +
-        "Это может занять несколько секунд."
+        "🎤 Ваш голос будет использован напрямую в видео!\n\n" +
+        "📝 Теперь введите текст сценария для озвучки:\n\n" +
+        "💡 **Советы:**\n" +
+        "• Используйте понятный и интересный текст\n" +
+        "• Длина текста должна соответствовать длительности видео\n" +
+        "• Избегайте сложных слов и терминов\n" +
+        "• Пишите так, как говорите\n\n" +
+        "✍️ Введите текст сценария:"
       );
 
-      // Клонируем голос через ElevenLabs
-      try {
-        // Получаем аудиофайл из Telegram
-        const voiceFile = await ctx.telegram.getFile(session.voiceFileId);
-        if (!voiceFile.file_path) {
-          throw new Error("No file path received from Telegram");
-        }
-        
-        const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${voiceFile.file_path}`;
-        const response = await fetch(fileUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to download voice file: ${response.status}`);
-        }
-        
-        const voiceBuffer = Buffer.from(await response.arrayBuffer());
-        this.logger.log(`Downloaded voice file for cloning: ${voiceBuffer.length} bytes`);
-        
-        // Запускаем асинхронное клонирование голоса в ElevenLabs
-        const voiceName = `User_${ctx.from?.id}_${Date.now()}`;
-        const cloneResult = await this.elevenLabsService.cloneVoiceAsync({
-          name: voiceName,
-          audioBuffer: voiceBuffer,
-          description: "Клонированный голос пользователя для видео"
-        });
-        
-        session.clonedVoiceId = cloneResult.voice_id;
-        this.logger.log(`Voice cloning started: ${cloneResult.voice_id}`);
-
-        // Регистрируем уведомление о готовности голоса
-        this.voiceNotificationService.registerVoiceNotification(
-          ctx.from?.id || 0,
-          ctx.chat?.id || 0,
-          cloneResult.voice_id,
-          voiceName
-        );
-
-        await ctx.reply(
-          "🔄 Клонирование голоса запущено!\n\n" +
-          `🎤 ID голоса: ${cloneResult.voice_id.substring(0, 8)}...\n` +
-          `📊 Статус: ${cloneResult.status}\n\n` +
-          "⏳ Клонирование может занять 5-15 минут.\n" +
-          "📱 Вы получите уведомление, когда голос будет готов.\n\n" +
-          "💡 **Примечание:** Для бесплатных аккаунтов используется fine-tuning,\n" +
-          "что может занять больше времени, но дает качественный результат.\n\n" +
-          "📝 Пока можете ввести текст сценария для озвучки:\n\n" +
-          "💡 **Советы:**\n" +
-          "• Используйте понятный и интересный текст\n" +
-          "• Длина текста должна соответствовать длительности видео\n" +
-          "• Избегайте сложных слов и терминов\n" +
-          "• Пишите так, как говорите\n\n" +
-          "✍️ Введите текст сценария:"
-        );
-      } catch (cloneError) {
-        this.logger.error("Error cloning voice:", cloneError);
-        
-        // Если клонирование не удалось, используем предустановленный русский голос
-        const fallbackVoiceId = "pNInz6obpgDQGcFmaJgB"; // Adam - русский голос ElevenLabs
-        session.clonedVoiceId = fallbackVoiceId;
-        
-        await ctx.reply(
-          "⚠️ Клонирование голоса недоступно для вашего аккаунта.\n\n" +
-          "🎤 Использую качественный русский голос Adam от ElevenLabs.\n" +
-          "💡 Для клонирования собственного голоса нужна платная подписка ElevenLabs.\n\n" +
-          "📝 Введите текст сценария для озвучки:"
-        );
-      }
+      // Голос готов к использованию через D-ID API
+      session.clonedVoiceId = undefined; // Не используем ElevenLabs
     } catch (error) {
       this.logger.error("Error processing voice:", error);
       await ctx.reply("❌ Ошибка при обработке голосового сообщения. Попробуйте еще раз.");
@@ -542,56 +485,17 @@ export class VideoGenerationScene {
             voiceUrl = await this.didService.uploadAudio(voiceBuffer);
             this.logger.log(`Voice uploaded to D-ID: ${voiceUrl}`);
           } else {
-            // Для HeyGen используем клонированный голос из ElevenLabs
-            if (session.clonedVoiceId) {
-              this.logger.log(`Using cloned voice from ElevenLabs: ${session.clonedVoiceId}`);
-              
-              // Проверяем готовность клонированного голоса
-              await ctx.reply("🔍 Проверяю готовность вашего голоса...");
-              
-              // Для предустановленных голосов (начинающихся с букв) считаем их готовыми
-              if (session.clonedVoiceId && /^[a-zA-Z]/.test(session.clonedVoiceId)) {
-                this.logger.log(`Using preset voice: ${session.clonedVoiceId}`);
-                // Предустановленные голоса всегда готовы
-              } else {
-                const voiceStatus = await this.elevenLabsService.getVoiceStatus(session.clonedVoiceId);
-                
-                if (!voiceStatus.ready) {
-                  this.logger.warn(`Voice not ready yet: ${voiceStatus.status}`);
-                  await ctx.reply(
-                    `⏳ Ваш клонированный голос еще не готов.\n` +
-                    `📊 Статус: ${voiceStatus.status}\n\n` +
-                    `🔄 Продолжаю с оригинальным голосом...`
-                  );
-                  voiceUrl = await this.didService.uploadAudio(voiceBuffer);
-                  return;
-                }
-              }
-              
-              // Голос готов (предустановленный или клонированный)
-              this.logger.log(`Voice is ready: ${session.clonedVoiceId}`);
-              
-              // Генерируем аудио с голосом
-              await ctx.reply("🎤 Генерирую аудио с вашим голосом...");
-                
-                const clonedAudioBuffer = await this.elevenLabsService.textToSpeech({
-                  text: session.script || "",
-                  voice_id: session.clonedVoiceId,
-                  voice_settings: {
-                    stability: 0.5,
-                    similarity_boost: 0.75,
-                    style: 0.0,
-                    use_speaker_boost: true
-                  }
-                });
-                
-              // Загружаем сгенерированное аудио в D-ID (так как HeyGen не поддерживает прямую загрузку)
-              voiceUrl = await this.didService.uploadAudio(clonedAudioBuffer);
-              this.logger.log(`Voice audio uploaded to D-ID: ${voiceUrl}`);
-            } else {
-              this.logger.warn("No cloned voice available, falling back to original audio");
-              voiceUrl = await this.didService.uploadAudio(voiceBuffer);
-            }
+            // Для HeyGen используем D-ID с оригинальным голосом (так как ElevenLabs заблокирован)
+            this.logger.log("HeyGen selected, but using D-ID with original voice due to ElevenLabs limitations");
+            
+            await ctx.reply(
+              "🔄 HeyGen выбран, но из-за ограничений ElevenLabs API\n" +
+              "будет использован D-ID с вашим оригинальным голосом.\n\n" +
+              "📤 Загружаю ваш голос в D-ID..."
+            );
+            
+            voiceUrl = await this.didService.uploadAudio(voiceBuffer);
+            this.logger.log(`Original voice uploaded to D-ID for HeyGen: ${voiceUrl}`);
           }
           
         } catch (error) {
