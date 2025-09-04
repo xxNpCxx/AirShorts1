@@ -18,10 +18,10 @@ let KeyboardsService = class KeyboardsService {
     mainInline(newsChannel) {
         const rows = [
             [telegraf_1.Markup.button.callback("🎬 Создать видео", "create_video")],
-            //[telegraf_1.Markup.button.callback("🆘 Поддержка оператора", "support")],
-            //[telegraf_1.Markup.button.callback("📜 Правила", "rules")],
+            [telegraf_1.Markup.button.callback("🆘 Поддержка оператора", "support")],
+            [telegraf_1.Markup.button.callback("📜 Правила", "rules")],
             [telegraf_1.Markup.button.url("📰 Новостной канал", newsChannel || "https://t.me/")],
-            //[telegraf_1.Markup.button.url("⭐️ Отзывы", "https://t.me/review413n_obmen")],
+            [telegraf_1.Markup.button.url("⭐️ Отзывы", "https://t.me/review413n_obmen")],
         ];
         return telegraf_1.Markup.inlineKeyboard(rows);
     }

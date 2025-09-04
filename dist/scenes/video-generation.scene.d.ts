@@ -5,6 +5,7 @@ import { Telegraf } from "telegraf";
 interface SessionData {
     photoFileId?: string;
     audioFileId?: string;
+    voiceFileId?: string;
     script?: string;
     platform?: "youtube-shorts";
     duration?: number;
@@ -28,6 +29,7 @@ export declare class VideoGenerationScene {
     private readonly bot;
     private readonly logger;
     constructor(didService: DidService, bot: Telegraf);
+    private calculateVideoDuration;
     onSceneEnter(ctx: Context): Promise<void>;
     onPhoto(ctx: PhotoContext): Promise<void>;
     onDocument(ctx: Context): Promise<void>;

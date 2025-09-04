@@ -42,6 +42,33 @@ export class VideoGenerationScene {
     @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
   ) {}
 
+  /**
+   * Рассчитывает длительность видео на основе текста
+   * Средняя скорость речи: ~150 слов в минуту для русского языка
+   */
+  private calculateVideoDuration(text: string): number {
+    if (!text || text.trim().length === 0) {
+      return 30; // По умолчанию 30 секунд
+    }
+
+    // Считаем количество слов (разделенных пробелами)
+    const wordCount = text.trim().split(/\s+/).length;
+    
+    // Средняя скорость речи для русского языка: ~150 слов/мин = 2.5 слов/сек
+    const wordsPerSecond = 2.5;
+    
+    // Рассчитываем базовую длительность
+    let duration = Math.ceil(wordCount / wordsPerSecond);
+    
+    // Добавляем небольшой буфер для пауз и интонации (20%)
+    duration = Math.ceil(duration * 1.2);
+    
+    // Минимум 15 секунд, максимум 60 секунд
+    duration = Math.max(15, Math.min(60, duration));
+    
+    return duration;
+  }
+
   @SceneEnter()
   async onSceneEnter(@Ctx() ctx: Context) {
     await ctx.reply(
@@ -298,20 +325,22 @@ export class VideoGenerationScene {
       if (!session.script) {
         // Первый текстовый ввод - это сценарий
         session.script = text;
+        
+        // Автоматически рассчитываем длительность на основе текста
+        const calculatedDuration = this.calculateVideoDuration(text);
+        session.duration = calculatedDuration;
+        
+        await ctx.reply(
+          `✅ Сценарий принят!\n\n` +
+          `📊 Анализ текста:\n` +
+          `• Количество слов: ${text.trim().split(/\s+/).length}\n` +
+          `• Рассчитанная длительность: ${calculatedDuration} сек.\n\n` +
+          `💡 Длительность рассчитана автоматически на основе количества слов и средней скорости речи для русского языка.\n\n`
+        );
+        
         await this.showPlatformSelection(ctx);
-      } else if (!session.duration) {
-        // Второй текстовый ввод - это длительность (платформа выбирается через inline кнопки)
-        const duration = parseInt(text);
-        if (isNaN(duration) || duration < 15 || duration > 60) {
-          await ctx.reply(
-            "❌ Длительность должна быть от 15 до 60 секунд. Попробуйте еще раз.",
-          );
-          return;
-        }
-        session.duration = duration;
-        await this.showQualitySelection(ctx);
       } else if (!session.textPrompt) {
-        // Третий текстовый ввод - это текстовый промпт (качество выбирается через inline кнопки)
+        // Второй текстовый ввод - это текстовый промпт (платформа выбирается через inline кнопки)
         session.textPrompt = text;
         await this.startVideoGeneration(ctx);
       }
@@ -408,13 +437,31 @@ export class VideoGenerationScene {
 
       if (session.voiceFileId) {
         try {
+          await ctx.reply("🔄 Обрабатываю голосовое сообщение...");
+          
+          // Получаем файл из Telegram
           const voiceFile = await ctx.telegram.getFile(session.voiceFileId);
-          if (voiceFile.file_path) {
-            voiceUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${voiceFile.file_path}`;
+          if (!voiceFile.file_path) {
+            throw new Error("No file path received from Telegram");
           }
+          
+          // Скачиваем файл
+          const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${voiceFile.file_path}`;
+          const response = await fetch(fileUrl);
+          if (!response.ok) {
+            throw new Error(`Failed to download voice file: ${response.status}`);
+          }
+          
+          const voiceBuffer = Buffer.from(await response.arrayBuffer());
+          this.logger.log(`Downloaded voice file: ${voiceBuffer.length} bytes`);
+          
+          // Загружаем аудио в D-ID
+          voiceUrl = await this.didService.uploadAudio(voiceBuffer);
+          this.logger.log(`Voice uploaded to D-ID: ${voiceUrl}`);
+          
         } catch (error) {
-          this.logger.error("Error getting voice URL:", error);
-          await ctx.reply("❌ Ошибка получения голосового сообщения. Попробуйте загрузить заново.");
+          this.logger.error("Error processing voice file:", error);
+          await ctx.reply("❌ Ошибка обработки голосового сообщения. Попробуйте загрузить заново.");
           return;
         }
       }
@@ -463,10 +510,11 @@ export class VideoGenerationScene {
       session.platform = "youtube-shorts";
       
       await ctx.editMessageText(
-        "✅ Платформа выбрана: Короткие вертикальные видео"
+        `✅ Платформа выбрана: Короткие вертикальные видео\n\n` +
+        `⏱️ Длительность видео: ${session.duration || 30} сек. (рассчитана автоматически)`
       );
       
-      await this.showDurationSelection(ctx);
+      await this.showQualitySelection(ctx);
     } catch (error) {
       this.logger.error("Error selecting YouTube Shorts:", error);
       await ctx.answerCbQuery("❌ Ошибка выбора платформы");

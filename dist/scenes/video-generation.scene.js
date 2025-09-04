@@ -26,13 +26,25 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
         this.bot = bot;
         this.logger = new common_1.Logger(VideoGenerationScene_1.name);
     }
+    calculateVideoDuration(text) {
+        if (!text || text.trim().length === 0) {
+            return 30;
+        }
+        const wordCount = text.trim().split(/\s+/).length;
+        const wordsPerSecond = 2.5;
+        let duration = Math.ceil(wordCount / wordsPerSecond);
+        duration = Math.ceil(duration * 1.2);
+        duration = Math.max(15, Math.min(60, duration));
+        return duration;
+    }
     async onSceneEnter(ctx) {
         await ctx.reply("🎬 Добро пожаловать в генератор видео!\n\n" +
             "Для создания видео мне понадобится:\n" +
             "1. 📸 Фото с человеком\n" +
-            "2. 📝 Сценарий ролика (текст для озвучки)\n" +
-            "3. ⚙️ Настройки видео\n\n" +
-            "🎵 **Голос:** Будет использован качественный русский синтетический голос\n\n" +
+            "2. 🎵 Голосовое сообщение (ваш голос)\n" +
+            "3. 📝 Сценарий ролика (текст для озвучки)\n" +
+            "4. ⚙️ Настройки видео\n\n" +
+            "🎵 **Голос:** Будет клонирован ваш голос из голосового сообщения!\n\n" +
             "📸 **Требования к фото:**\n" +
             "• Один человек в кадре (лицо хорошо видно)\n" +
             "• Размер: до 10 МБ\n" +
@@ -103,7 +115,18 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 `📊 Информация:\n` +
                 `• Разрешение: ${bestPhoto.width || '?'}x${bestPhoto.height || '?'}\n` +
                 `• Размер: ${bestPhoto.file_size ? Math.round(bestPhoto.file_size / 1024) + ' КБ' : 'неизвестен'}\n\n` +
-                "🎵 Теперь отправьте голосовую запись (до 1 минуты):");
+                "🎵 Теперь отправьте голосовое сообщение:\n\n" +
+                "📋 **Требования к голосовому сообщению:**\n" +
+                "• Длительность: 10-60 секунд\n" +
+                "• Четкая речь на русском языке\n" +
+                "• Минимум фонового шума\n" +
+                "• Естественная интонация\n\n" +
+                "💡 **Советы для лучшего результата:**\n" +
+                "• Говорите медленно и четко\n" +
+                "• Используйте выразительную интонацию\n" +
+                "• Запишите в тихом помещении\n" +
+                "• Держите телефон близко к лицу\n\n" +
+                "🎤 Нажмите и удерживайте кнопку записи голосового сообщения:");
         }
         catch (error) {
             this.logger.error("Error processing photo:", error);
@@ -143,12 +166,48 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             "📸 Пожалуйста, отправьте фото с человеком (как изображение).");
     }
     async onAudio(ctx) {
-        await ctx.reply("🎵 Аудиофайлы не требуются.\n\n" +
-            "📝 Просто введите текст для озвучивания.");
+        await ctx.reply("🎵 Аудиофайлы не поддерживаются.\n\n" +
+            "🎤 Пожалуйста, отправьте голосовое сообщение вместо аудиофайла.\n\n" +
+            "💡 Как записать голосовое сообщение:\n" +
+            "• Нажмите и удерживайте кнопку микрофона\n" +
+            "• Говорите четко на русском языке\n" +
+            "• Длительность: 10-60 секунд");
     }
     async onVoice(ctx) {
-        await ctx.reply("🎵 Голосовые сообщения больше не требуются!\n\n" +
-            "📝 Просто введите текст, который нужно озвучить. Будет использован качественный русский синтетический голос.");
+        try {
+            const voice = ctx.message?.voice;
+            if (!voice) {
+                await ctx.reply("❌ Не удалось получить голосовое сообщение. Попробуйте еще раз.");
+                return;
+            }
+            const session = ctx.session;
+            if (!session.photoFileId) {
+                await ctx.reply("❌ Сначала отправьте фото с человеком!");
+                return;
+            }
+            if (voice.duration && (voice.duration < 10 || voice.duration > 60)) {
+                await ctx.reply(`❌ Длительность голосового сообщения должна быть от 10 до 60 секунд!\n\n` +
+                    `Текущая длительность: ${voice.duration} сек.\n\n` +
+                    `💡 Запишите голосовое сообщение подходящей длительности.`);
+                return;
+            }
+            session.voiceFileId = voice.file_id;
+            await ctx.reply("✅ Голосовое сообщение принято!\n\n" +
+                `📊 Информация:\n` +
+                `• Длительность: ${voice.duration || '?'} сек.\n` +
+                `• Размер: ${voice.file_size ? Math.round(voice.file_size / 1024) + ' КБ' : 'неизвестен'}\n\n` +
+                "📝 Теперь введите текст сценария для озвучки:\n\n" +
+                "💡 **Советы:**\n" +
+                "• Используйте понятный и интересный текст\n" +
+                "• Длина текста должна соответствовать длительности видео\n" +
+                "• Избегайте сложных слов и терминов\n" +
+                "• Пишите так, как говорите\n\n" +
+                "✍️ Введите текст сценария:");
+        }
+        catch (error) {
+            this.logger.error("Error processing voice:", error);
+            await ctx.reply("❌ Ошибка при обработке голосового сообщения. Попробуйте еще раз.");
+        }
     }
     async onText(ctx) {
         try {
@@ -158,18 +217,24 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 return;
             }
             const session = ctx.session;
+            if (!session.photoFileId) {
+                await ctx.reply("❌ Сначала отправьте фото с человеком!");
+                return;
+            }
+            if (!session.voiceFileId) {
+                await ctx.reply("❌ Сначала отправьте голосовое сообщение!");
+                return;
+            }
             if (!session.script) {
                 session.script = text;
+                const calculatedDuration = this.calculateVideoDuration(text);
+                session.duration = calculatedDuration;
+                await ctx.reply(`✅ Сценарий принят!\n\n` +
+                    `📊 Анализ текста:\n` +
+                    `• Количество слов: ${text.trim().split(/\s+/).length}\n` +
+                    `• Рассчитанная длительность: ${calculatedDuration} сек.\n\n` +
+                    `💡 Длительность рассчитана автоматически на основе количества слов и средней скорости речи для русского языка.\n\n`);
                 await this.showPlatformSelection(ctx);
-            }
-            else if (!session.duration) {
-                const duration = parseInt(text);
-                if (isNaN(duration) || duration < 15 || duration > 60) {
-                    await ctx.reply("❌ Длительность должна быть от 15 до 60 секунд. Попробуйте еще раз.");
-                    return;
-                }
-                session.duration = duration;
-                await this.showQualitySelection(ctx);
             }
             else if (!session.textPrompt) {
                 session.textPrompt = text;
@@ -232,7 +297,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             await ctx.reply("🚀 Начинаю генерацию видео...\n\n" +
                 "Это может занять несколько минут. Пожалуйста, подождите.");
             let photoUrl = "";
-            let audioUrl = "";
+            let voiceUrl = "";
             if (session.photoFileId) {
                 try {
                     const photoFile = await ctx.telegram.getFile(session.photoFileId);
@@ -246,34 +311,41 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                     return;
                 }
             }
-            if (session.audioFileId) {
+            if (session.voiceFileId) {
                 try {
-                    const audioFile = await ctx.telegram.getFile(session.audioFileId);
-                    if (audioFile.file_path) {
-                        audioUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${audioFile.file_path}`;
+                    await ctx.reply("🔄 Обрабатываю голосовое сообщение...");
+                    const voiceFile = await ctx.telegram.getFile(session.voiceFileId);
+                    if (!voiceFile.file_path) {
+                        throw new Error("No file path received from Telegram");
                     }
+                    const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${voiceFile.file_path}`;
+                    const response = await fetch(fileUrl);
+                    if (!response.ok) {
+                        throw new Error(`Failed to download voice file: ${response.status}`);
+                    }
+                    const voiceBuffer = Buffer.from(await response.arrayBuffer());
+                    this.logger.log(`Downloaded voice file: ${voiceBuffer.length} bytes`);
+                    voiceUrl = await this.didService.uploadAudio(voiceBuffer);
+                    this.logger.log(`Voice uploaded to D-ID: ${voiceUrl}`);
                 }
                 catch (error) {
-                    this.logger.error("Error getting audio URL:", error);
-                    await ctx.reply("❌ Ошибка получения аудио. Попробуйте загрузить аудио заново.");
+                    this.logger.error("Error processing voice file:", error);
+                    await ctx.reply("❌ Ошибка обработки голосового сообщения. Попробуйте загрузить заново.");
                     return;
                 }
             }
             const request = {
                 photoUrl: photoUrl,
-                audioUrl: audioUrl,
+                audioUrl: voiceUrl,
                 script: session.script || "",
                 platform: session.platform || "youtube-shorts",
                 duration: session.duration || 30,
                 quality: session.quality || "720p",
                 textPrompt: session.textPrompt,
             };
-            this.logger.log(`Starting D-ID generation with photoUrl: ${photoUrl ? 'PROVIDED' : 'MISSING'}, audioUrl: ${audioUrl ? 'PROVIDED' : 'MISSING'}`);
+            this.logger.log(`Starting D-ID generation with photoUrl: ${photoUrl ? 'PROVIDED' : 'MISSING'}, voiceUrl: ${voiceUrl ? 'PROVIDED' : 'MISSING'}`);
             const result = await this.didService.generateVideo(request);
-            await ctx.reply("✅ Видео успешно создано!\n\n" +
-                `🆔 ID: ${result.id}\n` +
-                `📊 Статус: ${result.status}\n\n` +
-                "🎬 Генерация началась! Это может занять 2-5 минут.\n" +
+            await ctx.reply("🎬 Генерация началась! Это может занять 2-5 минут.\n" +
                 "📬 Готовое видео будет отправлено вам автоматически.");
             this.pollVideoStatus(result.id, ctx.from?.id);
             await ctx.scene?.leave();
@@ -292,8 +364,9 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             await ctx.answerCbQuery();
             const session = ctx.session;
             session.platform = "youtube-shorts";
-            await ctx.editMessageText("✅ Платформа выбрана: Короткие вертикальные видео");
-            await this.showDurationSelection(ctx);
+            await ctx.editMessageText(`✅ Платформа выбрана: Короткие вертикальные видео\n\n` +
+                `⏱️ Длительность видео: ${session.duration || 30} сек. (рассчитана автоматически)`);
+            await this.showQualitySelection(ctx);
         }
         catch (error) {
             this.logger.error("Error selecting YouTube Shorts:", error);
@@ -411,7 +484,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
         this.logger.warn(`⏰ Таймаут ожидания видео ${videoId} для пользователя ${userId}`);
         await this.bot.telegram.sendMessage(userId, `⏰ Генерация видео заняла больше времени чем ожидалось.\n\n` +
             `💡 Возможные причины:\n` +
-            `• Высокая нагрузка на сервер D-ID\n` +
+            `• Высокая нагрузка на сервер\n` +
             `• Сложность обработки изображения\n\n` +
             `🔄 Попробуйте создать видео заново.`);
     }
