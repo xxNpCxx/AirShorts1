@@ -53,6 +53,30 @@ let UsersService = UsersService_1 = class UsersService {
             return false;
         }
     }
+    async getUserPreferredService(telegramId) {
+        try {
+            const res = await this.pool.query("SELECT preferred_service FROM users WHERE telegram_id = $1", [telegramId]);
+            if (res.rowCount === 0) {
+                return 'did';
+            }
+            return res.rows[0].preferred_service || 'did';
+        }
+        catch (err) {
+            this.logger.error("[users][pg] Ошибка получения предпочтения сервиса:", err);
+            return 'did';
+        }
+    }
+    async setUserPreferredService(telegramId, service) {
+        try {
+            await this.pool.query("UPDATE users SET preferred_service = $1 WHERE telegram_id = $2", [service, telegramId]);
+            this.logger.log(`Установлен предпочтительный сервис ${service} для пользователя ${telegramId}`);
+            return true;
+        }
+        catch (err) {
+            this.logger.error("[users][pg] Ошибка установки предпочтения сервиса:", err);
+            return false;
+        }
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = UsersService_1 = __decorate([

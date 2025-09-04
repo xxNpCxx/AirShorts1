@@ -2,6 +2,8 @@ import { Ctx, Scene, SceneEnter, On, Action } from "nestjs-telegraf";
 import { Context } from "telegraf";
 import type { Message } from "@telegraf/types";
 import { DidService } from "../d-id/did.service";
+import { HeyGenService } from "../heygen/heygen.service";
+import { UsersService } from "../users/users.service";
 import { Logger, Inject } from "@nestjs/common";
 import { Telegraf } from "telegraf";
 import { getBotToken } from "nestjs-telegraf";
@@ -39,6 +41,8 @@ export class VideoGenerationScene {
 
   constructor(
     private readonly didService: DidService,
+    private readonly heygenService: HeyGenService,
+    private readonly usersService: UsersService,
     @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
   ) {}
 
@@ -413,9 +417,20 @@ export class VideoGenerationScene {
     try {
       const session = (ctx as unknown as { session: SessionData }).session;
 
+      // Определяем предпочтительный сервис пользователя
+      const userId = ctx.from?.id;
+      if (!userId) {
+        await ctx.reply("❌ Ошибка получения данных пользователя");
+        return;
+      }
+
+      const preferredService = await this.usersService.getUserPreferredService(userId);
+      const serviceName = preferredService === 'did' ? '🤖 ИИ-Аватар (D-ID)' : '👤 Цифровой двойник (HeyGen)';
+
       await ctx.reply(
-        "🚀 Начинаю генерацию видео...\n\n" +
-          "Это может занять несколько минут. Пожалуйста, подождите.",
+        `🚀 Начинаю генерацию видео...\n\n` +
+        `🔧 Используется: ${serviceName}\n` +
+        `⏱️ Это может занять несколько минут. Пожалуйста, подождите.`,
       );
 
       // Получаем URL файлов из Telegram
@@ -455,9 +470,14 @@ export class VideoGenerationScene {
           const voiceBuffer = Buffer.from(await response.arrayBuffer());
           this.logger.log(`Downloaded voice file: ${voiceBuffer.length} bytes`);
           
-          // Загружаем аудио в D-ID
-          voiceUrl = await this.didService.uploadAudio(voiceBuffer);
-          this.logger.log(`Voice uploaded to D-ID: ${voiceUrl}`);
+          // Загружаем аудио в выбранный сервис
+          if (preferredService === 'did') {
+            voiceUrl = await this.didService.uploadAudio(voiceBuffer);
+            this.logger.log(`Voice uploaded to D-ID: ${voiceUrl}`);
+          } else {
+            voiceUrl = await this.heygenService.uploadAudio(voiceBuffer);
+            this.logger.log(`Voice uploaded to HeyGen: ${voiceUrl}`);
+          }
           
         } catch (error) {
           this.logger.error("Error processing voice file:", error);
@@ -476,9 +496,12 @@ export class VideoGenerationScene {
         textPrompt: session.textPrompt,
       };
 
-      this.logger.log(`Starting D-ID generation with photoUrl: ${photoUrl ? 'PROVIDED' : 'MISSING'}, voiceUrl: ${voiceUrl ? `PROVIDED (${voiceUrl.substring(0, 50)}...)` : `MISSING (${voiceUrl})`}`);
+      this.logger.log(`Starting ${preferredService.toUpperCase()} generation with photoUrl: ${photoUrl ? 'PROVIDED' : 'MISSING'}, voiceUrl: ${voiceUrl ? `PROVIDED (${voiceUrl.substring(0, 50)}...)` : `MISSING (${voiceUrl})`}`);
       
-      const result = await this.didService.generateVideo(request);
+      // Выбираем сервис для генерации
+      const result = preferredService === 'did' 
+        ? await this.didService.generateVideo(request)
+        : await this.heygenService.generateVideo(request);
 
       await ctx.reply(
           "🎬 Генерация началась! Это может занять 2-5 минут.\n" +
@@ -486,7 +509,7 @@ export class VideoGenerationScene {
       );
 
       // Запускаем polling в фоне
-      this.pollVideoStatus(result.id, ctx.from?.id);
+      this.pollVideoStatus(result.id, ctx.from?.id, preferredService);
 
       // Возвращаемся в главное меню
       await (ctx as { scene?: { leave: () => Promise<void> } }).scene?.leave();
@@ -596,23 +619,31 @@ export class VideoGenerationScene {
   /**
    * Отслеживает статус генерации видео и автоматически отправляет готовое видео пользователю
    */
-  private async pollVideoStatus(videoId: string, userId?: number): Promise<void> {
+  private async pollVideoStatus(videoId: string, userId?: number, service: 'did' | 'heygen' = 'did'): Promise<void> {
     if (!userId) return;
     
     const maxAttempts = 20; // 10 минут максимум
     const interval = 30000; // 30 секунд между проверками
     
-    this.logger.log(`🔄 Начинаем отслеживание статуса видео ${videoId} для пользователя ${userId}`);
+    this.logger.log(`🔄 Начинаем отслеживание статуса видео ${videoId} для пользователя ${userId} (сервис: ${service.toUpperCase()})`);
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
         // Ждем перед проверкой
         await new Promise(resolve => setTimeout(resolve, interval));
         
-        const status = await this.didService.getVideoStatus(videoId);
-        this.logger.log(`📊 Статус видео ${videoId}: ${status.status} (попытка ${attempt + 1}/${maxAttempts})`);
+        // Выбираем сервис для проверки статуса
+        const status = service === 'did' 
+          ? await this.didService.getVideoStatus(videoId)
+          : await this.heygenService.getVideoStatus(videoId);
         
-        if (status.status === 'done' && status.result_url) {
+        this.logger.log(`📊 Статус видео ${videoId}: ${status.status} (попытка ${attempt + 1}/${maxAttempts}, сервис: ${service.toUpperCase()})`);
+        
+        // Проверяем статус в зависимости от сервиса
+        const isCompleted = (service === 'did' && status.status === 'done') || 
+                           (service === 'heygen' && status.status === 'completed');
+        
+        if (isCompleted && status.result_url) {
           this.logger.log(`✅ Видео ${videoId} готово! Отправляем пользователю ${userId}`);
           
           try {
@@ -631,7 +662,11 @@ export class VideoGenerationScene {
           return;
         }
         
-        if (status.status === 'error' || status.error) {
+        // Проверяем ошибки в зависимости от сервиса
+        const isError = (service === 'did' && (status.status === 'error' || status.error)) || 
+                       (service === 'heygen' && (status.status === 'failed' || status.error));
+        
+        if (isError) {
           this.logger.error(`❌ Ошибка генерации видео ${videoId}: ${status.error}`, {
             videoId,
             userId,

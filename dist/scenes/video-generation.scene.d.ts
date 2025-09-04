@@ -1,6 +1,8 @@
 import { Context } from "telegraf";
 import type { Message } from "@telegraf/types";
 import { DidService } from "../d-id/did.service";
+import { HeyGenService } from "../heygen/heygen.service";
+import { UsersService } from "../users/users.service";
 import { Telegraf } from "telegraf";
 interface SessionData {
     photoFileId?: string;
@@ -26,9 +28,11 @@ type TextContext = Context & {
 };
 export declare class VideoGenerationScene {
     private readonly didService;
+    private readonly heygenService;
+    private readonly usersService;
     private readonly bot;
     private readonly logger;
-    constructor(didService: DidService, bot: Telegraf);
+    constructor(didService: DidService, heygenService: HeyGenService, usersService: UsersService, bot: Telegraf);
     private calculateVideoDuration;
     onSceneEnter(ctx: Context): Promise<void>;
     onPhoto(ctx: PhotoContext): Promise<void>;

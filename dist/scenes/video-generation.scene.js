@@ -17,12 +17,16 @@ exports.VideoGenerationScene = void 0;
 const nestjs_telegraf_1 = require("nestjs-telegraf");
 const telegraf_1 = require("telegraf");
 const did_service_1 = require("../d-id/did.service");
+const heygen_service_1 = require("../heygen/heygen.service");
+const users_service_1 = require("../users/users.service");
 const common_1 = require("@nestjs/common");
 const telegraf_2 = require("telegraf");
 const nestjs_telegraf_2 = require("nestjs-telegraf");
 let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
-    constructor(didService, bot) {
+    constructor(didService, heygenService, usersService, bot) {
         this.didService = didService;
+        this.heygenService = heygenService;
+        this.usersService = usersService;
         this.bot = bot;
         this.logger = new common_1.Logger(VideoGenerationScene_1.name);
     }
@@ -294,8 +298,16 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
     async startVideoGeneration(ctx) {
         try {
             const session = ctx.session;
-            await ctx.reply("🚀 Начинаю генерацию видео...\n\n" +
-                "Это может занять несколько минут. Пожалуйста, подождите.");
+            const userId = ctx.from?.id;
+            if (!userId) {
+                await ctx.reply("❌ Ошибка получения данных пользователя");
+                return;
+            }
+            const preferredService = await this.usersService.getUserPreferredService(userId);
+            const serviceName = preferredService === 'did' ? '🤖 ИИ-Аватар (D-ID)' : '👤 Цифровой двойник (HeyGen)';
+            await ctx.reply(`🚀 Начинаю генерацию видео...\n\n` +
+                `🔧 Используется: ${serviceName}\n` +
+                `⏱️ Это может занять несколько минут. Пожалуйста, подождите.`);
             let photoUrl = "";
             let voiceUrl = "";
             if (session.photoFileId) {
@@ -325,8 +337,14 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                     }
                     const voiceBuffer = Buffer.from(await response.arrayBuffer());
                     this.logger.log(`Downloaded voice file: ${voiceBuffer.length} bytes`);
-                    voiceUrl = await this.didService.uploadAudio(voiceBuffer);
-                    this.logger.log(`Voice uploaded to D-ID: ${voiceUrl}`);
+                    if (preferredService === 'did') {
+                        voiceUrl = await this.didService.uploadAudio(voiceBuffer);
+                        this.logger.log(`Voice uploaded to D-ID: ${voiceUrl}`);
+                    }
+                    else {
+                        voiceUrl = await this.heygenService.uploadAudio(voiceBuffer);
+                        this.logger.log(`Voice uploaded to HeyGen: ${voiceUrl}`);
+                    }
                 }
                 catch (error) {
                     this.logger.error("Error processing voice file:", error);
@@ -343,11 +361,13 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 quality: session.quality || "720p",
                 textPrompt: session.textPrompt,
             };
-            this.logger.log(`Starting D-ID generation with photoUrl: ${photoUrl ? 'PROVIDED' : 'MISSING'}, voiceUrl: ${voiceUrl ? `PROVIDED (${voiceUrl.substring(0, 50)}...)` : `MISSING (${voiceUrl})`}`);
-            const result = await this.didService.generateVideo(request);
+            this.logger.log(`Starting ${preferredService.toUpperCase()} generation with photoUrl: ${photoUrl ? 'PROVIDED' : 'MISSING'}, voiceUrl: ${voiceUrl ? `PROVIDED (${voiceUrl.substring(0, 50)}...)` : `MISSING (${voiceUrl})`}`);
+            const result = preferredService === 'did'
+                ? await this.didService.generateVideo(request)
+                : await this.heygenService.generateVideo(request);
             await ctx.reply("🎬 Генерация началась! Это может занять 2-5 минут.\n" +
                 "📬 Готовое видео будет отправлено вам автоматически.");
-            this.pollVideoStatus(result.id, ctx.from?.id);
+            this.pollVideoStatus(result.id, ctx.from?.id, preferredService);
             await ctx.scene?.leave();
         }
         catch (error) {
@@ -430,18 +450,22 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
         await ctx.reply("❌ Создание видео отменено.");
         await ctx.scene?.leave();
     }
-    async pollVideoStatus(videoId, userId) {
+    async pollVideoStatus(videoId, userId, service = 'did') {
         if (!userId)
             return;
         const maxAttempts = 20;
         const interval = 30000;
-        this.logger.log(`🔄 Начинаем отслеживание статуса видео ${videoId} для пользователя ${userId}`);
+        this.logger.log(`🔄 Начинаем отслеживание статуса видео ${videoId} для пользователя ${userId} (сервис: ${service.toUpperCase()})`);
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
             try {
                 await new Promise(resolve => setTimeout(resolve, interval));
-                const status = await this.didService.getVideoStatus(videoId);
-                this.logger.log(`📊 Статус видео ${videoId}: ${status.status} (попытка ${attempt + 1}/${maxAttempts})`);
-                if (status.status === 'done' && status.result_url) {
+                const status = service === 'did'
+                    ? await this.didService.getVideoStatus(videoId)
+                    : await this.heygenService.getVideoStatus(videoId);
+                this.logger.log(`📊 Статус видео ${videoId}: ${status.status} (попытка ${attempt + 1}/${maxAttempts}, сервис: ${service.toUpperCase()})`);
+                const isCompleted = (service === 'did' && status.status === 'done') ||
+                    (service === 'heygen' && status.status === 'completed');
+                if (isCompleted && status.result_url) {
                     this.logger.log(`✅ Видео ${videoId} готово! Отправляем пользователю ${userId}`);
                     try {
                         await this.bot.telegram.sendVideo(userId, status.result_url, {
@@ -456,7 +480,9 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                     }
                     return;
                 }
-                if (status.status === 'error' || status.error) {
+                const isError = (service === 'did' && (status.status === 'error' || status.error)) ||
+                    (service === 'heygen' && (status.status === 'failed' || status.error));
+                if (isError) {
                     this.logger.error(`❌ Ошибка генерации видео ${videoId}: ${status.error}`, {
                         videoId,
                         userId,
@@ -620,8 +646,10 @@ __decorate([
 ], VideoGenerationScene.prototype, "onCancel", null);
 exports.VideoGenerationScene = VideoGenerationScene = VideoGenerationScene_1 = __decorate([
     (0, nestjs_telegraf_1.Scene)("video-generation"),
-    __param(1, (0, common_1.Inject)((0, nestjs_telegraf_2.getBotToken)("airshorts1_bot"))),
+    __param(3, (0, common_1.Inject)((0, nestjs_telegraf_2.getBotToken)("airshorts1_bot"))),
     __metadata("design:paramtypes", [did_service_1.DidService,
+        heygen_service_1.HeyGenService,
+        users_service_1.UsersService,
         telegraf_2.Telegraf])
 ], VideoGenerationScene);
 //# sourceMappingURL=video-generation.scene.js.map

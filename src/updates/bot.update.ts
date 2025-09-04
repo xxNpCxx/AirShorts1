@@ -9,6 +9,7 @@ import {
 } from "nestjs-telegraf";
 import { UsersService } from "../users/users.service";
 import { MenuService } from "../menu/menu.service";
+import { KeyboardsService } from "../keyboards/keyboards.service";
 import { CustomLoggerService } from "../logger/logger.service";
 import { Context } from "telegraf";
 
@@ -17,6 +18,7 @@ export class BotUpdate {
   constructor(
     private readonly _users: UsersService,
     private readonly _menu: MenuService,
+    private readonly _kb: KeyboardsService,
     private readonly _logger: CustomLoggerService,
   ) {
     this._logger.debug("BotUpdate инициализирован", "BotUpdate");
@@ -269,5 +271,118 @@ export class BotUpdate {
         scene: { enter: (sceneName: string) => Promise<void> };
       }
     ).scene.enter("video-generation");
+  }
+
+  @Action("service_settings")
+  async onServiceSettings(@Ctx() ctx: Context) {
+    try {
+      await ctx.answerCbQuery();
+      
+      if (!ctx.from?.id) {
+        await ctx.reply("❌ Ошибка получения данных пользователя");
+        return;
+      }
+
+      const currentService = await this._users.getUserPreferredService(ctx.from.id);
+      const serviceNames = {
+        'did': '🤖 ИИ-Аватар (D-ID)',
+        'heygen': '👤 Цифровой двойник (HeyGen)'
+      };
+
+      await ctx.editMessageText(
+        `⚙️ **Настройки сервиса генерации видео**\n\n` +
+        `Текущий сервис: ${serviceNames[currentService]}\n\n` +
+        `🤖 **ИИ-Аватар (D-ID):**\n` +
+        `• Быстрая генерация\n` +
+        `• Качественная синхронизация губ\n` +
+        `• Поддержка клонирования голоса\n\n` +
+        `👤 **Цифровой двойник (HeyGen):**\n` +
+        `• Более реалистичные движения\n` +
+        `• Профессиональное качество\n` +
+        `• Расширенные возможности персонализации\n\n` +
+        `Выберите предпочтительный сервис:`,
+        {
+          parse_mode: "Markdown",
+          reply_markup: this._kb.serviceSettings().reply_markup,
+        }
+      );
+    } catch (error) {
+      this._logger.error(`❌ Ошибка при показе настроек сервиса: ${error}`, undefined, "BotUpdate");
+      await ctx.answerCbQuery("❌ Произошла ошибка");
+    }
+  }
+
+  @Action("set_service_did")
+  async onSetServiceDid(@Ctx() ctx: Context) {
+    try {
+      await ctx.answerCbQuery("🤖 ИИ-Аватар (D-ID) выбран!");
+      
+      if (!ctx.from?.id) {
+        await ctx.reply("❌ Ошибка получения данных пользователя");
+        return;
+      }
+
+      await this._users.setUserPreferredService(ctx.from.id, 'did');
+      
+      await ctx.editMessageText(
+        `✅ **Сервис успешно изменен!**\n\n` +
+        `🤖 Теперь используется: **ИИ-Аватар (D-ID)**\n\n` +
+        `Особенности:\n` +
+        `• Быстрая генерация видео\n` +
+        `• Качественная синхронизация губ\n` +
+        `• Поддержка клонирования голоса\n` +
+        `• Оптимизировано для коротких роликов\n\n` +
+        `🎬 Теперь можете создавать видео!`,
+        {
+          parse_mode: "Markdown",
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "🎬 Создать видео", callback_data: "create_video" }],
+              [{ text: "🔙 Назад в меню", callback_data: "main_menu" }],
+            ]
+          }
+        }
+      );
+    } catch (error) {
+      this._logger.error(`❌ Ошибка при установке сервиса D-ID: ${error}`, undefined, "BotUpdate");
+      await ctx.answerCbQuery("❌ Произошла ошибка");
+    }
+  }
+
+  @Action("set_service_heygen")
+  async onSetServiceHeyGen(@Ctx() ctx: Context) {
+    try {
+      await ctx.answerCbQuery("👤 Цифровой двойник (HeyGen) выбран!");
+      
+      if (!ctx.from?.id) {
+        await ctx.reply("❌ Ошибка получения данных пользователя");
+        return;
+      }
+
+      await this._users.setUserPreferredService(ctx.from.id, 'heygen');
+      
+      await ctx.editMessageText(
+        `✅ **Сервис успешно изменен!**\n\n` +
+        `👤 Теперь используется: **Цифровой двойник (HeyGen)**\n\n` +
+        `Особенности:\n` +
+        `• Более реалистичные движения\n` +
+        `• Профессиональное качество видео\n` +
+        `• Расширенные возможности персонализации\n` +
+        `• Продвинутая технология создания аватаров\n\n` +
+        `🎬 Теперь можете создавать видео!`,
+        {
+          parse_mode: "Markdown",
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "🎬 Создать видео", callback_data: "create_video" }],
+              [{ text: "🔙 Назад в меню", callback_data: "main_menu" }],
+            ]
+          }
+        }
+      );
+    } catch (error) {
+      this._logger.error(`❌ Ошибка при установке сервиса HeyGen: ${error}`, undefined, "BotUpdate");
+      await ctx.answerCbQuery("❌ Произошла ошибка");
+    }
   }
 }

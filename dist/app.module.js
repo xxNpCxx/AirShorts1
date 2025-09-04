@@ -22,6 +22,7 @@ const redis_module_1 = require("./redis/redis.module");
 const menu_update_1 = require("./updates/menu.update");
 const logger_module_1 = require("./logger/logger.module");
 const did_module_1 = require("./d-id/did.module");
+const heygen_module_1 = require("./heygen/heygen.module");
 const video_generation_scene_1 = require("./scenes/video-generation.scene");
 const webhook_module_1 = require("./webhook/webhook.module");
 let AppModule = class AppModule {
@@ -42,6 +43,7 @@ exports.AppModule = AppModule = __decorate([
             menu_module_1.MenuModule,
             redis_module_1.RedisModule,
             did_module_1.DidModule,
+            heygen_module_1.HeyGenModule,
             webhook_module_1.WebhookModule,
             nestjs_telegraf_1.TelegrafModule.forRoot({
                 token: process.env.BOT_TOKEN || "",

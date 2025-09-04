@@ -56,4 +56,34 @@ export class UsersService {
       return false;
     }
   }
+
+  async getUserPreferredService(telegramId: number): Promise<'did' | 'heygen'> {
+    try {
+      const res = await this.pool.query(
+        "SELECT preferred_service FROM users WHERE telegram_id = $1",
+        [telegramId],
+      );
+      if (res.rowCount === 0) {
+        return 'did'; // По умолчанию D-ID
+      }
+      return res.rows[0].preferred_service || 'did';
+    } catch (err) {
+      this.logger.error("[users][pg] Ошибка получения предпочтения сервиса:", err);
+      return 'did'; // По умолчанию при ошибке
+    }
+  }
+
+  async setUserPreferredService(telegramId: number, service: 'did' | 'heygen'): Promise<boolean> {
+    try {
+      await this.pool.query(
+        "UPDATE users SET preferred_service = $1 WHERE telegram_id = $2",
+        [service, telegramId],
+      );
+      this.logger.log(`Установлен предпочтительный сервис ${service} для пользователя ${telegramId}`);
+      return true;
+    } catch (err) {
+      this.logger.error("[users][pg] Ошибка установки предпочтения сервиса:", err);
+      return false;
+    }
+  }
 }
