@@ -17,7 +17,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
     constructor(configService) {
         this.configService = configService;
         this.logger = new common_1.Logger(HeyGenService_1.name);
-        this.baseUrl = "https://api.heygen.com/v2";
+        this.baseUrl = "https://api.heygen.com";
         this.apiKey = this.configService.get("HEYGEN_API_KEY") || "";
         if (!this.apiKey) {
             this.logger.warn("HEYGEN_API_KEY не найден в переменных окружения");

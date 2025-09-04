@@ -43,7 +43,7 @@ interface HeyGenStatusResponse {
 export class HeyGenService {
   private readonly logger = new Logger(HeyGenService.name);
   private readonly apiKey: string;
-  private readonly baseUrl = "https://api.heygen.com/v2";
+  private readonly baseUrl = "https://api.heygen.com";
 
   constructor(private readonly configService: ConfigService) {
     this.apiKey = this.configService.get<string>("HEYGEN_API_KEY") || "";
