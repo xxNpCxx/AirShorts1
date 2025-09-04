@@ -17,7 +17,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
     constructor(configService) {
         this.configService = configService;
         this.logger = new common_1.Logger(HeyGenService_1.name);
-        this.baseUrl = "https://api.heygen.com";
+        this.baseUrl = "https://api.heygen.com/v1";
         this.apiKey = this.configService.get("HEYGEN_API_KEY") || "";
         if (!this.apiKey) {
             this.logger.warn("HEYGEN_API_KEY не найден в переменных окружения");
@@ -55,8 +55,8 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             else {
                 this.logger.log(`[${requestId}] 🎵 Using TTS with script: ${request.script?.substring(0, 50)}...`);
             }
-            this.logger.debug(`[${requestId}] 📤 Sending request to ${this.baseUrl}/v3/video/generate`);
-            const response = await fetch(`${this.baseUrl}/v3/video/generate`, {
+            this.logger.debug(`[${requestId}] 📤 Sending request to ${this.baseUrl}/video/generate`);
+            const response = await fetch(`${this.baseUrl}/video/generate`, {
                 method: "POST",
                 headers: {
                     "X-API-KEY": this.apiKey,
@@ -103,7 +103,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
     async getVideoStatus(videoId) {
         try {
             this.logger.debug(`🔍 Checking status for HeyGen video: ${videoId}`);
-            const response = await fetch(`${this.baseUrl}/v3/video_status/${videoId}`, {
+            const response = await fetch(`${this.baseUrl}/video_status/${videoId}`, {
                 headers: {
                     "X-API-KEY": this.apiKey,
                 },
