@@ -69,12 +69,14 @@ async function bootstrap() {
   logger.debug(`PORT: ${process.env.PORT || "не установлен, используется 3000"}`, "Bootstrap");
 
   // Запускаем миграции базы данных
+  logger.log("🔧 Начинаем запуск миграций базы данных...", "Bootstrap");
   try {
     logger.log("🔧 Запуск миграций базы данных...", "Bootstrap");
     await runMigrations();
     logger.log("✅ Миграции базы данных выполнены успешно", "Bootstrap");
   } catch (error) {
     logger.error("❌ Ошибка при выполнении миграций:", error instanceof Error ? error.message : String(error), "Bootstrap");
+    logger.error("❌ Stack trace:", error instanceof Error ? error.stack : "No stack trace", "Bootstrap");
     // Не останавливаем приложение, продолжаем работу
   }
 

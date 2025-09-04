@@ -11,6 +11,7 @@ async function runMigrations() {
   console.log(`📁 NODE_ENV: ${process.env.NODE_ENV}`);
   console.log(`📁 process.cwd(): ${process.cwd()}`);
   console.log(`📁 __dirname: ${__dirname}`);
+  console.log(`📁 DATABASE_URL: ${process.env.DATABASE_URL ? "установлен" : "НЕ УСТАНОВЛЕН"}`);
   
   const client = new Client({
     connectionString: process.env.DATABASE_URL,

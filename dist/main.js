@@ -47,6 +47,7 @@ async function bootstrap() {
     logger.debug(`BOT_TOKEN: ${process.env.BOT_TOKEN ? "установлен" : "НЕ УСТАНОВЛЕН"}`, "Bootstrap");
     logger.debug(`WEBHOOK_URL: ${process.env.WEBHOOK_URL || "не установлен"}`, "Bootstrap");
     logger.debug(`PORT: ${process.env.PORT || "не установлен, используется 3000"}`, "Bootstrap");
+    logger.log("🔧 Начинаем запуск миграций базы данных...", "Bootstrap");
     try {
         logger.log("🔧 Запуск миграций базы данных...", "Bootstrap");
         await (0, migrate_1.runMigrations)();
@@ -54,6 +55,7 @@ async function bootstrap() {
     }
     catch (error) {
         logger.error("❌ Ошибка при выполнении миграций:", error instanceof Error ? error.message : String(error), "Bootstrap");
+        logger.error("❌ Stack trace:", error instanceof Error ? error.stack : "No stack trace", "Bootstrap");
     }
     const port = Number(process.env.PORT) || 3000;
     logger.log(`🚀 Запуск приложения на порту ${port}`, "Bootstrap");
