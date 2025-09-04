@@ -56,25 +56,37 @@ async function runMigrations() {
         let hasNameColumn = false;
         let hasFilenameColumn = false;
         try {
-            const tableCheck = await client.query(`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'migrations' 
-        AND column_name = 'name'
+            const tableExistsCheck = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'migrations'
+        );
       `);
-            hasNameColumn = tableCheck.rows.length > 0;
-            const filenameCheck = await client.query(`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'migrations' 
-        AND column_name = 'filename'
-      `);
-            hasFilenameColumn = filenameCheck.rows.length > 0;
-            tableExists = true;
-            console.log("🏗️ Таблица migrations уже существует");
+            tableExists = tableExistsCheck.rows[0].exists;
+            if (tableExists) {
+                const tableCheck = await client.query(`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_name = 'migrations' 
+          AND column_name = 'name'
+        `);
+                hasNameColumn = tableCheck.rows.length > 0;
+                const filenameCheck = await client.query(`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_name = 'migrations' 
+          AND column_name = 'filename'
+        `);
+                hasFilenameColumn = filenameCheck.rows.length > 0;
+                console.log("🏗️ Таблица migrations уже существует");
+            }
+            else {
+                console.log("🏗️ Таблица migrations не существует, создаем новую");
+            }
         }
-        catch {
-            console.log("🏗️ Таблица migrations не существует, создаем новую");
+        catch (error) {
+            console.log("🏗️ Ошибка при проверке таблицы migrations, создаем новую:", error);
+            tableExists = false;
         }
         if (!tableExists) {
             console.log("🏗️ Создаем таблицу migrations...");
@@ -138,9 +150,20 @@ async function runMigrations() {
         let failuresCount = 0;
         for (const filename of migrationFiles) {
             try {
-                const { rows } = await client.query("SELECT id FROM migrations WHERE name = $1", [filename]);
-                if (rows.length > 0) {
-                    console.log(`⏭️  Миграция ${filename} уже выполнена, пропускаем`);
+                let shouldSkip = false;
+                if (tableExists) {
+                    try {
+                        const { rows } = await client.query("SELECT id FROM migrations WHERE name = $1", [filename]);
+                        if (rows.length > 0) {
+                            console.log(`⏭️  Миграция ${filename} уже выполнена, пропускаем`);
+                            shouldSkip = true;
+                        }
+                    }
+                    catch (error) {
+                        console.log(`⚠️  Не удалось проверить статус миграции ${filename}, выполняем`);
+                    }
+                }
+                if (shouldSkip) {
                     continue;
                 }
                 console.log(`🚀 Выполняем миграцию: ${filename}`);
@@ -148,9 +171,11 @@ async function runMigrations() {
                 const sql = (0, fs_1.readFileSync)(sqlPath, "utf8");
                 await client.query("BEGIN");
                 await client.query(sql);
-                await client.query("INSERT INTO migrations (name) VALUES ($1)", [
-                    filename,
-                ]);
+                if (tableExists) {
+                    await client.query("INSERT INTO migrations (name) VALUES ($1)", [
+                        filename,
+                    ]);
+                }
                 await client.query("COMMIT");
                 console.log(`✅ Миграция ${filename} выполнена успешно`);
             }

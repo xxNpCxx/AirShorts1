@@ -28,26 +28,39 @@ async function runMigrations() {
     let hasFilenameColumn = false;
 
     try {
-      const tableCheck = await client.query(`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'migrations' 
-        AND column_name = 'name'
+      // Сначала проверяем, существует ли таблица вообще
+      const tableExistsCheck = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'migrations'
+        );
       `);
-      hasNameColumn = tableCheck.rows.length > 0;
+      tableExists = tableExistsCheck.rows[0].exists;
 
-      const filenameCheck = await client.query(`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'migrations' 
-        AND column_name = 'filename'
-      `);
-      hasFilenameColumn = filenameCheck.rows.length > 0;
+      if (tableExists) {
+        const tableCheck = await client.query(`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_name = 'migrations' 
+          AND column_name = 'name'
+        `);
+        hasNameColumn = tableCheck.rows.length > 0;
 
-      tableExists = true;
-      console.log("🏗️ Таблица migrations уже существует");
-    } catch {
-      console.log("🏗️ Таблица migrations не существует, создаем новую");
+        const filenameCheck = await client.query(`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_name = 'migrations' 
+          AND column_name = 'filename'
+        `);
+        hasFilenameColumn = filenameCheck.rows.length > 0;
+
+        console.log("🏗️ Таблица migrations уже существует");
+      } else {
+        console.log("🏗️ Таблица migrations не существует, создаем новую");
+      }
+    } catch (error) {
+      console.log("🏗️ Ошибка при проверке таблицы migrations, создаем новую:", error);
+      tableExists = false;
     }
 
     // Создаем или обновляем таблицу migrations
@@ -120,14 +133,24 @@ async function runMigrations() {
 
     for (const filename of migrationFiles) {
       try {
-        // Проверяем, была ли миграция уже выполнена
-        const { rows } = await client.query(
-          "SELECT id FROM migrations WHERE name = $1",
-          [filename],
-        );
+        // Проверяем, была ли миграция уже выполнена (только если таблица migrations существует)
+        let shouldSkip = false;
+        if (tableExists) {
+          try {
+            const { rows } = await client.query(
+              "SELECT id FROM migrations WHERE name = $1",
+              [filename],
+            );
+            if (rows.length > 0) {
+              console.log(`⏭️  Миграция ${filename} уже выполнена, пропускаем`);
+              shouldSkip = true;
+            }
+          } catch (error) {
+            console.log(`⚠️  Не удалось проверить статус миграции ${filename}, выполняем`);
+          }
+        }
 
-        if (rows.length > 0) {
-          console.log(`⏭️  Миграция ${filename} уже выполнена, пропускаем`);
+        if (shouldSkip) {
           continue;
         }
 
@@ -138,9 +161,13 @@ async function runMigrations() {
         // Выполняем весь файл одной транзакцией, без разбиения по ';'
         await client.query("BEGIN");
         await client.query(sql);
-        await client.query("INSERT INTO migrations (name) VALUES ($1)", [
-          filename,
-        ]);
+        
+        // Записываем в таблицу migrations только если она существует
+        if (tableExists) {
+          await client.query("INSERT INTO migrations (name) VALUES ($1)", [
+            filename,
+          ]);
+        }
         await client.query("COMMIT");
 
         console.log(`✅ Миграция ${filename} выполнена успешно`);
