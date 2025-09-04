@@ -11,8 +11,17 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var HeyGenService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HeyGenService = void 0;
+exports.validateAvatarIVPayload = validateAvatarIVPayload;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
+function validateAvatarIVPayload(payload) {
+    return (typeof payload.image_key === 'string' &&
+        typeof payload.video_title === 'string' &&
+        typeof payload.script === 'string' &&
+        typeof payload.voice_id === 'string' &&
+        (!payload.video_orientation || ['portrait', 'landscape'].includes(payload.video_orientation)) &&
+        (!payload.fit || ['cover', 'contain'].includes(payload.fit)));
+}
 let HeyGenService = HeyGenService_1 = class HeyGenService {
     constructor(configService) {
         this.configService = configService;
@@ -80,16 +89,20 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     };
                 }
                 else {
-                    this.logger.log(`[${requestId}] 🚀 Пробуем Avatar IV с image_key: ${request.imageUrl}`);
+                    this.logger.log(`[${requestId}] 🚀 Используем Avatar IV с правильными параметрами`);
                     const av4Payload = {
-                        input_text: request.script,
-                        voice_id: "119caed25533477ba63822d5d1552d25",
                         image_key: request.imageUrl,
-                        dimension: {
-                            width: 1280,
-                            height: 720
-                        }
+                        video_title: `Generated Video ${Date.now()}`,
+                        script: request.script,
+                        voice_id: "119caed25533477ba63822d5d1552d25",
+                        video_orientation: "portrait",
+                        fit: "cover"
                     };
+                    if (!validateAvatarIVPayload(av4Payload)) {
+                        this.logger.error(`[${requestId}] ❌ Неправильные параметры Avatar IV:`, av4Payload);
+                        throw new Error('Invalid Avatar IV parameters');
+                    }
+                    this.logger.debug(`[${requestId}] 📤 Avatar IV payload (validated):`, av4Payload);
                     try {
                         const av4Response = await fetch(`${this.baseUrl}/v2/video/av4/generate`, {
                             method: 'POST',
@@ -99,6 +112,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                             },
                             body: JSON.stringify(av4Payload),
                         });
+                        this.logger.debug(`[${requestId}] 📥 Avatar IV response: ${av4Response.status} ${av4Response.statusText}`);
                         if (av4Response.ok) {
                             const av4Result = await av4Response.json();
                             const videoId = av4Result.data?.video_id || av4Result.video_id;
@@ -107,10 +121,14 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                                 return { id: videoId, status: 'created' };
                             }
                         }
-                        this.logger.warn(`[${requestId}] Avatar IV failed: ${av4Response.status}, fallback to standard API`);
+                        else {
+                            const errorText = await av4Response.text();
+                            this.logger.error(`[${requestId}] ❌ Avatar IV failed: ${av4Response.status} - ${errorText}`);
+                        }
+                        this.logger.warn(`[${requestId}] Avatar IV failed, fallback to standard API`);
                     }
                     catch (av4Error) {
-                        this.logger.warn(`[${requestId}] Avatar IV error, fallback to standard API:`, av4Error);
+                        this.logger.error(`[${requestId}] Avatar IV error, fallback to standard API:`, av4Error);
                     }
                 }
             }
@@ -261,8 +279,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             try {
                 const formData = new FormData();
                 formData.append('file', new Blob([imageBuffer], { type: 'image/jpeg' }), 'user_photo.jpg');
-                formData.append('type', 'image');
-                const uploadResponse = await fetch(`${this.baseUrl}/v1/assets`, {
+                const uploadResponse = await fetch(`${this.baseUrl}/v1/upload`, {
                     method: 'POST',
                     headers: {
                         'X-API-KEY': this.apiKey,
@@ -271,13 +288,21 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 });
                 if (uploadResponse.ok) {
                     const uploadResult = await uploadResponse.json();
+                    const imageKey = uploadResult.data?.image_key || uploadResult.image_key;
+                    if (imageKey) {
+                        this.logger.log(`[${uploadId}] ✅ Image Key для Avatar IV: ${imageKey}`);
+                        return imageKey;
+                    }
                     const assetId = uploadResult.data?.asset_id || uploadResult.asset_id;
                     if (assetId) {
                         this.logger.log(`[${uploadId}] ✅ Asset uploaded: ${assetId}`);
                         return assetId;
                     }
                 }
-                this.logger.warn(`[${uploadId}] Asset upload failed: ${uploadResponse.status}`);
+                else {
+                    const errorText = await uploadResponse.text();
+                    this.logger.warn(`[${uploadId}] Upload Asset failed: ${uploadResponse.status} - ${errorText}`);
+                }
             }
             catch (assetError) {
                 this.logger.warn(`[${uploadId}] Asset upload approach failed:`, assetError);

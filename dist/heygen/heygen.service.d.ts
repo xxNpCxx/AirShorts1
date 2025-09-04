@@ -15,6 +15,15 @@ export interface HeyGenVideoResponse {
     result_url?: string;
     error?: string;
 }
+export interface AvatarIVPayload {
+    image_key: string;
+    video_title: string;
+    script: string;
+    voice_id: string;
+    video_orientation?: 'portrait' | 'landscape';
+    fit?: 'cover' | 'contain';
+}
+export declare function validateAvatarIVPayload(payload: any): payload is AvatarIVPayload;
 export declare class HeyGenService {
     private readonly configService;
     private readonly logger;

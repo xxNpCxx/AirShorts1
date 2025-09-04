@@ -19,6 +19,28 @@ export interface HeyGenVideoResponse {
   error?: string;
 }
 
+// Avatar IV API параметры согласно документации
+export interface AvatarIVPayload {
+  image_key: string;
+  video_title: string;
+  script: string;
+  voice_id: string;
+  video_orientation?: 'portrait' | 'landscape';
+  fit?: 'cover' | 'contain';
+}
+
+// Функция валидации Avatar IV параметров
+export function validateAvatarIVPayload(payload: any): payload is AvatarIVPayload {
+  return (
+    typeof payload.image_key === 'string' &&
+    typeof payload.video_title === 'string' &&
+    typeof payload.script === 'string' &&
+    typeof payload.voice_id === 'string' &&
+    (!payload.video_orientation || ['portrait', 'landscape'].includes(payload.video_orientation)) &&
+    (!payload.fit || ['cover', 'contain'].includes(payload.fit))
+  );
+}
+
 interface HeyGenApiResponse {
   error: null | string;
   data?: {
@@ -122,18 +144,25 @@ export class HeyGenService {
             fit: "cover"
           };
         } else {
-          // Пробуем Avatar IV
-          this.logger.log(`[${requestId}] 🚀 Пробуем Avatar IV с image_key: ${request.imageUrl}`);
+          // Пробуем Avatar IV с ПРАВИЛЬНЫМИ параметрами согласно документации
+          this.logger.log(`[${requestId}] 🚀 Используем Avatar IV с правильными параметрами`);
           
-          const av4Payload = {
-            input_text: request.script,
-            voice_id: "119caed25533477ba63822d5d1552d25",
+          const av4Payload: AvatarIVPayload = {
             image_key: request.imageUrl,
-            dimension: {
-              width: 1280,
-              height: 720
-            }
+            video_title: `Generated Video ${Date.now()}`,
+            script: request.script,
+            voice_id: "119caed25533477ba63822d5d1552d25",
+            video_orientation: "portrait",
+            fit: "cover"
           };
+
+          // Валидация параметров согласно документации
+          if (!validateAvatarIVPayload(av4Payload)) {
+            this.logger.error(`[${requestId}] ❌ Неправильные параметры Avatar IV:`, av4Payload);
+            throw new Error('Invalid Avatar IV parameters');
+          }
+
+          this.logger.debug(`[${requestId}] 📤 Avatar IV payload (validated):`, av4Payload);
 
           try {
             const av4Response = await fetch(`${this.baseUrl}/v2/video/av4/generate`, {
@@ -145,6 +174,8 @@ export class HeyGenService {
               body: JSON.stringify(av4Payload),
             });
 
+            this.logger.debug(`[${requestId}] 📥 Avatar IV response: ${av4Response.status} ${av4Response.statusText}`);
+
             if (av4Response.ok) {
               const av4Result = await av4Response.json() as any;
               const videoId = av4Result.data?.video_id || av4Result.video_id;
@@ -153,11 +184,14 @@ export class HeyGenService {
                 this.logger.log(`[${requestId}] ✅ Avatar IV video generation started with ID: ${videoId}`);
                 return { id: videoId, status: 'created' };
               }
+            } else {
+              const errorText = await av4Response.text();
+              this.logger.error(`[${requestId}] ❌ Avatar IV failed: ${av4Response.status} - ${errorText}`);
             }
             
-            this.logger.warn(`[${requestId}] Avatar IV failed: ${av4Response.status}, fallback to standard API`);
+            this.logger.warn(`[${requestId}] Avatar IV failed, fallback to standard API`);
           } catch (av4Error) {
-            this.logger.warn(`[${requestId}] Avatar IV error, fallback to standard API:`, av4Error);
+            this.logger.error(`[${requestId}] Avatar IV error, fallback to standard API:`, av4Error);
           }
         }
       }
@@ -338,13 +372,13 @@ export class HeyGenService {
         this.logger.warn(`[${uploadId}] Photo Avatar approach failed:`, photoAvatarError);
       }
 
-      // Подход 2: Upload Asset для стандартного Avatar API
+      // Подход 2: Upload Asset API согласно документации
       try {
         const formData = new FormData();
         formData.append('file', new Blob([imageBuffer], { type: 'image/jpeg' }), 'user_photo.jpg');
-        formData.append('type', 'image');
         
-        const uploadResponse = await fetch(`${this.baseUrl}/v1/assets`, {
+        // Пробуем правильный endpoint для Upload Asset
+        const uploadResponse = await fetch(`${this.baseUrl}/v1/upload`, {
           method: 'POST',
           headers: {
             'X-API-KEY': this.apiKey,
@@ -354,15 +388,24 @@ export class HeyGenService {
 
         if (uploadResponse.ok) {
           const uploadResult = await uploadResponse.json() as any;
-          const assetId = uploadResult.data?.asset_id || uploadResult.asset_id;
+          // Для Avatar IV нужен image_key
+          const imageKey = uploadResult.data?.image_key || uploadResult.image_key;
           
+          if (imageKey) {
+            this.logger.log(`[${uploadId}] ✅ Image Key для Avatar IV: ${imageKey}`);
+            return imageKey;
+          }
+          
+          // Fallback: пробуем asset_id для стандартного API
+          const assetId = uploadResult.data?.asset_id || uploadResult.asset_id;
           if (assetId) {
             this.logger.log(`[${uploadId}] ✅ Asset uploaded: ${assetId}`);
             return assetId;
           }
+        } else {
+          const errorText = await uploadResponse.text();
+          this.logger.warn(`[${uploadId}] Upload Asset failed: ${uploadResponse.status} - ${errorText}`);
         }
-        
-        this.logger.warn(`[${uploadId}] Asset upload failed: ${uploadResponse.status}`);
       } catch (assetError) {
         this.logger.warn(`[${uploadId}] Asset upload approach failed:`, assetError);
       }
