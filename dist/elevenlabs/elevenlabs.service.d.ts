@@ -84,6 +84,7 @@ export declare class ElevenLabsService {
     private readonly baseUrl;
     constructor(configService: ConfigService);
     cloneVoiceAsync(request: VoiceCloneRequest): Promise<VoiceCloneResponse>;
+    private createVoiceWithFineTuning;
     cloneVoice(request: VoiceCloneRequest): Promise<VoiceCloneResponse>;
     textToSpeech(request: TextToSpeechRequest): Promise<Buffer>;
     getVoices(): Promise<ElevenLabsVoiceResponse[]>;

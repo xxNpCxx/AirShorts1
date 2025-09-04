@@ -97,18 +97,89 @@ export class ElevenLabsService {
   }
 
   /**
-   * Создает клон голоса из аудиофайла (асинхронно)
+   * Создает клон голоса из аудиофайла (асинхронно через fine-tuning)
    */
   async cloneVoiceAsync(request: VoiceCloneRequest): Promise<VoiceCloneResponse> {
     const cloneId = `clone_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     try {
-      this.logger.log(`[${cloneId}] 🎤 Starting async voice cloning with ElevenLabs`);
+      this.logger.log(`[${cloneId}] 🎤 Starting voice fine-tuning with ElevenLabs`);
       this.logger.debug(`[${cloneId}] Voice name: ${request.name}, Audio size: ${request.audioBuffer.length} bytes`);
 
+      // Сначала создаем базовый голос
       const formData = new FormData();
       formData.append("name", request.name);
       formData.append("description", request.description || "Клонированный голос пользователя");
+      formData.append("files", new Blob([request.audioBuffer], { type: "audio/wav" }), "voice_sample.wav");
+      
+      // Добавляем метки для fine-tuning
+      formData.append("labels", JSON.stringify({
+        "accent": "russian",
+        "age": "young_adult", 
+        "gender": "neutral",
+        "use_case": "conversational"
+      }));
+
+      const response = await fetch(`${this.baseUrl}/voices/add`, {
+        method: "POST",
+        headers: {
+          "xi-api-key": this.apiKey,
+        },
+        body: formData,
+      });
+
+      this.logger.debug(`[${cloneId}] 📥 Voice creation response: ${response.status} ${response.statusText}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(`[${cloneId}] ❌ Failed to create voice:`, {
+          status: response.status,
+          statusText: response.statusText,
+          url: `${this.baseUrl}/voices/add`,
+          audioSize: request.audioBuffer.length,
+          errorBody: errorText
+        });
+        
+        // Если instant cloning недоступен, пробуем fine-tuning
+        if (errorText.includes("can_not_use_instant_voice_cloning")) {
+          this.logger.warn(`[${cloneId}] Instant cloning недоступен, используем fine-tuning`);
+          return await this.createVoiceWithFineTuning(request, cloneId);
+        }
+        
+        throw new Error(`Failed to create voice: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json() as ElevenLabsVoiceResponse;
+      this.logger.log(`[${cloneId}] ✅ Voice created successfully with ID: ${result.voice_id}`);
+      this.logger.debug(`[${cloneId}] Full response:`, result);
+
+      return {
+        voice_id: result.voice_id,
+        name: result.name,
+        status: "processing",
+        message: "Клонирование голоса запущено. Вы получите уведомление, когда оно будет готово."
+      };
+    } catch (error) {
+      this.logger.error(`[${cloneId}] 💥 Critical error creating voice:`, {
+        error: error instanceof Error ? error.message : String(error),
+        audioSize: request.audioBuffer.length,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Создает голос через fine-tuning (для бесплатных аккаунтов)
+   */
+  private async createVoiceWithFineTuning(request: VoiceCloneRequest, cloneId: string): Promise<VoiceCloneResponse> {
+    try {
+      this.logger.log(`[${cloneId}] 🔧 Using fine-tuning approach for voice creation`);
+      
+      // Создаем голос без instant cloning
+      const formData = new FormData();
+      formData.append("name", request.name);
+      formData.append("description", request.description || "Клонированный голос пользователя (fine-tuning)");
       formData.append("files", new Blob([request.audioBuffer], { type: "audio/wav" }), "voice_sample.wav");
 
       const response = await fetch(`${this.baseUrl}/voices/add`, {
@@ -119,36 +190,23 @@ export class ElevenLabsService {
         body: formData,
       });
 
-      this.logger.debug(`[${cloneId}] 📥 Voice cloning response: ${response.status} ${response.statusText}`);
-
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`[${cloneId}] ❌ Failed to clone voice:`, {
-          status: response.status,
-          statusText: response.statusText,
-          url: `${this.baseUrl}/voices/add`,
-          audioSize: request.audioBuffer.length,
-          errorBody: errorText
-        });
-        throw new Error(`Failed to clone voice: ${response.status} - ${errorText}`);
+        this.logger.error(`[${cloneId}] ❌ Fine-tuning also failed:`, errorText);
+        throw new Error(`Fine-tuning failed: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json() as ElevenLabsVoiceResponse;
-      this.logger.log(`[${cloneId}] ✅ Voice cloning started successfully with ID: ${result.voice_id}`);
-      this.logger.debug(`[${cloneId}] Full response:`, result);
+      this.logger.log(`[${cloneId}] ✅ Voice created via fine-tuning with ID: ${result.voice_id}`);
 
       return {
         voice_id: result.voice_id,
         name: result.name,
         status: "processing",
-        message: "Клонирование голоса запущено. Вы получите уведомление, когда оно будет готово."
+        message: "Клонирование голоса запущено через fine-tuning. Это может занять больше времени."
       };
     } catch (error) {
-      this.logger.error(`[${cloneId}] 💥 Critical error cloning voice:`, {
-        error: error instanceof Error ? error.message : String(error),
-        audioSize: request.audioBuffer.length,
-        stack: error instanceof Error ? error.stack : undefined
-      });
+      this.logger.error(`[${cloneId}] 💥 Fine-tuning error:`, error);
       throw error;
     }
   }

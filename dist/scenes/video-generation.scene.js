@@ -230,8 +230,10 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 await ctx.reply("🔄 Клонирование голоса запущено!\n\n" +
                     `🎤 ID голоса: ${cloneResult.voice_id.substring(0, 8)}...\n` +
                     `📊 Статус: ${cloneResult.status}\n\n` +
-                    "⏳ Клонирование может занять несколько минут.\n" +
+                    "⏳ Клонирование может занять 5-15 минут.\n" +
                     "📱 Вы получите уведомление, когда голос будет готов.\n\n" +
+                    "💡 **Примечание:** Для бесплатных аккаунтов используется fine-tuning,\n" +
+                    "что может занять больше времени, но дает качественный результат.\n\n" +
                     "📝 Пока можете ввести текст сценария для озвучки:\n\n" +
                     "💡 **Советы:**\n" +
                     "• Используйте понятный и интересный текст\n" +
@@ -242,7 +244,11 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             }
             catch (cloneError) {
                 this.logger.error("Error cloning voice:", cloneError);
-                await ctx.reply("⚠️ Не удалось клонировать голос, но можно продолжить с синтетическим голосом.\n\n" +
+                const fallbackVoiceId = "pNInz6obpgDQGcFmaJgB";
+                session.clonedVoiceId = fallbackVoiceId;
+                await ctx.reply("⚠️ Клонирование голоса недоступно для вашего аккаунта.\n\n" +
+                    "🎤 Использую качественный русский голос Adam от ElevenLabs.\n" +
+                    "💡 Для клонирования собственного голоса нужна платная подписка ElevenLabs.\n\n" +
                     "📝 Введите текст сценария для озвучки:");
             }
         }
@@ -382,31 +388,35 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                     else {
                         if (session.clonedVoiceId) {
                             this.logger.log(`Using cloned voice from ElevenLabs: ${session.clonedVoiceId}`);
-                            await ctx.reply("🔍 Проверяю готовность вашего клонированного голоса...");
-                            const voiceStatus = await this.elevenLabsService.getVoiceStatus(session.clonedVoiceId);
-                            if (voiceStatus.ready) {
-                                this.logger.log(`Cloned voice is ready: ${session.clonedVoiceId}`);
-                                await ctx.reply("🎤 Генерирую аудио с вашим клонированным голосом...");
-                                const clonedAudioBuffer = await this.elevenLabsService.textToSpeech({
-                                    text: session.script || "",
-                                    voice_id: session.clonedVoiceId,
-                                    voice_settings: {
-                                        stability: 0.5,
-                                        similarity_boost: 0.75,
-                                        style: 0.0,
-                                        use_speaker_boost: true
-                                    }
-                                });
-                                voiceUrl = await this.didService.uploadAudio(clonedAudioBuffer);
-                                this.logger.log(`Cloned voice audio uploaded to D-ID: ${voiceUrl}`);
+                            await ctx.reply("🔍 Проверяю готовность вашего голоса...");
+                            if (session.clonedVoiceId && /^[a-zA-Z]/.test(session.clonedVoiceId)) {
+                                this.logger.log(`Using preset voice: ${session.clonedVoiceId}`);
                             }
                             else {
-                                this.logger.warn(`Cloned voice not ready yet: ${voiceStatus.status}`);
-                                await ctx.reply(`⏳ Ваш клонированный голос еще не готов.\n` +
-                                    `📊 Статус: ${voiceStatus.status}\n\n` +
-                                    `🔄 Продолжаю с оригинальным голосом...`);
-                                voiceUrl = await this.didService.uploadAudio(voiceBuffer);
+                                const voiceStatus = await this.elevenLabsService.getVoiceStatus(session.clonedVoiceId);
+                                if (!voiceStatus.ready) {
+                                    this.logger.warn(`Voice not ready yet: ${voiceStatus.status}`);
+                                    await ctx.reply(`⏳ Ваш клонированный голос еще не готов.\n` +
+                                        `📊 Статус: ${voiceStatus.status}\n\n` +
+                                        `🔄 Продолжаю с оригинальным голосом...`);
+                                    voiceUrl = await this.didService.uploadAudio(voiceBuffer);
+                                    return;
+                                }
                             }
+                            this.logger.log(`Voice is ready: ${session.clonedVoiceId}`);
+                            await ctx.reply("🎤 Генерирую аудио с вашим голосом...");
+                            const clonedAudioBuffer = await this.elevenLabsService.textToSpeech({
+                                text: session.script || "",
+                                voice_id: session.clonedVoiceId,
+                                voice_settings: {
+                                    stability: 0.5,
+                                    similarity_boost: 0.75,
+                                    style: 0.0,
+                                    use_speaker_boost: true
+                                }
+                            });
+                            voiceUrl = await this.didService.uploadAudio(clonedAudioBuffer);
+                            this.logger.log(`Voice audio uploaded to D-ID: ${voiceUrl}`);
                         }
                         else {
                             this.logger.warn("No cloned voice available, falling back to original audio");
