@@ -93,10 +93,10 @@ async function runMigrations() {
     }
 
     // Читаем все SQL файлы миграций
-    // На Render папка migrations находится в корне проекта (/opt/render/project/migrations)
+    // На Render папка migrations находится в /opt/render/project/src/migrations
     // В локальной разработке папка migrations находится относительно src/
     const migrationsDir = process.cwd().includes('/opt/render/project')
-      ? join(process.cwd(), "..", "migrations")  // process.cwd() = /opt/render/project/src, нужен /opt/render/project/migrations
+      ? join(process.cwd(), "migrations")  // process.cwd() = /opt/render/project/src, нужен /opt/render/project/src/migrations
       : join(__dirname, "../../migrations");
     
     console.log(`📁 Ищем миграции в: ${migrationsDir}`);
@@ -107,34 +107,6 @@ async function runMigrations() {
       console.log(`📁 Текущая рабочая директория: ${process.cwd()}`);
       console.log(`📁 __dirname: ${__dirname}`);
       console.log(`📁 NODE_ENV: ${process.env.NODE_ENV}`);
-      
-      // Попробуем найти папку migrations в разных местах
-      const possiblePaths = [
-        join(process.cwd(), "migrations"),
-        join(process.cwd(), "..", "migrations"),
-        join(__dirname, "migrations"),
-        join(__dirname, "..", "migrations"),
-        join(__dirname, "..", "..", "migrations"),
-        join(__dirname, "..", "..", "..", "migrations"),
-        "/opt/render/project/migrations",
-        "/opt/render/project/src/migrations",
-        "/opt/render/project/src/dist/migrations"
-      ];
-      
-      console.log(`🔍 Проверяем возможные пути к миграциям:`);
-      for (const path of possiblePaths) {
-        const exists = existsSync(path);
-        console.log(`  ${exists ? '✅' : '❌'} ${path}`);
-        if (exists) {
-          try {
-            const files = readdirSync(path);
-            console.log(`    📁 Файлы: ${files.join(', ')}`);
-          } catch (e) {
-            console.log(`    ❌ Ошибка чтения: ${e}`);
-          }
-        }
-      }
-      
       return; // Выходим без ошибки, если папки нет
     }
     
