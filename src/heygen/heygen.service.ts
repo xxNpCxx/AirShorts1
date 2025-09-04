@@ -95,20 +95,38 @@ export class HeyGenService {
         }
       };
 
-      // Если есть пользовательское фото, но HeyGen не поддерживает кастомные аватары
+      // Если есть пользовательское фото, используем TalkingPhoto вместо обычного аватара
       if (request.imageUrl && request.imageUrl.trim() !== "" && request.imageUrl !== "undefined" && request.imageUrl !== "null" && request.imageUrl !== "heygen_placeholder_image_url" && request.imageUrl !== "heygen_use_available_avatar") {
-        this.logger.log(`[${requestId}] 📸 Пользовательское фото предоставлено, но HeyGen не поддерживает кастомные аватары`);
-        this.logger.log(`[${requestId}] 📸 Используем доступный аватар: ${defaultAvatarId}`);
-        payload.video_inputs[0].character.avatar_id = defaultAvatarId;
-      } else {
+        this.logger.log(`[${requestId}] 📸 Используем TalkingPhoto с пользовательским фото: ${request.imageUrl}`);
+        payload.video_inputs[0].character = {
+          type: "talking_photo",
+          talking_photo_id: request.imageUrl, // ID загруженного фото
+          talking_photo_style: "square",
+          talking_style: "expressive",
+          expression: "default",
+          super_resolution: true,
+          scale: 1.0
+        };
+      }
+
+      // Если есть пользовательское аудио, используем AudioVoiceSettings
+      if (useCustomAudio) {
+        this.logger.log(`[${requestId}] 🎵 Используем пользовательское аудио: ${request.audioUrl}`);
+        payload.video_inputs[0].voice = {
+          type: "audio",
+          audio_url: request.audioUrl
+        };
+      }
+
+      // Если нет пользовательского фото, используем доступный аватар
+      if (!request.imageUrl || request.imageUrl === "heygen_use_available_avatar" || request.imageUrl === "heygen_placeholder_image_url") {
         this.logger.log(`[${requestId}] 📸 Using available avatar: ${defaultAvatarId}`);
         // defaultAvatarId уже установлен в payload выше
       }
 
-      // Если используется пользовательское аудио, HeyGen пока не поддерживает загрузку файлов
-      // Нужно использовать предварительно загруженный голос или TTS
-      if (useCustomAudio) {
-        this.logger.warn(`[${requestId}] HeyGen API пока не поддерживает загрузку пользовательских аудиофайлов`);
+      // Если используется пользовательское аудио, но не было обработано выше
+      if (useCustomAudio && payload.video_inputs[0].voice.type === "text") {
+        this.logger.warn(`[${requestId}] Пользовательское аудио не было обработано, используем TTS`);
         // Используем TTS с текстом вместо аудио
         payload.video_inputs[0].voice.input_text = request.script;
         payload.video_inputs[0].voice.voice_id = "119caed25533477ba63822d5d1552d25";
@@ -242,12 +260,43 @@ export class HeyGenService {
   async uploadImage(imageBuffer: Buffer): Promise<string> {
     const uploadId = `heygen_image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
-    this.logger.log(`[${uploadId}] 🖼️ HeyGen не поддерживает создание кастомных аватаров из пользовательских фото`);
-    this.logger.log(`[${uploadId}] 📸 Будет использован доступный аватар из библиотеки HeyGen`);
-    
-    // HeyGen не поддерживает создание кастомных аватаров
-    // Возвращаем placeholder, который будет обработан в generateVideo
-    return "heygen_use_available_avatar";
+    try {
+      this.logger.log(`[${uploadId}] 🖼️ Создаем TalkingPhoto из пользовательского фото (${imageBuffer.length} bytes)`);
+      
+      // Создаем TalkingPhoto из пользовательского фото
+      const formData = new FormData();
+      formData.append('image', new Blob([imageBuffer]), 'user_photo.jpg');
+      formData.append('name', `talking_photo_${uploadId}`);
+      
+      const response = await fetch(`${this.baseUrl}/v1/talking_photo/generate`, {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': this.apiKey,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(`[${uploadId}] ❌ TalkingPhoto creation failed: ${response.status} ${response.statusText}`);
+        this.logger.error(`[${uploadId}] Error details: ${errorText}`);
+        
+        // Fallback: используем доступный аватар
+        this.logger.log(`[${uploadId}] 🔄 Fallback: используем доступный аватар`);
+        return "heygen_use_available_avatar";
+      }
+
+      const result = await response.json() as any;
+      const talkingPhotoId = result.data?.talking_photo_id || result.talking_photo_id;
+      this.logger.log(`[${uploadId}] ✅ TalkingPhoto created successfully: ${talkingPhotoId}`);
+      
+      return talkingPhotoId;
+    } catch (error) {
+      this.logger.error(`[${uploadId}] ❌ Error creating TalkingPhoto:`, error);
+      // Fallback: используем доступный аватар
+      this.logger.log(`[${uploadId}] 🔄 Fallback: используем доступный аватар`);
+      return "heygen_use_available_avatar";
+    }
   }
 
   private async uploadImageFallback(imageBuffer: Buffer, uploadId: string): Promise<string> {
