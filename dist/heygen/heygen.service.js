@@ -128,7 +128,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                         this.logger.warn(`[${requestId}] Avatar IV failed, fallback to standard API`);
                     }
                     catch (av4Error) {
-                        this.logger.error(`[${requestId}] Avatar IV error, fallback to standard API:`, av4Error);
+                        this.logger.warn(`[${requestId}] Avatar IV error, fallback to standard API:`, av4Error);
                     }
                 }
             }

@@ -150,7 +150,7 @@ export class HeyGenService {
           const av4Payload: AvatarIVPayload = {
             image_key: request.imageUrl,
             video_title: `Generated Video ${Date.now()}`,
-            script: request.script,
+            script: request.script,              // НЕ input_text!
             voice_id: "119caed25533477ba63822d5d1552d25",
             video_orientation: "portrait",
             fit: "cover"
@@ -191,7 +191,7 @@ export class HeyGenService {
             
             this.logger.warn(`[${requestId}] Avatar IV failed, fallback to standard API`);
           } catch (av4Error) {
-            this.logger.error(`[${requestId}] Avatar IV error, fallback to standard API:`, av4Error);
+            this.logger.warn(`[${requestId}] Avatar IV error, fallback to standard API:`, av4Error);
           }
         }
       }
