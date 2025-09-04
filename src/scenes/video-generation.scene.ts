@@ -476,7 +476,7 @@ export class VideoGenerationScene {
         textPrompt: session.textPrompt,
       };
 
-      this.logger.log(`Starting D-ID generation with photoUrl: ${photoUrl ? 'PROVIDED' : 'MISSING'}, voiceUrl: ${voiceUrl ? 'PROVIDED' : 'MISSING'}`);
+      this.logger.log(`Starting D-ID generation with photoUrl: ${photoUrl ? 'PROVIDED' : 'MISSING'}, voiceUrl: ${voiceUrl ? `PROVIDED (${voiceUrl.substring(0, 50)}...)` : `MISSING (${voiceUrl})`}`);
       
       const result = await this.didService.generateVideo(request);
 

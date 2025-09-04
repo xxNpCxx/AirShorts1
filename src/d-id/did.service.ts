@@ -56,7 +56,10 @@ export class DidService {
       this.logger.debug(`[${requestId}] Audio provided: ${!!request.audioUrl}, Script length: ${request.script?.length || 0} chars`);
 
       // Определяем, использовать ли пользовательское аудио или TTS
-      const useCustomAudio = request.audioUrl && request.audioUrl.trim() !== "";
+      const useCustomAudio = request.audioUrl && 
+                            request.audioUrl.trim() !== "" && 
+                            request.audioUrl !== "undefined" && 
+                            request.audioUrl !== "null";
       
       let payload: any = {
         source_url: request.photoUrl,
@@ -256,10 +259,20 @@ export class DidService {
         throw new Error(`Failed to upload audio: ${response.status} - ${errorText}`);
       }
 
-      const result = (await response.json()) as AudioUploadResponse;
-      this.logger.log(`[${uploadId}] ✅ Audio uploaded successfully: ${result.audio_url}`);
+      const result = await response.json() as any;
+      this.logger.debug(`[${uploadId}] 📋 Full audio upload response:`, result);
       
-      return result.audio_url;
+      // D-ID API может возвращать разные поля для URL аудио
+      const audioUrl = result.audio_url || result.url || result.audio;
+      
+      if (!audioUrl) {
+        this.logger.error(`[${uploadId}] ❌ No audio URL in response:`, result);
+        throw new Error('No audio URL received from D-ID API');
+      }
+      
+      this.logger.log(`[${uploadId}] ✅ Audio uploaded successfully: ${audioUrl}`);
+      
+      return audioUrl;
     } catch (error) {
       this.logger.error(`[${uploadId}] 💥 Critical error uploading audio:`, {
         error: error instanceof Error ? error.message : String(error),
