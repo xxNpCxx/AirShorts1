@@ -90,6 +90,17 @@ let BotUpdate = class BotUpdate {
         this._logger.debug(`[@On text] Текстовое сообщение получено: "${messageText}" от пользователя ${ctx.from?.id} (вне сцены)`, "BotUpdate");
         this._logger.debug(`[@On text] Неизвестное сообщение: "${messageText}"`, "BotUpdate");
     }
+    async onVoice(ctx) {
+        this._logger.log(`🎤 [@On voice] Голосовое сообщение получено от пользователя ${ctx.from?.id}`, "BotUpdate");
+        const sceneContext = ctx;
+        if (sceneContext.scene?.current) {
+            this._logger.debug(`[@On voice] Пользователь ${ctx.from?.id} находится в сцене "${sceneContext.scene.current.id}", пропускаем обработку в BotUpdate`, "BotUpdate");
+            return;
+        }
+        await ctx.reply("🎤 Голосовое сообщение получено!\n\n" +
+            "📸 Для создания видео с вашим голосом сначала отправьте фото с человеком.\n\n" +
+            "🎬 Нажмите кнопку 'Создать видео' в главном меню.");
+    }
     async onMainMenu(ctx) {
         const messageText = ctx.message && "text" in ctx.message ? ctx.message.text : "";
         this._logger.log(`🏠 [@Hears] Главное меню запрошено пользователем ${ctx.from?.id}, текст: "${messageText}"`, "BotUpdate");
@@ -248,6 +259,13 @@ __decorate([
     __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onText", null);
+__decorate([
+    (0, nestjs_telegraf_1.On)("voice"),
+    __param(0, (0, nestjs_telegraf_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
+    __metadata("design:returntype", Promise)
+], BotUpdate.prototype, "onVoice", null);
 __decorate([
     (0, nestjs_telegraf_1.Hears)(["🏠 Главное меню", "Главное меню"]),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),

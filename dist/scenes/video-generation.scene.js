@@ -184,11 +184,14 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
     }
     async onVoice(ctx) {
         try {
+            this.logger.log("🎤 Обработчик голосового сообщения вызван");
             const voice = ctx.message?.voice;
             if (!voice) {
+                this.logger.warn("❌ Голосовое сообщение не найдено в ctx.message");
                 await ctx.reply("❌ Не удалось получить голосовое сообщение. Попробуйте еще раз.");
                 return;
             }
+            this.logger.log(`🎤 Получено голосовое сообщение: file_id=${voice.file_id}, duration=${voice.duration}`);
             const session = ctx.session;
             if (!session.photoFileId) {
                 await ctx.reply("❌ Сначала отправьте фото с человеком!");
@@ -223,12 +226,15 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
     async onMessage(ctx) {
         try {
             const message = ctx.message;
+            this.logger.log(`📨 Обработчик сообщений вызван: type=${message ? Object.keys(message).join(', ') : 'no message'}`);
             if (message && "forward_from" in message && message.forward_from) {
+                this.logger.log("🔄 Обнаружено пересланное сообщение");
                 if ("voice" in message && message.voice) {
                     this.logger.log("🔄 Обработка пересланного голосового сообщения");
                     await this.onVoice(ctx);
                 }
                 else {
+                    this.logger.log("❌ Пересланное сообщение не содержит голосовое сообщение");
                     await ctx.reply("❌ Пересланное сообщение не содержит голосовое сообщение.\n\n" +
                         "🎤 Пожалуйста, перешлите голосовое сообщение или запишите новое.");
                 }

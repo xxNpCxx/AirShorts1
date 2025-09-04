@@ -264,11 +264,15 @@ export class VideoGenerationScene {
   @On("voice")
   async onVoice(@Ctx() ctx: VoiceContext) {
     try {
+      this.logger.log("🎤 Обработчик голосового сообщения вызван");
       const voice = ctx.message?.voice;
       if (!voice) {
+        this.logger.warn("❌ Голосовое сообщение не найдено в ctx.message");
         await ctx.reply("❌ Не удалось получить голосовое сообщение. Попробуйте еще раз.");
         return;
       }
+      
+      this.logger.log(`🎤 Получено голосовое сообщение: file_id=${voice.file_id}, duration=${voice.duration}`);
 
       const session = ctx.session as SessionData;
 
@@ -318,13 +322,17 @@ export class VideoGenerationScene {
   async onMessage(@Ctx() ctx: Context) {
     try {
       const message = ctx.message;
+      this.logger.log(`📨 Обработчик сообщений вызван: type=${message ? Object.keys(message).join(', ') : 'no message'}`);
+      
       if (message && "forward_from" in message && message.forward_from) {
+        this.logger.log("🔄 Обнаружено пересланное сообщение");
         // Проверяем, есть ли голосовое сообщение в пересланном сообщении
         if ("voice" in message && message.voice) {
           this.logger.log("🔄 Обработка пересланного голосового сообщения");
           // Обрабатываем как обычное голосовое сообщение
           await this.onVoice(ctx as VoiceContext);
         } else {
+          this.logger.log("❌ Пересланное сообщение не содержит голосовое сообщение");
           await ctx.reply(
             "❌ Пересланное сообщение не содержит голосовое сообщение.\n\n" +
             "🎤 Пожалуйста, перешлите голосовое сообщение или запишите новое."
