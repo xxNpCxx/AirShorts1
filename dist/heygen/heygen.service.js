@@ -57,41 +57,61 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 }
             };
             if (request.imageUrl && request.imageUrl.trim() !== "" && request.imageUrl !== "undefined" && request.imageUrl !== "null" && request.imageUrl !== "heygen_placeholder_image_url" && request.imageUrl !== "heygen_use_available_avatar") {
-                this.logger.log(`[${requestId}] 📸 Используем Avatar IV с пользовательским фото: ${request.imageUrl}`);
-                const av4Payload = {
-                    input_text: request.script,
-                    voice_id: "119caed25533477ba63822d5d1552d25",
-                    image_key: request.imageUrl,
-                    dimension: {
-                        width: 1280,
-                        height: 720
+                this.logger.log(`[${requestId}] 📸 Обрабатываем пользовательское фото: ${request.imageUrl}`);
+                if (request.imageUrl.includes('photo_avatar_')) {
+                    this.logger.log(`[${requestId}] 🎭 Используем Photo Avatar в стандартном Avatar API`);
+                    payload.video_inputs[0].character = {
+                        type: "talking_photo",
+                        talking_photo_id: request.imageUrl,
+                        talking_photo_style: "square",
+                        talking_style: "expressive",
+                        expression: "default",
+                        super_resolution: true,
+                        scale: 1.0
+                    };
+                }
+                else if (request.imageUrl.includes('asset_')) {
+                    this.logger.log(`[${requestId}] 🖼️ Используем Asset как Image Background`);
+                    payload.video_inputs[0].background = {
+                        type: "image",
+                        image_asset_id: request.imageUrl,
+                        fit: "cover"
+                    };
+                }
+                else {
+                    this.logger.log(`[${requestId}] 🚀 Пробуем Avatar IV с image_key: ${request.imageUrl}`);
+                    const av4Payload = {
+                        input_text: request.script,
+                        voice_id: "119caed25533477ba63822d5d1552d25",
+                        image_key: request.imageUrl,
+                        dimension: {
+                            width: 1280,
+                            height: 720
+                        }
+                    };
+                    try {
+                        const av4Response = await fetch(`${this.baseUrl}/v2/video/av4/generate`, {
+                            method: 'POST',
+                            headers: {
+                                'X-API-KEY': this.apiKey,
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(av4Payload),
+                        });
+                        if (av4Response.ok) {
+                            const av4Result = await av4Response.json();
+                            const videoId = av4Result.data?.video_id || av4Result.video_id;
+                            if (videoId) {
+                                this.logger.log(`[${requestId}] ✅ Avatar IV video generation started with ID: ${videoId}`);
+                                return { id: videoId, status: 'created' };
+                            }
+                        }
+                        this.logger.warn(`[${requestId}] Avatar IV failed: ${av4Response.status}, fallback to standard API`);
                     }
-                };
-                this.logger.debug(`[${requestId}] 📤 Sending Avatar IV request to ${this.baseUrl}/v2/video/av4/generate`);
-                const av4Response = await fetch(`${this.baseUrl}/v2/video/av4/generate`, {
-                    method: 'POST',
-                    headers: {
-                        'X-API-KEY': this.apiKey,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(av4Payload),
-                });
-                this.logger.debug(`[${requestId}] 📥 Avatar IV API response: ${av4Response.status} ${av4Response.statusText}`);
-                if (!av4Response.ok) {
-                    const errorText = await av4Response.text();
-                    this.logger.error(`[${requestId}] ❌ Avatar IV generation failed: ${av4Response.status} ${av4Response.statusText}`);
-                    this.logger.error(`[${requestId}] Error details: ${errorText}`);
-                    throw new Error(`Avatar IV generation failed: ${av4Response.status} - ${errorText}`);
+                    catch (av4Error) {
+                        this.logger.warn(`[${requestId}] Avatar IV error, fallback to standard API:`, av4Error);
+                    }
                 }
-                const av4Result = await av4Response.json();
-                const videoId = av4Result.data?.video_id || av4Result.video_id;
-                if (!videoId) {
-                    this.logger.error(`[${requestId}] ❌ No video_id in Avatar IV response:`, av4Result);
-                    throw new Error('No video_id returned from Avatar IV API');
-                }
-                this.logger.log(`[${requestId}] ✅ Avatar IV video generation started successfully with ID: ${videoId}`);
-                this.logger.debug(`[${requestId}] Full Avatar IV response:`, av4Result);
-                return { id: videoId, status: 'created' };
             }
             if (useCustomAudio && request.audioUrl) {
                 this.logger.log(`[${requestId}] 🎵 Используем пользовательское аудио asset: ${request.audioUrl}`);
@@ -219,34 +239,60 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
     async uploadImage(imageBuffer) {
         const uploadId = `heygen_image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         try {
-            this.logger.log(`[${uploadId}] 🖼️ Загружаем пользовательское фото для Avatar IV (${imageBuffer.length} bytes)`);
-            const formData = new FormData();
-            formData.append('file', new Blob([imageBuffer], { type: 'image/jpeg' }), 'user_photo.jpg');
-            const uploadResponse = await fetch(`${this.baseUrl}/v1/upload`, {
-                method: 'POST',
-                headers: {
-                    'X-API-KEY': this.apiKey,
-                },
-                body: formData,
-            });
-            if (!uploadResponse.ok) {
-                const errorText = await uploadResponse.text();
-                this.logger.error(`[${uploadId}] ❌ Image upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
-                this.logger.error(`[${uploadId}] Error details: ${errorText}`);
-                throw new Error(`Image upload failed: ${uploadResponse.status} - ${errorText}`);
+            this.logger.log(`[${uploadId}] 🖼️ Пробуем создать TalkingPhoto из пользовательского фото (${imageBuffer.length} bytes)`);
+            try {
+                const formData = new FormData();
+                formData.append('image', new Blob([imageBuffer], { type: 'image/jpeg' }), 'user_photo.jpg');
+                const response = await fetch(`${this.baseUrl}/v1/photo_avatar/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'X-API-KEY': this.apiKey,
+                    },
+                    body: formData,
+                });
+                if (response.ok) {
+                    const result = await response.json();
+                    const photoAvatarId = result.data?.photo_avatar_id || result.photo_avatar_id;
+                    if (photoAvatarId) {
+                        this.logger.log(`[${uploadId}] ✅ Photo Avatar created: ${photoAvatarId}`);
+                        return photoAvatarId;
+                    }
+                }
+                this.logger.warn(`[${uploadId}] Photo Avatar API failed: ${response.status}`);
             }
-            const uploadResult = await uploadResponse.json();
-            const imageKey = uploadResult.data?.image_key || uploadResult.image_key;
-            if (!imageKey) {
-                this.logger.error(`[${uploadId}] ❌ No image_key in upload response:`, uploadResult);
-                throw new Error('No image_key returned from image upload');
+            catch (photoAvatarError) {
+                this.logger.warn(`[${uploadId}] Photo Avatar approach failed:`, photoAvatarError);
             }
-            this.logger.log(`[${uploadId}] ✅ Image uploaded for Avatar IV: ${imageKey}`);
-            return imageKey;
+            try {
+                const formData = new FormData();
+                formData.append('file', new Blob([imageBuffer], { type: 'image/jpeg' }), 'user_photo.jpg');
+                formData.append('type', 'image');
+                const uploadResponse = await fetch(`${this.baseUrl}/v1/assets`, {
+                    method: 'POST',
+                    headers: {
+                        'X-API-KEY': this.apiKey,
+                    },
+                    body: formData,
+                });
+                if (uploadResponse.ok) {
+                    const uploadResult = await uploadResponse.json();
+                    const assetId = uploadResult.data?.asset_id || uploadResult.asset_id;
+                    if (assetId) {
+                        this.logger.log(`[${uploadId}] ✅ Asset uploaded: ${assetId}`);
+                        return assetId;
+                    }
+                }
+                this.logger.warn(`[${uploadId}] Asset upload failed: ${uploadResponse.status}`);
+            }
+            catch (assetError) {
+                this.logger.warn(`[${uploadId}] Asset upload approach failed:`, assetError);
+            }
+            this.logger.warn(`[${uploadId}] ⚠️ Все подходы загрузки фото не сработали, используем доступный аватар`);
+            return "heygen_use_available_avatar";
         }
         catch (error) {
-            this.logger.error(`[${uploadId}] ❌ Error uploading image for Avatar IV:`, error);
-            throw error;
+            this.logger.error(`[${uploadId}] ❌ Critical error in uploadImage:`, error);
+            return "heygen_use_available_avatar";
         }
     }
     async uploadImageFallback(imageBuffer, uploadId) {

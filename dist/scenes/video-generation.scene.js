@@ -332,14 +332,15 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                             const photoBuffer = await ctx.telegram.getFileLink(session.photoFileId);
                             const response = await fetch(photoBuffer.href);
                             const imageBuffer = Buffer.from(await response.arrayBuffer());
-                            await ctx.reply("📤 Создаю ваш Avatar IV из фото...");
+                            await ctx.reply("📤 Создаю говорящий аватар из вашего фото...");
                             imageUrl = await this.heygenService.uploadImage(imageBuffer);
-                            this.logger.log(`Avatar IV image uploaded in HeyGen: ${imageUrl}`);
+                            this.logger.log(`Talking avatar created in HeyGen: ${imageUrl}`);
                         }
                         catch (error) {
-                            this.logger.error("Error creating Avatar IV in HeyGen:", error);
-                            await ctx.reply("❌ Ошибка создания Avatar IV. Попробуйте загрузить фото заново.");
-                            return;
+                            this.logger.error("Error creating talking avatar in HeyGen:", error);
+                            this.logger.warn("Fallback to standard avatar due to photo processing error");
+                            imageUrl = "heygen_use_available_avatar";
+                            await ctx.reply("⚠️ Не удалось создать аватар из вашего фото. Будет использован стандартный аватар.");
                         }
                     }
                 }
@@ -388,8 +389,8 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             this.logger.log(`[${requestId}] 🎯 Генерируем видео через HeyGen с пользовательским контентом`);
             const result = await this.heygenService.generateVideo(request);
             const hasUserContent = (session.photoFileId && session.voiceFileId);
-            const serviceExplanation = session.photoFileId
-                ? "📸 Используется ваше фото для создания Avatar IV с TTS озвучкой"
+            const serviceExplanation = session.photoFileId && imageUrl !== "heygen_use_available_avatar"
+                ? "📸 Используется ваше фото для создания говорящего аватара с TTS озвучкой"
                 : "🤖 Используется предустановленный аватар и TTS";
             await ctx.reply(`🎬 Генерация началась! Это может занять 2-5 минут.\n\n` +
                 `🔧 Сервис: HeyGen (Digital Twin)\n` +
