@@ -59,62 +59,52 @@ export class UsersService {
   }
 
   async getUserPreferredService(telegramId: number): Promise<'did' | 'heygen'> {
-    try {
-      // Сначала проверяем, существует ли колонка preferred_service
-      const columnCheck = await this.pool.query(`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'users' AND column_name = 'preferred_service'
-      `);
-      
-      if (columnCheck.rowCount === 0) {
-        this.logger.warn("[users][pg] Колонка preferred_service не существует, используем временный кеш");
-        // Используем временный кеш
-        const cachedPreference = this.temporaryPreferences.get(telegramId);
-        this.logger.log(`Получено предпочтение из кеша для пользователя ${telegramId}: ${cachedPreference || 'did'}`);
-        return cachedPreference || 'did';
-      }
-
-      const res = await this.pool.query(
-        "SELECT preferred_service FROM users WHERE telegram_id = $1",
-        [telegramId],
-      );
-      if (res.rowCount === 0) {
-        return 'did'; // По умолчанию D-ID
-      }
-      return res.rows[0].preferred_service || 'did';
-    } catch (err) {
-      this.logger.error("[users][pg] Ошибка получения предпочтения сервиса:", err);
-      return 'did'; // По умолчанию при ошибке
+    // Сначала проверяем, существует ли колонка preferred_service
+    const columnCheck = await this.pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'preferred_service'
+    `);
+    
+    if (columnCheck.rowCount === 0) {
+      this.logger.warn("[users][pg] Колонка preferred_service не существует, используем временный кеш");
+      // Используем временный кеш
+      const cachedPreference = this.temporaryPreferences.get(telegramId);
+      this.logger.log(`Получено предпочтение из кеша для пользователя ${telegramId}: ${cachedPreference || 'did'}`);
+      return cachedPreference || 'did';
     }
+
+    const res = await this.pool.query(
+      "SELECT preferred_service FROM users WHERE telegram_id = $1",
+      [telegramId],
+    );
+    if (res.rowCount === 0) {
+      return 'did'; // По умолчанию D-ID для новых пользователей
+    }
+    return res.rows[0].preferred_service || 'did';
   }
 
   async setUserPreferredService(telegramId: number, service: 'did' | 'heygen'): Promise<boolean> {
-    try {
-      // Сначала проверяем, существует ли колонка preferred_service
-      const columnCheck = await this.pool.query(`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'users' AND column_name = 'preferred_service'
-      `);
-      
-      if (columnCheck.rowCount === 0) {
-        this.logger.warn("[users][pg] Колонка preferred_service не существует, сохраняем во временный кеш");
-        // Сохраняем в временный кеш
-        this.temporaryPreferences.set(telegramId, service);
-        this.logger.log(`Пользователь ${telegramId} выбрал сервис: ${service} (сохранено во временный кеш)`);
-        return true; // Возвращаем true, чтобы UI не показывал ошибку
-      }
-
-      await this.pool.query(
-        "UPDATE users SET preferred_service = $1 WHERE telegram_id = $2",
-        [service, telegramId],
-      );
-      this.logger.log(`Установлен предпочтительный сервис ${service} для пользователя ${telegramId}`);
+    // Сначала проверяем, существует ли колонка preferred_service
+    const columnCheck = await this.pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'preferred_service'
+    `);
+    
+    if (columnCheck.rowCount === 0) {
+      this.logger.warn("[users][pg] Колонка preferred_service не существует, сохраняем во временный кеш");
+      // Сохраняем в временный кеш
+      this.temporaryPreferences.set(telegramId, service);
+      this.logger.log(`Пользователь ${telegramId} выбрал сервис: ${service} (сохранено во временный кеш)`);
       return true;
-    } catch (err) {
-      this.logger.error("[users][pg] Ошибка установки предпочтения сервиса:", err);
-      return false;
     }
+
+    await this.pool.query(
+      "UPDATE users SET preferred_service = $1 WHERE telegram_id = $2",
+      [service, telegramId],
+    );
+    this.logger.log(`Установлен предпочтительный сервис ${service} для пользователя ${telegramId}`);
+    return true;
   }
 }
