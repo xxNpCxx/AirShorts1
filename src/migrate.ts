@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "fs";
+import { readFileSync, readdirSync, existsSync } from "fs";
 import { join } from "path";
 import { Client } from "pg";
 import * as dotenv from "dotenv";
@@ -87,7 +87,23 @@ async function runMigrations() {
     }
 
     // Читаем все SQL файлы миграций
-    const migrationsDir = join(__dirname, "../../migrations");
+    // В production (Render) папка migrations находится в корне проекта
+    // В development папка migrations находится относительно src/
+    const migrationsDir = process.env.NODE_ENV === 'production' 
+      ? join(process.cwd(), "migrations")
+      : join(__dirname, "../../migrations");
+    
+    console.log(`📁 Ищем миграции в: ${migrationsDir}`);
+    
+    // Проверяем существование папки миграций
+    if (!existsSync(migrationsDir)) {
+      console.log(`⚠️ Папка миграций не найдена: ${migrationsDir}`);
+      console.log(`📁 Текущая рабочая директория: ${process.cwd()}`);
+      console.log(`📁 __dirname: ${__dirname}`);
+      console.log(`📁 NODE_ENV: ${process.env.NODE_ENV}`);
+      return; // Выходим без ошибки, если папки нет
+    }
+    
     const migrationFiles = readdirSync(migrationsDir)
       .filter((file) => file.endsWith(".sql"))
       .sort(); // Сортируем по имени файла
