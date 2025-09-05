@@ -2,6 +2,7 @@ import { Ctx, Scene, SceneEnter, On, Action } from "nestjs-telegraf";
 import { Context } from "telegraf";
 import type { Message } from "@telegraf/types";
 import { HeyGenService } from "../heygen/heygen.service";
+import { ProcessManagerService } from "../heygen/process-manager.service";
 import { ElevenLabsService } from "../elevenlabs/elevenlabs.service";
 import { VoiceNotificationService } from "../elevenlabs/voice-notification.service";
 import { UsersService } from "../users/users.service";
@@ -43,6 +44,7 @@ export class VideoGenerationScene {
 
   constructor(
     private readonly heygenService: HeyGenService,
+    private readonly processManager: ProcessManagerService,
     private readonly elevenLabsService: ElevenLabsService,
     private readonly voiceNotificationService: VoiceNotificationService,
     private readonly usersService: UsersService,
@@ -67,13 +69,145 @@ export class VideoGenerationScene {
     // Рассчитываем базовую длительность
     let duration = Math.ceil(wordCount / wordsPerSecond);
     
-    // Добавляем небольшой буфер для пауз и интонации (20%)
-    duration = Math.ceil(duration * 1.2);
+    // Добавляем небольшой буфер для пауз и интонации (25% для русского языка)
+    duration = Math.ceil(duration * 1.25);
     
     // Минимум 15 секунд, максимум 60 секунд
     duration = Math.max(15, Math.min(60, duration));
     
     return duration;
+  }
+
+  /**
+   * Создает цифровой двойник с Photo Avatar и Voice Clone
+   */
+  private async createDigitalTwin(@Ctx() ctx: Context) {
+    const requestId = `digital_twin_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    
+    try {
+      const session = (ctx as any).session as SessionData;
+      const userId = ctx.from?.id;
+      
+      this.logger.log(`🎬 [DIGITAL_TWIN_CREATE] Starting Digital Twin creation`, {
+        requestId,
+        userId,
+        hasPhoto: !!session.photoFileId,
+        hasVoice: !!session.voiceFileId,
+        hasScript: !!session.script,
+        scriptLength: session.script?.length || 0,
+        quality: session.quality,
+        timestamp: new Date().toISOString()
+      });
+      
+      if (!session.photoFileId || !session.voiceFileId || !session.script) {
+        this.logger.warn(`⚠️ [DIGITAL_TWIN_CREATE] Missing required data`, {
+          requestId,
+          userId,
+          hasPhoto: !!session.photoFileId,
+          hasVoice: !!session.voiceFileId,
+          hasScript: !!session.script,
+          timestamp: new Date().toISOString()
+        });
+        await ctx.reply("❌ Не все данные получены. Пожалуйста, загрузите фото, голосовое сообщение и введите текст.");
+        return;
+      }
+
+      this.logger.log(`📁 [DIGITAL_TWIN_CREATE] Getting file URLs from Telegram`, {
+        requestId,
+        userId,
+        photoFileId: session.photoFileId,
+        voiceFileId: session.voiceFileId,
+        timestamp: new Date().toISOString()
+      });
+
+      // Получаем URL файлов из Telegram
+      const photoFile = await ctx.telegram.getFile(session.photoFileId);
+      const voiceFile = await ctx.telegram.getFile(session.voiceFileId);
+      
+      this.logger.log(`📁 [DIGITAL_TWIN_CREATE] Telegram file info received`, {
+        requestId,
+        userId,
+        photoFile: {
+          fileId: photoFile.file_id,
+          filePath: photoFile.file_path,
+          fileSize: photoFile.file_size
+        },
+        voiceFile: {
+          fileId: voiceFile.file_id,
+          filePath: voiceFile.file_path,
+          fileSize: voiceFile.file_size
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+      if (!photoFile.file_path || !voiceFile.file_path) {
+        this.logger.error(`❌ [DIGITAL_TWIN_CREATE] Missing file paths`, {
+          requestId,
+          userId,
+          photoFilePath: photoFile.file_path,
+          voiceFilePath: voiceFile.file_path,
+          timestamp: new Date().toISOString()
+        });
+        await ctx.reply("❌ Ошибка получения файлов. Попробуйте загрузить файлы заново.");
+        return;
+      }
+
+      const photoUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${photoFile.file_path}`;
+      const audioUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${voiceFile.file_path}`;
+
+      this.logger.log(`🔗 [DIGITAL_TWIN_CREATE] File URLs generated`, {
+        requestId,
+        userId,
+        photoUrl: photoUrl.substring(0, 100) + '...',
+        audioUrl: audioUrl.substring(0, 100) + '...',
+        timestamp: new Date().toISOString()
+      });
+
+      // Создаем процесс создания цифрового двойника
+      const process = await this.processManager.createDigitalTwinProcess(
+        ctx.from!.id,
+        photoUrl,
+        audioUrl,
+        session.script,
+        `Digital Twin Video ${new Date().toISOString()}`,
+        session.quality || "720p"
+      );
+
+      this.logger.log(`✅ [DIGITAL_TWIN_CREATE] Process created successfully`, {
+        requestId,
+        userId,
+        processId: process.id,
+        status: process.status,
+        timestamp: new Date().toISOString()
+      });
+
+      await ctx.reply(
+        `🎬 Создание цифрового двойника запущено!\n\n` +
+        `📋 ID процесса: ${process.id}\n` +
+        `📸 Фото: ✅ Загружено\n` +
+        `🎵 Голос: ✅ Загружен\n` +
+        `📝 Текст: ${session.script.length} символов\n` +
+        `🎥 Качество: ${process.quality}\n\n` +
+        `⏳ Обработка займет 2-5 минут. Вы получите уведомление когда видео будет готово!`
+      );
+
+      this.logger.log(`📤 [DIGITAL_TWIN_CREATE] User notification sent`, {
+        requestId,
+        userId,
+        processId: process.id,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      this.logger.error(`❌ [DIGITAL_TWIN_CREATE] Error creating Digital Twin`, {
+        requestId,
+        userId: ctx.from?.id,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      });
+      await ctx.reply("❌ Ошибка при создании цифрового двойника. Попробуйте еще раз.");
+    }
   }
 
   @SceneEnter()
@@ -431,6 +565,43 @@ export class VideoGenerationScene {
     );
   }
 
+  private async showDigitalTwinOptions(@Ctx() ctx: Context) {
+    const session = (ctx as any).session as SessionData;
+    
+    if (!session.photoFileId || !session.voiceFileId || !session.script) {
+      await ctx.reply("❌ Не все данные получены. Пожалуйста, загрузите фото, голосовое сообщение и введите текст.");
+      return;
+    }
+
+    await ctx.reply(
+      "🎬 Все данные получены! Выберите тип генерации:\n\n" +
+      "🤖 **ИИ-Аватар (D-ID):**\n" +
+      "• Использует готовые аватары\n" +
+      "• Быстрая генерация\n" +
+      "• Стандартные голоса\n\n" +
+      "👤 **Цифровой двойник (HeyGen):**\n" +
+      "• Ваше фото + ваш голос\n" +
+      "• Персонализированный результат\n" +
+      "• Более длительная обработка (2-5 мин)\n\n" +
+      "Выберите вариант:",
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: "🤖 ИИ-Аватар (быстро)", callback_data: "generate_ai_avatar" }
+            ],
+            [
+              { text: "👤 Цифровой двойник (персонально)", callback_data: "create_digital_twin" }
+            ],
+            [
+              { text: "❌ Отмена", callback_data: "cancel_video_generation" }
+            ]
+          ]
+        }
+      }
+    );
+  }
+
   private async startVideoGeneration(@Ctx() ctx: Context) {
     try {
       const session = (ctx as unknown as { session: SessionData }).session;
@@ -471,13 +642,10 @@ export class VideoGenerationScene {
               imageUrl = await this.heygenService.uploadImage(imageBuffer);
               this.logger.log(`Image processed: ${imageUrl}`);
               
-              if (imageUrl === "heygen_use_available_avatar") {
-                await ctx.reply("📝 Загрузка пользовательских фото временно недоступна.\nБудет использован красивый стандартный аватар.");
-              }
             } catch (error) {
               this.logger.error("Error processing image:", error);
-              imageUrl = "heygen_use_available_avatar";
-              await ctx.reply("⚠️ Ошибка обработки фото. Будет использован стандартный аватар.");
+              await ctx.reply("❌ Ошибка обработки фото. Попробуйте загрузить фото заново.");
+              return;
             }
           }
         } catch (error) {
@@ -512,9 +680,6 @@ export class VideoGenerationScene {
           voiceUrl = await this.heygenService.uploadAudio(voiceBuffer);
           this.logger.log(`Voice processed: ${voiceUrl}`);
           
-          if (voiceUrl.includes('heygen_tts_required')) {
-            await ctx.reply("📝 Загрузка пользовательского аудио временно недоступна.\nБудет использован качественный синтез речи для озвучки вашего текста.");
-          }
           
         } catch (error) {
           this.logger.error("Error processing voice file:", error);
@@ -639,7 +804,7 @@ export class VideoGenerationScene {
         "✅ Качество выбрано: 720p (быстрее генерация, меньше места)"
       );
 
-      await this.showTextPromptInput(ctx);
+      await this.showDigitalTwinOptions(ctx);
     } catch (error) {
       this.logger.error("Error selecting 720p quality:", error);
       await ctx.answerCbQuery("❌ Ошибка выбора качества");
@@ -657,7 +822,7 @@ export class VideoGenerationScene {
         "✅ Качество выбрано: 1080p (лучшее качество, больше места)"
       );
 
-      await this.showTextPromptInput(ctx);
+      await this.showDigitalTwinOptions(ctx);
     } catch (error) {
       this.logger.error("Error selecting 1080p quality:", error);
       await ctx.answerCbQuery("❌ Ошибка выбора качества");
@@ -680,6 +845,30 @@ export class VideoGenerationScene {
   async onCancel(@Ctx() ctx: Context) {
     await ctx.reply("❌ Создание видео отменено.");
     await (ctx as { scene?: { leave: () => Promise<void> } }).scene?.leave();
+  }
+
+  @Action("create_digital_twin")
+  async onCreateDigitalTwin(@Ctx() ctx: Context) {
+    try {
+      await ctx.answerCbQuery();
+      this.logger.log(`🎬 [@Action create_digital_twin] Пользователь ${ctx.from?.id} запустил создание цифрового двойника`);
+      await this.createDigitalTwin(ctx);
+    } catch (error) {
+      this.logger.error("Error creating digital twin:", error);
+      await ctx.answerCbQuery("❌ Ошибка создания цифрового двойника");
+    }
+  }
+
+  @Action("generate_ai_avatar")
+  async onGenerateAiAvatar(@Ctx() ctx: Context) {
+    try {
+      await ctx.answerCbQuery();
+      this.logger.log(`🤖 [@Action generate_ai_avatar] Пользователь ${ctx.from?.id} запустил генерацию ИИ-аватара`);
+      await this.startVideoGeneration(ctx);
+    } catch (error) {
+      this.logger.error("Error generating AI avatar:", error);
+      await ctx.answerCbQuery("❌ Ошибка генерации ИИ-аватара");
+    }
   }
 
   /**

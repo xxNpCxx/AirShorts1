@@ -335,14 +335,11 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                             await ctx.reply("📤 Обрабатываю ваше фото...");
                             imageUrl = await this.heygenService.uploadImage(imageBuffer);
                             this.logger.log(`Image processed: ${imageUrl}`);
-                            if (imageUrl === "heygen_use_available_avatar") {
-                                await ctx.reply("📝 Загрузка пользовательских фото временно недоступна.\nБудет использован красивый стандартный аватар.");
-                            }
                         }
                         catch (error) {
                             this.logger.error("Error processing image:", error);
-                            imageUrl = "heygen_use_available_avatar";
-                            await ctx.reply("⚠️ Ошибка обработки фото. Будет использован стандартный аватар.");
+                            await ctx.reply("❌ Ошибка обработки фото. Попробуйте загрузить фото заново.");
+                            return;
                         }
                     }
                 }
@@ -369,9 +366,6 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                     await ctx.reply("🎵 Обрабатываю ваш голос...");
                     voiceUrl = await this.heygenService.uploadAudio(voiceBuffer);
                     this.logger.log(`Voice processed: ${voiceUrl}`);
-                    if (voiceUrl.includes('heygen_tts_required')) {
-                        await ctx.reply("📝 Загрузка пользовательского аудио временно недоступна.\nБудет использован качественный синтез речи для озвучки вашего текста.");
-                    }
                 }
                 catch (error) {
                     this.logger.error("Error processing voice file:", error);

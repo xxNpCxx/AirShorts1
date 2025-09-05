@@ -232,12 +232,19 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
         const uploadId = `heygen_audio_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         try {
             this.logger.log(`[${uploadId}] 🎵 Загружаем пользовательское аудио в HeyGen Assets (${audioBuffer.length} bytes)`);
+            const FormData = require('form-data');
             const formData = new FormData();
-            formData.append('file', new Blob([audioBuffer], { type: 'audio/wav' }), 'user_audio.wav');
+            formData.append('file', audioBuffer, {
+                filename: 'user_audio.wav',
+                contentType: 'audio/wav',
+                knownLength: audioBuffer.length
+            });
+            this.logger.debug(`[${uploadId}] 📤 FormData prepared with ${audioBuffer.length} bytes`);
             const response = await fetch('https://upload.heygen.com/v1/asset', {
                 method: 'POST',
                 headers: {
-                    'X-API-KEY': this.apiKey,
+                    'X-Api-Key': this.apiKey,
+                    ...formData.getHeaders(),
                 },
                 body: formData,
             });
@@ -267,12 +274,19 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
         const uploadId = `heygen_image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         try {
             this.logger.log(`[${uploadId}] 🖼️ Загружаем пользовательское фото в HeyGen Assets (${imageBuffer.length} bytes)`);
+            const FormData = require('form-data');
             const formData = new FormData();
-            formData.append('file', new Blob([imageBuffer], { type: 'image/jpeg' }), 'user_photo.jpg');
+            formData.append('file', imageBuffer, {
+                filename: 'user_photo.jpg',
+                contentType: 'image/jpeg',
+                knownLength: imageBuffer.length
+            });
+            this.logger.debug(`[${uploadId}] 📤 FormData prepared with ${imageBuffer.length} bytes`);
             const response = await fetch('https://upload.heygen.com/v1/asset', {
                 method: 'POST',
                 headers: {
-                    'X-API-KEY': this.apiKey,
+                    'X-Api-Key': this.apiKey,
+                    ...formData.getHeaders(),
                 },
                 body: formData,
             });
@@ -344,22 +358,31 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             });
             if (!response.ok) {
                 this.logger.warn('Failed to get available avatars, using hardcoded fallback');
-                return ["Abigail_expressive_2024112501", "Abigail_standing_office_front", "Abigail_sitting_sofa_front"];
+                return this.getHardcodedAvatars();
             }
             const result = await response.json();
             const avatars = result.data?.avatars || [];
             const avatarIds = avatars.map((avatar) => avatar.avatar_id).filter(Boolean);
             if (avatarIds.length === 0) {
                 this.logger.warn('No avatars found, using hardcoded fallback');
-                return ["Abigail_expressive_2024112501", "Abigail_standing_office_front", "Abigail_sitting_sofa_front"];
+                return this.getHardcodedAvatars();
             }
             this.logger.log(`Found ${avatarIds.length} available avatars: ${avatarIds.slice(0, 3).join(', ')}...`);
             return avatarIds;
         }
         catch (error) {
             this.logger.error('Error getting available avatars:', error);
-            return ["Abigail_expressive_2024112501", "Abigail_standing_office_front", "Abigail_sitting_sofa_front"];
+            return this.getHardcodedAvatars();
         }
+    }
+    getHardcodedAvatars() {
+        return [
+            "Abigail_expressive_2024112501",
+            "Abigail_standing_office_front",
+            "Abigail_sitting_sofa_front",
+            "1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b",
+            "Abigail_standing_office_front_2024112501"
+        ];
     }
 };
 exports.HeyGenService = HeyGenService;

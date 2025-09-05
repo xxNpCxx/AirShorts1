@@ -1,0 +1,72 @@
+# Cursor AI - Files to ignore for indexing and AI assistance
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Test files
+test-*.js
+test-*.json
+*-test-results.json
+debug-*.js
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache directories
+.npm/
+.yarn/
+.cache/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+*.tmp
+
+# IDE files
+.vscode/
+.idea/
+
+# Large binary files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.mp4
+*.mov
+*.avi
+*.wav
+*.mp3
+
+# Test images (keep only if needed for development)
+test-image.*
+
+# Temporary files
+*.temp
+*.backup
+*.bak
+
+# PM2 files
+.pm2/
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# Redis dump files
+dump.rdb

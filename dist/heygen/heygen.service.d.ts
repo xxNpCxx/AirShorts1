@@ -75,5 +75,6 @@ export declare class HeyGenService {
     uploadImage(imageBuffer: Buffer): Promise<string>;
     private uploadImageFallback;
     private getAvailableAvatars;
+    private getHardcodedAvatars;
 }
 //# sourceMappingURL=heygen.service.d.ts.map

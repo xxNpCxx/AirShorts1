@@ -1,0 +1,53 @@
+# ESLint ignore file
+
+# Build outputs
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Test files
+test-*.js
+debug-*.js
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env*
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache directories
+.npm/
+.yarn/
+.cache/
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+*.backup
+*.bak
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# PM2 files
+.pm2/
+
+# Redis dump files
+dump.rdb
