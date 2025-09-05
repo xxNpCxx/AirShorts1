@@ -462,9 +462,23 @@ export class VideoGenerationScene {
           if (photoFile.file_path) {
             photoUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${photoFile.file_path}`;
             
-            // Upload API недоступен, поэтому используем стандартный аватар
-            await ctx.reply("📝 HeyGen API не поддерживает загрузку пользовательских фото.\nБудет использован красивый стандартный аватар.");
-            imageUrl = "heygen_use_available_avatar";
+            // Загружаем изображение в HeyGen и создаем TalkingPhoto
+            try {
+              const photoBuffer = await ctx.telegram.getFileLink(session.photoFileId);
+              const response = await fetch(photoBuffer.href);
+              const imageBuffer = Buffer.from(await response.arrayBuffer());
+              await ctx.reply("📤 Обрабатываю ваше фото...");
+              imageUrl = await this.heygenService.uploadImage(imageBuffer);
+              this.logger.log(`Image processed in HeyGen: ${imageUrl}`);
+              
+              if (imageUrl === "heygen_use_available_avatar") {
+                await ctx.reply("📝 HeyGen API не поддерживает загрузку пользовательских фото.\nБудет использован красивый стандартный аватар.");
+              }
+            } catch (error) {
+              this.logger.error("Error processing image in HeyGen:", error);
+              imageUrl = "heygen_use_available_avatar";
+              await ctx.reply("⚠️ Ошибка обработки фото. Будет использован стандартный аватар.");
+            }
           }
         } catch (error) {
           this.logger.error("Error getting photo URL:", error);
@@ -474,9 +488,39 @@ export class VideoGenerationScene {
       }
 
       if (session.voiceFileId) {
-        // Upload API недоступен, поэтому игнорируем голосовое сообщение
-        await ctx.reply("📝 HeyGen API не поддерживает загрузку пользовательского аудио.\nБудет использован качественный TTS для озвучки вашего текста.");
-        voiceUrl = "heygen_tts_required";
+        try {
+          await ctx.reply("🔄 Обрабатываю голосовое сообщение...");
+          
+          // Получаем файл из Telegram
+          const voiceFile = await ctx.telegram.getFile(session.voiceFileId);
+          if (!voiceFile.file_path) {
+            throw new Error("No file path received from Telegram");
+          }
+          
+          // Скачиваем файл
+          const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${voiceFile.file_path}`;
+          const response = await fetch(fileUrl);
+          if (!response.ok) {
+            throw new Error(`Failed to download voice file: ${response.status}`);
+          }
+          
+          const voiceBuffer = Buffer.from(await response.arrayBuffer());
+          this.logger.log(`Downloaded voice file: ${voiceBuffer.length} bytes`);
+          
+          // Обрабатываем пользовательское аудио
+          await ctx.reply("🎵 Обрабатываю ваш голос...");
+          voiceUrl = await this.heygenService.uploadAudio(voiceBuffer);
+          this.logger.log(`Voice processed for HeyGen: ${voiceUrl}`);
+          
+          if (voiceUrl.includes('heygen_tts_required')) {
+            await ctx.reply("📝 HeyGen API не поддерживает загрузку пользовательского аудио.\nБудет использован качественный TTS для озвучки вашего текста.");
+          }
+          
+        } catch (error) {
+          this.logger.error("Error processing voice file:", error);
+          await ctx.reply("❌ Ошибка обработки голосового сообщения. Попробуйте загрузить заново.");
+          return;
+        }
       }
 
       const request = {
