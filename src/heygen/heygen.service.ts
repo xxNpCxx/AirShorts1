@@ -427,15 +427,20 @@ export class HeyGenService {
     try {
       this.logger.log(`[${uploadId}] 🎵 Загружаем пользовательское аудио в HeyGen Assets (${audioBuffer.length} bytes)`);
       
-      const formData = new FormData();
-      formData.append('file', new Blob([audioBuffer], { type: 'audio/wav' }), 'user_audio.wav');
+      // Попробуем использовать base64 кодирование
+      const base64Audio = audioBuffer.toString('base64');
+      const payload = {
+        file: base64Audio,
+        type: 'audio/wav'
+      };
       
       const response = await fetch('https://upload.heygen.com/v1/asset', {
         method: 'POST',
         headers: {
           'X-API-KEY': this.apiKey,
+          'Content-Type': 'application/json',
         },
-        body: formData,
+        body: JSON.stringify(payload),
       });
 
       this.logger.log(`[${uploadId}] 📥 Upload Asset response: ${response.status} ${response.statusText}`);
@@ -480,15 +485,20 @@ export class HeyGenService {
     try {
       this.logger.log(`[${uploadId}] 🖼️ Загружаем пользовательское фото в HeyGen Assets (${imageBuffer.length} bytes)`);
       
-      const formData = new FormData();
-      formData.append('file', new Blob([imageBuffer], { type: 'image/jpeg' }), 'user_photo.jpg');
+      // Попробуем использовать base64 кодирование
+      const base64Image = imageBuffer.toString('base64');
+      const payload = {
+        file: base64Image,
+        type: 'image/jpeg'
+      };
       
       const response = await fetch('https://upload.heygen.com/v1/asset', {
         method: 'POST',
         headers: {
           'X-API-KEY': this.apiKey,
+          'Content-Type': 'application/json',
         },
-        body: formData,
+        body: JSON.stringify(payload),
       });
 
       this.logger.log(`[${uploadId}] 📥 Upload Asset response: ${response.status} ${response.statusText}`);
