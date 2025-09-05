@@ -15,6 +15,44 @@ export interface HeyGenVideoResponse {
     result_url?: string;
     error?: string;
 }
+export interface StandardVideoPayload {
+    video_inputs: VideoInput[];
+    dimension: {
+        width: number;
+        height: number;
+    };
+    caption?: boolean;
+    title?: string;
+    callback_id?: string;
+    folder_id?: string;
+    callback_url?: string;
+}
+export interface VideoInput {
+    character: {
+        type: "avatar" | "talking_photo";
+        avatar_id?: string;
+        talking_photo_id?: string;
+        avatar_style?: string;
+        talking_photo_style?: string;
+        talking_style?: string;
+        expression?: string;
+        super_resolution?: boolean;
+        scale?: number;
+    };
+    voice: {
+        type: "text" | "audio";
+        input_text?: string;
+        voice_id?: string;
+        speed?: number;
+        audio_asset_id?: string;
+    };
+    background?: {
+        type: "color" | "image" | "video";
+        value?: string;
+        image_asset_id?: string;
+        fit?: string;
+    };
+}
 export interface AvatarIVPayload {
     image_key: string;
     video_title: string;
@@ -23,6 +61,7 @@ export interface AvatarIVPayload {
     video_orientation?: 'portrait' | 'landscape';
     fit?: 'cover' | 'contain';
 }
+export declare function validateStandardVideoPayload(payload: any): payload is StandardVideoPayload;
 export declare function validateAvatarIVPayload(payload: any): payload is AvatarIVPayload;
 export declare class HeyGenService {
     private readonly configService;

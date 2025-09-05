@@ -1,4 +1,343 @@
+---
+alwaysApply: true
+---
+
 # API Integration Standards
+
+## 🎯 Purpose
+Prevent common API integration mistakes by enforcing strict standards for external API usage, parameter validation, and documentation compliance.
+
+## 🚫 Common Anti-Patterns to Avoid
+
+### ❌ Parameter Improvisation
+```typescript
+// BAD: Guessing API parameters
+const payload = {
+  input_text: script,        // Wrong field name
+  dimension: { width: 1280 } // Wrong structure
+};
+```
+
+```typescript
+// GOOD: Following exact API documentation
+const payload: AvatarIVPayload = {
+  image_key: imageKey,       // Exact field from docs
+  video_title: title,        // Required field
+  script: script,            // Correct field name
+  voice_id: voiceId,         // Required field
+  video_orientation: "portrait", // Enum value from docs
+  fit: "cover"              // Enum value from docs
+};
+```
+
+### ❌ Mixing Different API Endpoints
+```typescript
+// BAD: Using Avatar API v2 params for Avatar IV
+const av4Payload = {
+  video_inputs: [...],       // Wrong - this is for v2/video/generate
+  dimension: { width: 1280 } // Wrong - this is for standard API
+};
+```
+
+```typescript
+// GOOD: Endpoint-specific parameters
+// For Avatar IV API (/v2/video/av4/generate)
+const av4Payload: AvatarIVPayload = {
+  image_key: string,
+  video_title: string,
+  script: string,
+  voice_id: string
+};
+
+// For Standard Avatar API (/v2/video/generate)  
+const standardPayload: StandardVideoPayload = {
+  video_inputs: VideoInput[],
+  dimension: { width: number, height: number }
+};
+```
+
+### ❌ No Parameter Validation
+```typescript
+// BAD: Sending unvalidated data
+await fetch(endpoint, {
+  body: JSON.stringify(someObject) // Hope it works!
+});
+```
+
+```typescript
+// GOOD: Validate before sending
+if (!validateAvatarIVPayload(payload)) {
+  throw new Error('Invalid Avatar IV parameters');
+}
+await fetch(endpoint, { body: JSON.stringify(payload) });
+```
+
+## ✅ Required Standards
+
+### 1. 📚 Documentation First Approach
+
+**RULE**: Always read and reference official API documentation before implementation.
+
+```typescript
+/**
+ * Avatar IV API Implementation
+ * 
+ * @see https://docs.heygen.com/reference/create-avatar-iv-video
+ * @endpoint POST /v2/video/av4/generate
+ * @requires image_key from Upload Asset API
+ * @requires video_title (string, required)
+ * @requires script (string, required) - NOT input_text!
+ * @requires voice_id (string, required)
+ * @optional video_orientation ("portrait" | "landscape")
+ * @optional fit ("cover" | "contain")
+ */
+```
+
+### 2. 🏗️ TypeScript Interface Definition
+
+**RULE**: Define strict TypeScript interfaces for ALL external API payloads.
+
+```typescript
+// Define interface matching EXACT API specification
+export interface AvatarIVPayload {
+  image_key: string;                    // Required
+  video_title: string;                  // Required  
+  script: string;                       // Required (NOT input_text!)
+  voice_id: string;                     // Required
+  video_orientation?: 'portrait' | 'landscape'; // Optional enum
+  fit?: 'cover' | 'contain';           // Optional enum
+  custom_motion_prompt?: string;        // Optional
+  enhance_custom_motion_prompt?: boolean; // Optional
+}
+
+// Define response interface
+export interface AvatarIVResponse {
+  data?: {
+    video_id: string;
+    status: string;
+  };
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+```
+
+### 3. 🔍 Parameter Validation Functions
+
+**RULE**: Create validation functions for all API payloads.
+
+```typescript
+/**
+ * Validates Avatar IV payload against API specification
+ * @param payload - Object to validate
+ * @returns true if valid, false otherwise
+ */
+export function validateAvatarIVPayload(payload: any): payload is AvatarIVPayload {
+  return (
+    typeof payload.image_key === 'string' &&
+    typeof payload.video_title === 'string' &&
+    typeof payload.script === 'string' &&
+    typeof payload.voice_id === 'string' &&
+    (!payload.video_orientation || ['portrait', 'landscape'].includes(payload.video_orientation)) &&
+    (!payload.fit || ['cover', 'contain'].includes(payload.fit)) &&
+    (!payload.custom_motion_prompt || typeof payload.custom_motion_prompt === 'string') &&
+    (!payload.enhance_custom_motion_prompt || typeof payload.enhance_custom_motion_prompt === 'boolean')
+  );
+}
+```
+
+### 4. 📝 Comprehensive Logging
+
+**RULE**: Log API requests with full payload details for debugging.
+
+```typescript
+// Log the exact payload being sent
+this.logger.debug(`[${requestId}] 📤 ${apiName} payload (validated):`, payload);
+
+// Log API response details
+this.logger.debug(`[${requestId}] 📥 ${apiName} response: ${response.status} ${response.statusText}`);
+
+// Log errors with full context
+if (!response.ok) {
+  const errorText = await response.text();
+  this.logger.error(`[${requestId}] ❌ ${apiName} failed: ${response.status} - ${errorText}`);
+}
+```
+
+### 5. 🛡️ Error Handling Standards
+
+**RULE**: Handle API errors gracefully with specific error types.
+
+```typescript
+try {
+  // Validate before sending
+  if (!validateAvatarIVPayload(payload)) {
+    throw new ApiValidationError('Invalid Avatar IV parameters', payload);
+  }
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new ApiResponseError(
+      `Avatar IV API failed: ${response.status}`,
+      response.status,
+      errorData
+    );
+  }
+
+  return await response.json();
+} catch (error) {
+  this.logger.error(`Avatar IV API error:`, error);
+  throw error; // Re-throw for upstream handling
+}
+```
+
+### 6. 📋 API Version Management
+
+**RULE**: Always specify and document API versions used.
+
+```typescript
+/**
+ * HeyGen API Configuration
+ * 
+ * @version Avatar IV API v2 (current)
+ * @baseUrl https://api.heygen.com
+ * @endpoints
+ *   - POST /v2/video/av4/generate (Avatar IV)
+ *   - POST /v2/video/generate (Standard Avatar)
+ *   - POST /v1/upload (Asset Upload)
+ * @lastUpdated 2025-09-06
+ * @documentation https://docs.heygen.com/reference/create-avatar-iv-video
+ */
+const HEYGEN_API = {
+  baseUrl: 'https://api.heygen.com',
+  version: 'v2',
+  endpoints: {
+    avatarIV: '/v2/video/av4/generate',
+    standardAvatar: '/v2/video/generate', 
+    uploadAsset: '/v1/upload'
+  }
+} as const;
+```
+
+## 🔄 Implementation Checklist
+
+Before integrating ANY external API, complete this checklist:
+
+### Phase 1: Research & Planning
+- [ ] Read complete official API documentation
+- [ ] Identify exact endpoint and HTTP method
+- [ ] List all required and optional parameters
+- [ ] Note parameter types and validation rules
+- [ ] Check for API version requirements
+- [ ] Review rate limits and error codes
+
+### Phase 2: Type Safety
+- [ ] Define TypeScript interface for request payload
+- [ ] Define TypeScript interface for response data
+- [ ] Create validation function for request payload
+- [ ] Add JSDoc comments with API documentation links
+
+### Phase 3: Implementation
+- [ ] Implement API call with proper error handling
+- [ ] Add comprehensive logging (request/response)
+- [ ] Test with valid and invalid payloads
+- [ ] Handle all documented error responses
+- [ ] Add fallback mechanisms where appropriate
+
+### Phase 4: Documentation
+- [ ] Document API version and endpoint used
+- [ ] Add code comments explaining parameter choices
+- [ ] Include links to official documentation
+- [ ] Document any API-specific quirks or limitations
+
+## 🚨 Code Review Requirements
+
+When reviewing API integration code, verify:
+
+1. **Documentation References**: Are official docs linked and followed?
+2. **Parameter Accuracy**: Do parameters match API specification exactly?
+3. **Type Safety**: Are TypeScript interfaces defined and used?
+4. **Validation**: Are payloads validated before sending?
+5. **Error Handling**: Are API errors handled appropriately?
+6. **Logging**: Is there sufficient logging for debugging?
+
+## 📚 Examples by API Type
+
+### REST API Integration Template
+```typescript
+/**
+ * Generic REST API Integration Template
+ * Replace with actual API details
+ */
+
+// 1. Define interfaces from API docs
+interface APIRequest {
+  // Exact fields from documentation
+}
+
+interface APIResponse {
+  // Exact response structure
+}
+
+// 2. Create validation
+function validateRequest(payload: any): payload is APIRequest {
+  // Validate all required fields
+}
+
+// 3. Implement with full error handling
+async function callAPI(request: APIRequest): Promise<APIResponse> {
+  // Validate
+  if (!validateRequest(request)) {
+    throw new Error('Invalid request parameters');
+  }
+
+  // Log request
+  this.logger.debug('API Request:', request);
+
+  // Make call
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request)
+  });
+
+  // Handle response
+  if (!response.ok) {
+    const error = await response.text();
+    this.logger.error(`API Error: ${response.status} - ${error}`);
+    throw new Error(`API failed: ${response.status}`);
+  }
+
+  return await response.json();
+}
+```
+
+## 🎯 Success Metrics
+
+Following these standards should result in:
+- ✅ Zero "parameter not found" errors
+- ✅ Zero "invalid request format" errors  
+- ✅ Clear error messages and debugging info
+- ✅ Consistent API integration patterns
+- ✅ Easy maintenance and updates
+- ✅ Faster development of new integrations
+
+## 📖 Reference Links
+
+- [HeyGen Avatar IV API](https://docs.heygen.com/reference/create-avatar-iv-video)
+- [TypeScript Handbook - Interfaces](https://www.typescriptlang.org/docs/handbook/interfaces.html)
+- [API Design Best Practices](https://docs.microsoft.com/en-us/azure/architecture/best-practices/api-design)
+
+---
+
+**Remember**: When in doubt, always refer to the official API documentation first. Never guess or improvise parameters!# API Integration Standards
 
 ## 🎯 Purpose
 Prevent common API integration mistakes by enforcing strict standards for external API usage, parameter validation, and documentation compliance.

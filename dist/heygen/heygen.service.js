@@ -11,9 +11,21 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var HeyGenService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HeyGenService = void 0;
+exports.validateStandardVideoPayload = validateStandardVideoPayload;
 exports.validateAvatarIVPayload = validateAvatarIVPayload;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
+function validateStandardVideoPayload(payload) {
+    return (Array.isArray(payload.video_inputs) &&
+        payload.video_inputs.length > 0 &&
+        payload.dimension &&
+        typeof payload.dimension.width === 'number' &&
+        typeof payload.dimension.height === 'number' &&
+        payload.video_inputs.every((input) => input.character &&
+            ['avatar', 'talking_photo'].includes(input.character.type) &&
+            input.voice &&
+            ['text', 'audio'].includes(input.voice.type)));
+}
 function validateAvatarIVPayload(payload) {
     return (typeof payload.image_key === 'string' &&
         typeof payload.video_title === 'string' &&
@@ -22,11 +34,22 @@ function validateAvatarIVPayload(payload) {
         (!payload.video_orientation || ['portrait', 'landscape'].includes(payload.video_orientation)) &&
         (!payload.fit || ['cover', 'contain'].includes(payload.fit)));
 }
+const HEYGEN_API = {
+    baseUrl: 'https://api.heygen.com',
+    version: 'v2',
+    endpoints: {
+        avatarIV: '/v2/video/av4/generate',
+        standardAvatar: '/v2/video/generate',
+        uploadAsset: '/v1/upload',
+        listAvatars: '/v1/avatar.list',
+        videoStatus: '/v1/video_status.get'
+    }
+};
 let HeyGenService = HeyGenService_1 = class HeyGenService {
     constructor(configService) {
         this.configService = configService;
         this.logger = new common_1.Logger(HeyGenService_1.name);
-        this.baseUrl = "https://api.heygen.com";
+        this.baseUrl = HEYGEN_API.baseUrl;
         this.apiKey = this.configService.get("HEYGEN_API_KEY") || "";
         if (!this.apiKey) {
             this.logger.warn("HEYGEN_API_KEY не найден в переменных окружения");
@@ -148,8 +171,13 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             else {
                 this.logger.log(`[${requestId}] 🎵 Using TTS with script: ${request.script?.substring(0, 50)}...`);
             }
-            this.logger.debug(`[${requestId}] 📤 Sending request to ${this.baseUrl}/v2/video/generate`);
-            const response = await fetch(`${this.baseUrl}/v2/video/generate`, {
+            if (!validateStandardVideoPayload(payload)) {
+                this.logger.error(`[${requestId}] ❌ Invalid Standard Video API parameters:`, payload);
+                throw new Error('Invalid Standard Video API parameters');
+            }
+            this.logger.debug(`[${requestId}] 📤 Standard Video payload (validated):`, payload);
+            this.logger.debug(`[${requestId}] 📤 Sending request to ${this.baseUrl}${HEYGEN_API.endpoints.standardAvatar}`);
+            const response = await fetch(`${this.baseUrl}${HEYGEN_API.endpoints.standardAvatar}`, {
                 method: "POST",
                 headers: {
                     "X-API-KEY": this.apiKey,
