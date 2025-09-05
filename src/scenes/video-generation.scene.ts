@@ -164,7 +164,7 @@ export class VideoGenerationScene {
       });
 
       // Создаем процесс создания цифрового двойника
-      const process = await this.processManager.createDigitalTwinProcess(
+      const digitalTwinProcess = await this.processManager.createDigitalTwinProcess(
         ctx.from!.id,
         photoUrl,
         audioUrl,
@@ -176,25 +176,25 @@ export class VideoGenerationScene {
       this.logger.log(`✅ [DIGITAL_TWIN_CREATE] Process created successfully`, {
         requestId,
         userId,
-        processId: process.id,
-        status: process.status,
+        processId: digitalTwinProcess.id,
+        status: digitalTwinProcess.status,
         timestamp: new Date().toISOString()
       });
 
       await ctx.reply(
         `🎬 Создание цифрового двойника запущено!\n\n` +
-        `📋 ID процесса: ${process.id}\n` +
+        `📋 ID процесса: ${digitalTwinProcess.id}\n` +
         `📸 Фото: ✅ Загружено\n` +
         `🎵 Голос: ✅ Загружен\n` +
         `📝 Текст: ${session.script.length} символов\n` +
-        `🎥 Качество: ${process.quality}\n\n` +
+        `🎥 Качество: ${digitalTwinProcess.quality}\n\n` +
         `⏳ Обработка займет 2-5 минут. Вы получите уведомление когда видео будет готово!`
       );
 
       this.logger.log(`📤 [DIGITAL_TWIN_CREATE] User notification sent`, {
         requestId,
         userId,
-        processId: process.id,
+        processId: digitalTwinProcess.id,
         timestamp: new Date().toISOString()
       });
 
@@ -486,6 +486,14 @@ export class VideoGenerationScene {
         const calculatedDuration = this.calculateVideoDuration(text);
         session.duration = calculatedDuration;
         
+        this.logger.log(`📝 [TEXT_INPUT] Script received`, {
+          userId: ctx.from?.id,
+          scriptLength: text.length,
+          wordCount: text.trim().split(/\s+/).length,
+          calculatedDuration,
+          timestamp: new Date().toISOString()
+        });
+        
         await ctx.reply(
           `✅ Сценарий принят!\n\n` +
           `📊 Анализ текста:\n` +
@@ -494,11 +502,17 @@ export class VideoGenerationScene {
           `💡 Длительность рассчитана автоматически на основе количества слов и средней скорости речи для русского языка.\n\n`
         );
         
-        await this.showPlatformSelection(ctx);
-      } else if (!session.textPrompt) {
-        // Второй текстовый ввод - это текстовый промпт (платформа выбирается через inline кнопки)
-        session.textPrompt = text;
-        await this.startVideoGeneration(ctx);
+        await this.showDigitalTwinOptions(ctx);
+      } else {
+        // Все данные уже получены, но пользователь отправил еще текст
+        await ctx.reply(
+          "❌ Все необходимые данные уже получены!\n\n" +
+          "📋 Текущий статус:\n" +
+          `• Фото: ✅ Загружено\n` +
+          `• Голос: ✅ Загружен\n` +
+          `• Сценарий: ✅ "${session.script}"\n\n` +
+          "🎬 Используйте кнопки ниже для выбора типа генерации и качества."
+        );
       }
     } catch (error) {
       this.logger.error("Error processing text:", error);
@@ -568,10 +582,31 @@ export class VideoGenerationScene {
   private async showDigitalTwinOptions(@Ctx() ctx: Context) {
     const session = (ctx as any).session as SessionData;
     
+    this.logger.log(`🎬 [DIGITAL_TWIN_OPTIONS] Showing options to user`, {
+      userId: ctx.from?.id,
+      hasPhoto: !!session.photoFileId,
+      hasVoice: !!session.voiceFileId,
+      hasScript: !!session.script,
+      scriptLength: session.script?.length || 0,
+      timestamp: new Date().toISOString()
+    });
+    
     if (!session.photoFileId || !session.voiceFileId || !session.script) {
+      this.logger.warn(`⚠️ [DIGITAL_TWIN_OPTIONS] Missing required data`, {
+        userId: ctx.from?.id,
+        hasPhoto: !!session.photoFileId,
+        hasVoice: !!session.voiceFileId,
+        hasScript: !!session.script,
+        timestamp: new Date().toISOString()
+      });
       await ctx.reply("❌ Не все данные получены. Пожалуйста, загрузите фото, голосовое сообщение и введите текст.");
       return;
     }
+
+    this.logger.log(`📤 [DIGITAL_TWIN_OPTIONS] Sending options to user`, {
+      userId: ctx.from?.id,
+      timestamp: new Date().toISOString()
+    });
 
     await ctx.reply(
       "🎬 Все данные получены! Выберите тип генерации:\n\n" +
@@ -600,6 +635,11 @@ export class VideoGenerationScene {
         }
       }
     );
+
+    this.logger.log(`✅ [DIGITAL_TWIN_OPTIONS] Options sent successfully`, {
+      userId: ctx.from?.id,
+      timestamp: new Date().toISOString()
+    });
   }
 
   private async startVideoGeneration(@Ctx() ctx: Context) {
