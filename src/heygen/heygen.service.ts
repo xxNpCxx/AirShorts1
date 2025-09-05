@@ -206,11 +206,8 @@ export class HeyGenService {
       this.logger.debug(`[${requestId}] Audio provided: ${!!request.audioUrl}, Script length: ${request.script?.length || 0} chars`);
 
       // Определяем, использовать ли пользовательское аудио или TTS
-      const useCustomAudio = request.audioUrl && 
-                            request.audioUrl.trim() !== "" && 
-                            request.audioUrl !== "undefined" && 
-                            request.audioUrl !== "null" &&
-                            !request.audioUrl.includes('avatar_iv_tts_required');
+      // Upload API недоступен, поэтому всегда используем TTS
+      const useCustomAudio = false; // Отключено из-за недоступности Upload API
 
       // Получаем список доступных аватаров для дефолтного значения
       const availableAvatars = await this.getAvailableAvatars();
@@ -239,55 +236,15 @@ export class HeyGenService {
         }
       };
 
-      // Если есть пользовательское фото, создаем TalkingPhoto в Standard API
-      if (request.imageUrl && request.imageUrl.trim() !== "" && request.imageUrl !== "undefined" && request.imageUrl !== "null" && request.imageUrl !== "heygen_placeholder_image_url" && request.imageUrl !== "heygen_use_available_avatar") {
-        this.logger.log(`[${requestId}] 📸 Используем пользовательское фото в Standard API: ${request.imageUrl}`);
-        
-        // Определяем тип загруженного изображения
-        if (request.imageUrl.includes('photo_avatar_')) {
-          // Photo Avatar - используем TalkingPhoto
-          this.logger.log(`[${requestId}] 🎭 Используем Photo Avatar как TalkingPhoto`);
-          payload.video_inputs[0].character = {
-            type: "talking_photo",
-            talking_photo_id: request.imageUrl,
-            talking_photo_style: "square",
-            talking_style: "expressive",
-            expression: "default",
-            super_resolution: true,
-            scale: 1.0
-          };
-        } else {
-          // Asset или image_key - используем как Image Background
-          this.logger.log(`[${requestId}] 🖼️ Используем изображение как Background`);
-          payload.video_inputs[0].background = {
-            type: "image",
-            image_asset_id: request.imageUrl,
-            fit: "cover"
-          };
-        }
-      }
+      // Upload API недоступен, поэтому всегда используем доступный аватар
+      this.logger.log(`[${requestId}] 📸 Upload API недоступен, используем доступный аватар: ${defaultAvatarId}`);
 
-      // Если есть валидное пользовательское аудио, используем его
-      if (useCustomAudio) {
-        this.logger.log(`[${requestId}] 🎵 Используем пользовательское аудио asset: ${request.audioUrl}`);
-        payload.video_inputs[0].voice = {
-          type: "audio",
-          audio_asset_id: request.audioUrl
-        };
-      }
+      // Всегда используем TTS и доступный аватар (Upload API недоступен)
+      this.logger.log(`[${requestId}] 📸 Using available avatar: ${defaultAvatarId}`);
+      this.logger.log(`[${requestId}] 🎵 Using TTS with script: ${request.script?.substring(0, 50)}...`);
 
-      // Если нет пользовательского фото, используем доступный аватар
-      if (!request.imageUrl || request.imageUrl === "heygen_use_available_avatar" || request.imageUrl === "heygen_placeholder_image_url") {
-        this.logger.log(`[${requestId}] 📸 Using available avatar: ${defaultAvatarId}`);
-        // defaultAvatarId уже установлен в payload выше
-      }
-
-      // Логируем финальный тип голоса
-      if (useCustomAudio) {
-        this.logger.log(`[${requestId}] 🎵 Using custom user audio from: ${request.audioUrl}`);
-      } else {
-        this.logger.log(`[${requestId}] 🎵 Using TTS with script: ${request.script?.substring(0, 50)}...`);
-      }
+      // Логируем финальный тип голоса (всегда TTS)
+      this.logger.log(`[${requestId}] 🎵 Using TTS with script: ${request.script?.substring(0, 50)}...`);
 
       // Валидация payload согласно API стандартам
       if (!validateStandardVideoPayload(payload)) {
@@ -415,6 +372,7 @@ export class HeyGenService {
   /**
    * Upload audio asset to HeyGen API
    * 
+   * @deprecated Upload API недоступен для текущего плана HeyGen
    * @see https://docs.heygen.com/reference/upload-asset
    * @endpoint POST /v1/upload
    * @param audioBuffer - Audio file buffer
@@ -424,51 +382,17 @@ export class HeyGenService {
   async uploadAudio(audioBuffer: Buffer): Promise<string> {
     const uploadId = `heygen_audio_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
-    try {
-      this.logger.log(`[${uploadId}] 🎵 Загружаем пользовательское аудио в HeyGen Assets (${audioBuffer.length} bytes)`);
-      
-      const formData = new FormData();
-      formData.append('file', new Blob([audioBuffer], { type: 'audio/wav' }), 'user_audio.wav');
-      
-      const response = await fetch(`${this.baseUrl}/v1/upload`, {
-        method: 'POST',
-        headers: {
-          'X-API-KEY': this.apiKey,
-        },
-        body: formData,
-      });
-
-      this.logger.log(`[${uploadId}] 📥 Upload Asset response: ${response.status} ${response.statusText}`);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        this.logger.error(`[${uploadId}] ❌ Audio upload failed: ${response.status} ${response.statusText}`);
-        this.logger.error(`[${uploadId}] Error details: ${errorText}`);
-        throw new Error(`Audio upload failed: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json() as any;
-      this.logger.log(`[${uploadId}] 📋 Upload Asset response data:`, result);
-      
-      const audioAssetId = result.data?.asset_id || result.asset_id;
-      
-      if (!audioAssetId) {
-        this.logger.error(`[${uploadId}] ❌ No asset_id in response:`, result);
-        throw new Error('No asset_id returned from HeyGen Upload Asset API');
-      }
-      
-      this.logger.log(`[${uploadId}] ✅ Audio uploaded successfully: ${audioAssetId}`);
-      return audioAssetId;
-      
-    } catch (error) {
-      this.logger.error(`[${uploadId}] ❌ Error uploading audio:`, error);
-      throw error;
-    }
+    this.logger.warn(`[${uploadId}] ⚠️ Upload API недоступен для текущего плана HeyGen`);
+    this.logger.warn(`[${uploadId}] 🎵 Пользовательское аудио будет проигнорировано, используется TTS`);
+    
+    // Возвращаем специальный маркер, который указывает на использование TTS
+    return "heygen_tts_required";
   }
 
   /**
    * Upload image asset to HeyGen API for Avatar IV
    * 
+   * @deprecated Upload API недоступен для текущего плана HeyGen
    * @see https://docs.heygen.com/reference/upload-asset
    * @endpoint POST /v1/upload
    * @param imageBuffer - Image file buffer  
@@ -477,51 +401,11 @@ export class HeyGenService {
   async uploadImage(imageBuffer: Buffer): Promise<string> {
     const uploadId = `heygen_image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
-    try {
-      this.logger.log(`[${uploadId}] 🖼️ Загружаем пользовательское фото в HeyGen Assets (${imageBuffer.length} bytes)`);
-      
-      const formData = new FormData();
-      formData.append('file', new Blob([imageBuffer], { type: 'image/jpeg' }), 'user_photo.jpg');
-      
-      const response = await fetch(`${this.baseUrl}/v1/upload`, {
-        method: 'POST',
-        headers: {
-          'X-API-KEY': this.apiKey,
-        },
-        body: formData,
-      });
-
-      this.logger.log(`[${uploadId}] 📥 Upload Asset response: ${response.status} ${response.statusText}`);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        this.logger.error(`[${uploadId}] ❌ Image upload failed: ${response.status} ${response.statusText}`);
-        this.logger.error(`[${uploadId}] Error details: ${errorText}`);
-        throw new Error(`Image upload failed: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json() as any;
-      this.logger.log(`[${uploadId}] 📋 Upload Asset response data:`, result);
-      
-      // Ищем image_key для Avatar IV или asset_id для Standard API
-      const imageKey = result.data?.image_key || result.image_key;
-      const assetId = result.data?.asset_id || result.asset_id;
-      
-      if (imageKey) {
-        this.logger.log(`[${uploadId}] ✅ Image Key для Avatar IV: ${imageKey}`);
-        return imageKey;
-      } else if (assetId) {
-        this.logger.log(`[${uploadId}] ✅ Asset ID для Standard API: ${assetId}`);
-        return assetId;
-      } else {
-        this.logger.error(`[${uploadId}] ❌ No image_key or asset_id in response:`, result);
-        throw new Error('No image_key or asset_id returned from HeyGen Upload Asset API');
-      }
-      
-    } catch (error) {
-      this.logger.error(`[${uploadId}] ❌ Error uploading image:`, error);
-      throw error;
-    }
+    this.logger.warn(`[${uploadId}] ⚠️ Upload API недоступен для текущего плана HeyGen`);
+    this.logger.warn(`[${uploadId}] 🖼️ Пользовательское фото будет проигнорировано, используется доступный аватар`);
+    
+    // Возвращаем специальный маркер, который указывает на использование доступного аватара
+    return "heygen_use_available_avatar";
   }
 
   private async uploadImageFallback(imageBuffer: Buffer, uploadId: string): Promise<string> {
