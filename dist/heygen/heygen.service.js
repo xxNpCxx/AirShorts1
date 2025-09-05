@@ -132,8 +132,8 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 this.logger.error(`[${requestId}] ❌ Invalid Standard Video API parameters:`, payload);
                 throw new Error('Invalid Standard Video API parameters');
             }
-            this.logger.debug(`[${requestId}] 📤 Standard Video payload (validated):`, payload);
-            this.logger.debug(`[${requestId}] 📤 Sending request to ${this.baseUrl}${HEYGEN_API.endpoints.standardAvatar}`);
+            this.logger.log(`[${requestId}] 📤 Standard Video payload (validated):`, payload);
+            this.logger.log(`[${requestId}] 📤 Sending request to ${this.baseUrl}${HEYGEN_API.endpoints.standardAvatar}`);
             const response = await fetch(`${this.baseUrl}${HEYGEN_API.endpoints.standardAvatar}`, {
                 method: "POST",
                 headers: {
@@ -142,7 +142,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 },
                 body: JSON.stringify(payload),
             });
-            this.logger.debug(`[${requestId}] 📥 HeyGen API response: ${response.status} ${response.statusText}`);
+            this.logger.log(`[${requestId}] 📥 HeyGen API response: ${response.status} ${response.statusText}`);
             if (!response.ok) {
                 const errorText = await response.text();
                 this.logger.error(`[${requestId}] ❌ HeyGen API Error:`, {
@@ -156,7 +156,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             }
             const result = (await response.json());
             this.logger.log(`[${requestId}] ✅ Video generation started successfully with ID: ${result.data?.video_id}`);
-            this.logger.debug(`[${requestId}] Full HeyGen response:`, result);
+            this.logger.log(`[${requestId}] Full HeyGen response:`, result);
             return {
                 id: result.data?.video_id || "",
                 status: "created",
@@ -241,7 +241,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 },
                 body: formData,
             });
-            this.logger.debug(`[${uploadId}] 📥 Upload Asset response: ${response.status} ${response.statusText}`);
+            this.logger.log(`[${uploadId}] 📥 Upload Asset response: ${response.status} ${response.statusText}`);
             if (!response.ok) {
                 const errorText = await response.text();
                 this.logger.error(`[${uploadId}] ❌ Audio upload failed: ${response.status} ${response.statusText}`);
@@ -276,15 +276,20 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     },
                     body: formData,
                 });
+                this.logger.log(`[${uploadId}] 📥 Photo Avatar API response: ${response.status} ${response.statusText}`);
                 if (response.ok) {
                     const result = await response.json();
+                    this.logger.log(`[${uploadId}] 📋 Photo Avatar response:`, result);
                     const photoAvatarId = result.data?.photo_avatar_id || result.photo_avatar_id;
                     if (photoAvatarId) {
                         this.logger.log(`[${uploadId}] ✅ Photo Avatar created: ${photoAvatarId}`);
                         return photoAvatarId;
                     }
                 }
-                this.logger.warn(`[${uploadId}] Photo Avatar API failed: ${response.status}`);
+                else {
+                    const errorText = await response.text();
+                    this.logger.warn(`[${uploadId}] Photo Avatar API failed: ${response.status} - ${errorText}`);
+                }
             }
             catch (photoAvatarError) {
                 this.logger.warn(`[${uploadId}] Photo Avatar approach failed:`, photoAvatarError);

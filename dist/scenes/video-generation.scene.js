@@ -387,6 +387,15 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             this.logger.log(`Starting ${preferredService.toUpperCase()} generation with photoUrl: ${photoUrl ? 'PROVIDED' : 'MISSING'}, voiceUrl: ${voiceUrl ? `PROVIDED (${voiceUrl.substring(0, 50)}...)` : `MISSING (${voiceUrl})`}`);
             const requestId = `video_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
             this.logger.log(`[${requestId}] 🎯 Генерируем видео через HeyGen с пользовательским контентом`);
+            this.logger.log(`[${requestId}] 📋 Request object:`, {
+                photoUrl: photoUrl ? `PROVIDED (${photoUrl.substring(0, 50)}...)` : 'MISSING',
+                audioUrl: voiceUrl ? `PROVIDED (${voiceUrl.substring(0, 50)}...)` : 'MISSING',
+                script: request.script?.substring(0, 50) + '...',
+                imageUrl: imageUrl ? `PROVIDED (${imageUrl.substring(0, 50)}...)` : 'MISSING',
+                platform: request.platform,
+                duration: request.duration,
+                quality: request.quality
+            });
             const result = await this.heygenService.generateVideo(request);
             const hasUserContent = (session.photoFileId && session.voiceFileId);
             const hasCustomPhoto = session.photoFileId && imageUrl !== "heygen_use_available_avatar";
