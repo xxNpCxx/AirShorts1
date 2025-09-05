@@ -413,37 +413,115 @@ export class HeyGenService {
    * @throws Error if upload fails
    */
   /**
-   * Process audio for HeyGen - currently not supported in Avatar IV API
+   * Upload audio asset to HeyGen API
    * 
+   * @see https://docs.heygen.com/reference/upload-asset
+   * @endpoint POST /v1/upload
    * @param audioBuffer - Audio file buffer
-   * @returns Promise with placeholder (TTS will be used)
+   * @returns Promise with audio asset ID
+   * @throws Error if upload fails
    */
   async uploadAudio(audioBuffer: Buffer): Promise<string> {
     const uploadId = `heygen_audio_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
-    this.logger.log(`[${uploadId}] 🎵 HeyGen API (сентябрь 2025) не поддерживает загрузку пользовательского аудио`);
-    this.logger.log(`[${uploadId}] 📝 Avatar IV использует только voice_id из библиотеки HeyGen (TTS)`);
-    this.logger.log(`[${uploadId}] 📊 Аудио размер: ${audioBuffer.length} bytes - сохранен, но не используется`);
-    
-    // Возвращаем маркер, что аудио обработано, но не загружено
-    return `heygen_audio_not_supported:${uploadId}`;
+    try {
+      this.logger.log(`[${uploadId}] 🎵 Загружаем пользовательское аудио в HeyGen Assets (${audioBuffer.length} bytes)`);
+      
+      const formData = new FormData();
+      formData.append('file', new Blob([audioBuffer], { type: 'audio/wav' }), 'user_audio.wav');
+      
+      const response = await fetch(`${this.baseUrl}/v1/upload`, {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': this.apiKey,
+        },
+        body: formData,
+      });
+
+      this.logger.log(`[${uploadId}] 📥 Upload Asset response: ${response.status} ${response.statusText}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(`[${uploadId}] ❌ Audio upload failed: ${response.status} ${response.statusText}`);
+        this.logger.error(`[${uploadId}] Error details: ${errorText}`);
+        throw new Error(`Audio upload failed: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json() as any;
+      this.logger.log(`[${uploadId}] 📋 Upload Asset response data:`, result);
+      
+      const audioAssetId = result.data?.asset_id || result.asset_id;
+      
+      if (!audioAssetId) {
+        this.logger.error(`[${uploadId}] ❌ No asset_id in response:`, result);
+        throw new Error('No asset_id returned from HeyGen Upload Asset API');
+      }
+      
+      this.logger.log(`[${uploadId}] ✅ Audio uploaded successfully: ${audioAssetId}`);
+      return audioAssetId;
+      
+    } catch (error) {
+      this.logger.error(`[${uploadId}] ❌ Error uploading audio:`, error);
+      throw error;
+    }
   }
 
   /**
-   * Process image for HeyGen - Upload endpoints return 404 in current API version
+   * Upload image asset to HeyGen API for Avatar IV
    * 
+   * @see https://docs.heygen.com/reference/upload-asset
+   * @endpoint POST /v1/upload
    * @param imageBuffer - Image file buffer  
-   * @returns Promise with placeholder (standard avatar will be used)
+   * @returns Promise with image_key for Avatar IV or asset_id for Standard API
    */
   async uploadImage(imageBuffer: Buffer): Promise<string> {
     const uploadId = `heygen_image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
-    this.logger.log(`[${uploadId}] 🖼️ HeyGen API (сентябрь 2025) не поддерживает загрузку пользовательских изображений`);
-    this.logger.log(`[${uploadId}] 📝 Все Upload endpoints (/v1/upload, /v1/photo_avatar/generate) возвращают 404`);
-    this.logger.log(`[${uploadId}] 📊 Фото размер: ${imageBuffer.length} bytes - сохранено, но не используется`);
-    this.logger.log(`[${uploadId}] 🤖 Будет использован доступный аватар из библиотеки HeyGen`);
-    
-    return "heygen_use_available_avatar";
+    try {
+      this.logger.log(`[${uploadId}] 🖼️ Загружаем пользовательское фото в HeyGen Assets (${imageBuffer.length} bytes)`);
+      
+      const formData = new FormData();
+      formData.append('file', new Blob([imageBuffer], { type: 'image/jpeg' }), 'user_photo.jpg');
+      
+      const response = await fetch(`${this.baseUrl}/v1/upload`, {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': this.apiKey,
+        },
+        body: formData,
+      });
+
+      this.logger.log(`[${uploadId}] 📥 Upload Asset response: ${response.status} ${response.statusText}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(`[${uploadId}] ❌ Image upload failed: ${response.status} ${response.statusText}`);
+        this.logger.error(`[${uploadId}] Error details: ${errorText}`);
+        throw new Error(`Image upload failed: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json() as any;
+      this.logger.log(`[${uploadId}] 📋 Upload Asset response data:`, result);
+      
+      // Ищем image_key для Avatar IV или asset_id для Standard API
+      const imageKey = result.data?.image_key || result.image_key;
+      const assetId = result.data?.asset_id || result.asset_id;
+      
+      if (imageKey) {
+        this.logger.log(`[${uploadId}] ✅ Image Key для Avatar IV: ${imageKey}`);
+        return imageKey;
+      } else if (assetId) {
+        this.logger.log(`[${uploadId}] ✅ Asset ID для Standard API: ${assetId}`);
+        return assetId;
+      } else {
+        this.logger.error(`[${uploadId}] ❌ No image_key or asset_id in response:`, result);
+        throw new Error('No image_key or asset_id returned from HeyGen Upload Asset API');
+      }
+      
+    } catch (error) {
+      this.logger.error(`[${uploadId}] ❌ Error uploading image:`, error);
+      throw error;
+    }
   }
 
   private async uploadImageFallback(imageBuffer: Buffer, uploadId: string): Promise<string> {

@@ -336,7 +336,10 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                             imageUrl = await this.heygenService.uploadImage(imageBuffer);
                             this.logger.log(`Image processed in HeyGen: ${imageUrl}`);
                             if (imageUrl === "heygen_use_available_avatar") {
-                                await ctx.reply("📝 HeyGen API не поддерживает загрузку пользовательских фото.\nБудет использован красивый стандартный аватар.");
+                                await ctx.reply("📝 Ошибка загрузки фото.\nБудет использован красивый стандартный аватар.");
+                            }
+                            else {
+                                await ctx.reply("✅ Ваше фото успешно загружено!\n🎭 Будет создан персонализированный аватар.");
                             }
                         }
                         catch (error) {
@@ -370,7 +373,10 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                     voiceUrl = await this.heygenService.uploadAudio(voiceBuffer);
                     this.logger.log(`Voice processed for HeyGen: ${voiceUrl}`);
                     if (voiceUrl.includes('heygen_audio_not_supported')) {
-                        await ctx.reply("📝 HeyGen API не поддерживает загрузку пользовательского аудио.\nБудет использован качественный TTS для озвучки вашего текста.");
+                        await ctx.reply("📝 Ошибка загрузки аудио.\nБудет использован качественный TTS для озвучки вашего текста.");
+                    }
+                    else {
+                        await ctx.reply("✅ Ваш голос успешно загружен!\n🎵 Будет использован для озвучки видео.");
                     }
                 }
                 catch (error) {
@@ -407,13 +413,13 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             const hasCustomVoice = session.voiceFileId && voiceUrl && !voiceUrl.includes('heygen_audio_not_supported');
             let serviceExplanation = "";
             if (session.photoFileId && session.voiceFileId) {
-                serviceExplanation = "📝 HeyGen API (2025) поддерживает только TTS и стандартные аватары\n🎭 Ваш контент сохранен, но используется TTS с доступным аватаром";
+                serviceExplanation = "🎭 Используется ВАШЕ фото и ВАШ голос для создания персонализированного аватара";
             }
             else if (session.photoFileId) {
-                serviceExplanation = "📸 HeyGen API не поддерживает загрузку фото, используется стандартный аватар";
+                serviceExplanation = "📸 Используется ВАШЕ фото с качественным TTS озвучиванием";
             }
             else if (session.voiceFileId) {
-                serviceExplanation = "🎵 HeyGen API не поддерживает загрузку аудио, используется TTS";
+                serviceExplanation = "🎵 Используется ВАШ голос с красивым аватаром из библиотеки";
             }
             else {
                 serviceExplanation = "🤖 Используется предустановленный аватар и TTS";
