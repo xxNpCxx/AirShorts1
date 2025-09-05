@@ -505,10 +505,10 @@ export class VideoGenerationScene {
           const voiceBuffer = Buffer.from(await response.arrayBuffer());
           this.logger.log(`Downloaded voice file: ${voiceBuffer.length} bytes`);
           
-                  // Avatar IV пока не поддерживает пользовательское аудио
-        await ctx.reply("📝 Avatar IV будет использовать TTS для озвучки вашего текста...");
+                  // Загружаем пользовательское аудио в HeyGen Assets для Standard API
+        await ctx.reply("🎵 Загружаю ваш голос в HeyGen...");
         voiceUrl = await this.heygenService.uploadAudio(voiceBuffer);
-        this.logger.log(`Audio processing for Avatar IV: ${voiceUrl}`);
+        this.logger.log(`Voice uploaded to HeyGen: ${voiceUrl}`);
           
         } catch (error) {
           this.logger.error("Error processing voice file:", error);
@@ -538,9 +538,19 @@ export class VideoGenerationScene {
       const result = await this.heygenService.generateVideo(request);
 
       const hasUserContent = (session.photoFileId && session.voiceFileId);
-      const serviceExplanation = session.photoFileId && imageUrl !== "heygen_use_available_avatar"
-        ? "📸 Используется ваше фото для создания говорящего аватара с TTS озвучкой"
-        : "🤖 Используется предустановленный аватар и TTS";
+      const hasCustomPhoto = session.photoFileId && imageUrl !== "heygen_use_available_avatar";
+      const hasCustomVoice = session.voiceFileId && voiceUrl && !voiceUrl.includes('avatar_iv_tts_required');
+      
+      let serviceExplanation = "";
+      if (hasCustomPhoto && hasCustomVoice) {
+        serviceExplanation = "🎭 Используется ваше фото и голос для создания персонализированного аватара";
+      } else if (hasCustomPhoto) {
+        serviceExplanation = "📸 Используется ваше фото с TTS озвучкой";
+      } else if (hasCustomVoice) {
+        serviceExplanation = "🎵 Используется ваш голос с предустановленным аватаром";
+      } else {
+        serviceExplanation = "🤖 Используется предустановленный аватар и TTS";
+      }
       
       await ctx.reply(
           `🎬 Генерация началась! Это может занять 2-5 минут.\n\n` +
