@@ -230,108 +230,18 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
     }
     async uploadAudio(audioBuffer) {
         const uploadId = `heygen_audio_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        try {
-            this.logger.log(`[${uploadId}] 🎵 Загружаем пользовательское аудио в HeyGen Assets (${audioBuffer.length} bytes)`);
-            const formData = new FormData();
-            formData.append('file', new Blob([audioBuffer], { type: 'audio/wav' }), 'user_audio.wav');
-            const response = await fetch(`${this.baseUrl}${HEYGEN_API.endpoints.uploadAsset}`, {
-                method: 'POST',
-                headers: {
-                    'X-API-KEY': this.apiKey,
-                },
-                body: formData,
-            });
-            this.logger.log(`[${uploadId}] 📥 Upload Asset response: ${response.status} ${response.statusText}`);
-            if (!response.ok) {
-                const errorText = await response.text();
-                this.logger.error(`[${uploadId}] ❌ Audio upload failed: ${response.status} ${response.statusText}`);
-                this.logger.error(`[${uploadId}] Error details: ${errorText}`);
-                throw new Error(`Audio upload failed: ${response.status} - ${errorText}`);
-            }
-            const result = await response.json();
-            const audioAssetId = result.data?.asset_id || result.asset_id;
-            if (!audioAssetId) {
-                this.logger.error(`[${uploadId}] ❌ No asset_id in response:`, result);
-                throw new Error('No asset_id returned from HeyGen Upload Asset API');
-            }
-            this.logger.log(`[${uploadId}] ✅ Audio uploaded successfully: ${audioAssetId}`);
-            return audioAssetId;
-        }
-        catch (error) {
-            this.logger.error(`[${uploadId}] ❌ Error uploading audio:`, error);
-            throw error;
-        }
+        this.logger.log(`[${uploadId}] 🎵 HeyGen API (сентябрь 2025) не поддерживает загрузку пользовательского аудио`);
+        this.logger.log(`[${uploadId}] 📝 Avatar IV использует только voice_id из библиотеки HeyGen (TTS)`);
+        this.logger.log(`[${uploadId}] 📊 Аудио размер: ${audioBuffer.length} bytes - сохранен, но не используется`);
+        return `heygen_audio_not_supported:${uploadId}`;
     }
     async uploadImage(imageBuffer) {
         const uploadId = `heygen_image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        try {
-            this.logger.log(`[${uploadId}] 🖼️ Пробуем создать TalkingPhoto из пользовательского фото (${imageBuffer.length} bytes)`);
-            try {
-                const formData = new FormData();
-                formData.append('image', new Blob([imageBuffer], { type: 'image/jpeg' }), 'user_photo.jpg');
-                const response = await fetch(`${this.baseUrl}/v1/photo_avatar/generate`, {
-                    method: 'POST',
-                    headers: {
-                        'X-API-KEY': this.apiKey,
-                    },
-                    body: formData,
-                });
-                this.logger.log(`[${uploadId}] 📥 Photo Avatar API response: ${response.status} ${response.statusText}`);
-                if (response.ok) {
-                    const result = await response.json();
-                    this.logger.log(`[${uploadId}] 📋 Photo Avatar response:`, result);
-                    const photoAvatarId = result.data?.photo_avatar_id || result.photo_avatar_id;
-                    if (photoAvatarId) {
-                        this.logger.log(`[${uploadId}] ✅ Photo Avatar created: ${photoAvatarId}`);
-                        return photoAvatarId;
-                    }
-                }
-                else {
-                    const errorText = await response.text();
-                    this.logger.warn(`[${uploadId}] Photo Avatar API failed: ${response.status} - ${errorText}`);
-                }
-            }
-            catch (photoAvatarError) {
-                this.logger.warn(`[${uploadId}] Photo Avatar approach failed:`, photoAvatarError);
-            }
-            try {
-                const formData = new FormData();
-                formData.append('file', new Blob([imageBuffer], { type: 'image/jpeg' }), 'user_photo.jpg');
-                const uploadResponse = await fetch(`${this.baseUrl}/v1/upload`, {
-                    method: 'POST',
-                    headers: {
-                        'X-API-KEY': this.apiKey,
-                    },
-                    body: formData,
-                });
-                if (uploadResponse.ok) {
-                    const uploadResult = await uploadResponse.json();
-                    const imageKey = uploadResult.data?.image_key || uploadResult.image_key;
-                    if (imageKey) {
-                        this.logger.log(`[${uploadId}] ✅ Image Key для Avatar IV: ${imageKey}`);
-                        return imageKey;
-                    }
-                    const assetId = uploadResult.data?.asset_id || uploadResult.asset_id;
-                    if (assetId) {
-                        this.logger.log(`[${uploadId}] ✅ Asset uploaded: ${assetId}`);
-                        return assetId;
-                    }
-                }
-                else {
-                    const errorText = await uploadResponse.text();
-                    this.logger.warn(`[${uploadId}] Upload Asset failed: ${uploadResponse.status} - ${errorText}`);
-                }
-            }
-            catch (assetError) {
-                this.logger.warn(`[${uploadId}] Asset upload approach failed:`, assetError);
-            }
-            this.logger.warn(`[${uploadId}] ⚠️ Все подходы загрузки фото не сработали, используем доступный аватар`);
-            return "heygen_use_available_avatar";
-        }
-        catch (error) {
-            this.logger.error(`[${uploadId}] ❌ Critical error in uploadImage:`, error);
-            return "heygen_use_available_avatar";
-        }
+        this.logger.log(`[${uploadId}] 🖼️ HeyGen API (сентябрь 2025) не поддерживает загрузку пользовательских изображений`);
+        this.logger.log(`[${uploadId}] 📝 Все Upload endpoints (/v1/upload, /v1/photo_avatar/generate) возвращают 404`);
+        this.logger.log(`[${uploadId}] 📊 Фото размер: ${imageBuffer.length} bytes - сохранено, но не используется`);
+        this.logger.log(`[${uploadId}] 🤖 Будет использован доступный аватар из библиотеки HeyGen`);
+        return "heygen_use_available_avatar";
     }
     async uploadImageFallback(imageBuffer, uploadId) {
         try {
