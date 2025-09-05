@@ -428,7 +428,7 @@ export class HeyGenService {
       this.logger.log(`[${uploadId}] 🎵 Загружаем пользовательское аудио в HeyGen Assets (${audioBuffer.length} bytes)`);
       
       const formData = new FormData();
-      formData.append('file', audioBuffer, 'user_audio.wav');
+      formData.append('file', new Blob([audioBuffer], { type: 'audio/wav' }), 'user_audio.wav');
       
       const response = await fetch('https://upload.heygen.com/v1/asset', {
         method: 'POST',
@@ -481,7 +481,7 @@ export class HeyGenService {
       this.logger.log(`[${uploadId}] 🖼️ Загружаем пользовательское фото в HeyGen Assets (${imageBuffer.length} bytes)`);
       
       const formData = new FormData();
-      formData.append('file', imageBuffer, 'user_photo.jpg');
+      formData.append('file', new Blob([imageBuffer], { type: 'image/jpeg' }), 'user_photo.jpg');
       
       const response = await fetch('https://upload.heygen.com/v1/asset', {
         method: 'POST',
