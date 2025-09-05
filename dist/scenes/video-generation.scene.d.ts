@@ -1,20 +1,15 @@
 import { Context } from "telegraf";
 import type { Message } from "@telegraf/types";
 import { HeyGenService } from "../heygen/heygen.service";
-import { ElevenLabsService } from "../elevenlabs/elevenlabs.service";
-import { VoiceNotificationService } from "../elevenlabs/voice-notification.service";
-import { UsersService } from "../users/users.service";
+import { ProcessManagerService } from "../heygen/process-manager.service";
 import { Telegraf } from "telegraf";
 interface SessionData {
     photoFileId?: string;
-    audioFileId?: string;
     voiceFileId?: string;
-    clonedVoiceId?: string;
     script?: string;
     platform?: "youtube-shorts";
     duration?: number;
     quality?: "720p" | "1080p";
-    textPrompt?: string;
 }
 type PhotoContext = Context & {
     message: Message.PhotoMessage;
@@ -30,13 +25,12 @@ type TextContext = Context & {
 };
 export declare class VideoGenerationScene {
     private readonly heygenService;
-    private readonly elevenLabsService;
-    private readonly voiceNotificationService;
-    private readonly usersService;
+    private readonly processManager;
     private readonly bot;
     private readonly logger;
-    constructor(heygenService: HeyGenService, elevenLabsService: ElevenLabsService, voiceNotificationService: VoiceNotificationService, usersService: UsersService, bot: Telegraf);
+    constructor(heygenService: HeyGenService, processManager: ProcessManagerService, bot: Telegraf);
     private calculateVideoDuration;
+    private createDigitalTwin;
     onSceneEnter(ctx: Context): Promise<void>;
     onPhoto(ctx: PhotoContext): Promise<void>;
     onDocument(ctx: Context): Promise<void>;
@@ -44,19 +38,11 @@ export declare class VideoGenerationScene {
     onAudio(ctx: Context): Promise<void>;
     onVoice(ctx: VoiceContext): Promise<void>;
     onText(ctx: TextContext): Promise<void>;
-    private showPlatformSelection;
-    private showDurationSelection;
     private showQualitySelection;
-    private showTextPromptInput;
-    private startVideoGeneration;
-    onYouTubeShortsSelected(ctx: Context): Promise<void>;
-    onTikTokSelected(ctx: Context): Promise<void>;
-    onInstagramReelsSelected(ctx: Context): Promise<void>;
     onQuality720Selected(ctx: Context): Promise<void>;
     onQuality1080Selected(ctx: Context): Promise<void>;
     onCancelVideoGeneration(ctx: Context): Promise<void>;
     onCancel(ctx: Context): Promise<void>;
-    private pollVideoStatus;
 }
 export {};
 //# sourceMappingURL=video-generation.scene.d.ts.map

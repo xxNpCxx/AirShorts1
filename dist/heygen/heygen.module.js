@@ -10,14 +10,18 @@ exports.HeyGenModule = void 0;
 const common_1 = require("@nestjs/common");
 const heygen_controller_1 = require("./heygen.controller");
 const heygen_service_1 = require("./heygen.service");
+const heygen_webhook_controller_1 = require("./heygen-webhook.controller");
+const process_manager_service_1 = require("./process-manager.service");
+const nestjs_telegraf_1 = require("nestjs-telegraf");
 let HeyGenModule = class HeyGenModule {
 };
 exports.HeyGenModule = HeyGenModule;
 exports.HeyGenModule = HeyGenModule = __decorate([
     (0, common_1.Module)({
-        controllers: [heygen_controller_1.HeyGenController],
-        providers: [heygen_service_1.HeyGenService],
-        exports: [heygen_service_1.HeyGenService],
+        imports: [nestjs_telegraf_1.TelegrafModule],
+        controllers: [heygen_controller_1.HeyGenController, heygen_webhook_controller_1.HeyGenWebhookController],
+        providers: [heygen_service_1.HeyGenService, process_manager_service_1.ProcessManagerService],
+        exports: [heygen_service_1.HeyGenService, process_manager_service_1.ProcessManagerService],
     })
 ], HeyGenModule);
 //# sourceMappingURL=heygen.module.js.map

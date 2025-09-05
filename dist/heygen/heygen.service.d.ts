@@ -9,6 +9,27 @@ export interface HeyGenVideoRequest {
     textPrompt?: string;
     imageUrl?: string;
 }
+export interface DigitalTwinRequest {
+    photoUrl: string;
+    audioUrl: string;
+    script: string;
+    videoTitle: string;
+    platform: "youtube-shorts";
+    quality: "720p" | "1080p";
+    callbackId: string;
+}
+export interface PhotoAvatarRequest {
+    name: string;
+    photo_url: string;
+    callback_url?: string;
+    callback_id?: string;
+}
+export interface VoiceCloningRequest {
+    name: string;
+    audio_url: string;
+    callback_url?: string;
+    callback_id?: string;
+}
 export interface HeyGenVideoResponse {
     id: string;
     status: string;
@@ -76,5 +97,9 @@ export declare class HeyGenService {
     private uploadImageFallback;
     private getAvailableAvatars;
     private getHardcodedAvatars;
+    createPhotoAvatar(photoUrl: string, callbackId: string): Promise<string>;
+    createVoiceClone(audioUrl: string, callbackId: string): Promise<string>;
+    generateDigitalTwinVideo(avatarId: string, voiceId: string, script: string, videoTitle: string, callbackId: string): Promise<string>;
+    setupWebhook(): Promise<void>;
 }
 //# sourceMappingURL=heygen.service.d.ts.map

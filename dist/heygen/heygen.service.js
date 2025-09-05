@@ -384,6 +384,220 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             "Abigail_standing_office_front_2024112501"
         ];
     }
+    async createPhotoAvatar(photoUrl, callbackId) {
+        const requestId = `photo_avatar_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        try {
+            this.logger.log(`📸 [HEYGEN_PHOTO_AVATAR] Starting Photo Avatar creation`, {
+                requestId,
+                callbackId,
+                photoUrl: photoUrl.substring(0, 100) + '...',
+                webhookUrl: `${process.env.WEBHOOK_URL}/heygen/webhook`,
+                timestamp: new Date().toISOString()
+            });
+            const payload = {
+                name: `avatar_${callbackId}`,
+                photo_url: photoUrl,
+                callback_url: `${process.env.WEBHOOK_URL}/heygen/webhook`,
+                callback_id: callbackId
+            };
+            this.logger.log(`📤 [HEYGEN_PHOTO_AVATAR] Sending request to HeyGen API`, {
+                requestId,
+                callbackId,
+                endpoint: `${this.baseUrl}/v1/photo_avatar.create`,
+                payload: {
+                    name: payload.name,
+                    photo_url: payload.photo_url.substring(0, 100) + '...',
+                    callback_url: payload.callback_url,
+                    callback_id: payload.callback_id
+                },
+                timestamp: new Date().toISOString()
+            });
+            const response = await fetch(`${this.baseUrl}/v1/photo_avatar.create`, {
+                method: 'POST',
+                headers: {
+                    'X-API-KEY': this.apiKey,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            this.logger.log(`📥 [HEYGEN_PHOTO_AVATAR] Received response from HeyGen API`, {
+                requestId,
+                callbackId,
+                status: response.status,
+                statusText: response.statusText,
+                headers: Object.fromEntries(response.headers.entries()),
+                timestamp: new Date().toISOString()
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                this.logger.error(`❌ [HEYGEN_PHOTO_AVATAR] API request failed`, {
+                    requestId,
+                    callbackId,
+                    status: response.status,
+                    statusText: response.statusText,
+                    errorBody: errorText,
+                    timestamp: new Date().toISOString()
+                });
+                throw new Error(`Photo Avatar creation failed: ${response.status} - ${errorText}`);
+            }
+            const result = await response.json();
+            this.logger.log(`📋 [HEYGEN_PHOTO_AVATAR] Response data received`, {
+                requestId,
+                callbackId,
+                responseData: result,
+                timestamp: new Date().toISOString()
+            });
+            const avatarId = result.data?.avatar_id || result.avatar_id;
+            if (!avatarId) {
+                this.logger.error(`❌ [HEYGEN_PHOTO_AVATAR] No avatar_id in response`, {
+                    requestId,
+                    callbackId,
+                    responseData: result,
+                    timestamp: new Date().toISOString()
+                });
+                throw new Error('No avatar_id returned from Photo Avatar API');
+            }
+            this.logger.log(`✅ [HEYGEN_PHOTO_AVATAR] Photo Avatar created successfully`, {
+                requestId,
+                callbackId,
+                avatarId,
+                timestamp: new Date().toISOString()
+            });
+            return avatarId;
+        }
+        catch (error) {
+            this.logger.error(`❌ [HEYGEN_PHOTO_AVATAR] Error creating Photo Avatar`, {
+                requestId,
+                callbackId,
+                error: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined,
+                photoUrl: photoUrl.substring(0, 100) + '...',
+                timestamp: new Date().toISOString()
+            });
+            throw error;
+        }
+    }
+    async createVoiceClone(audioUrl, callbackId) {
+        const requestId = `voice_clone_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        try {
+            this.logger.log(`[${requestId}] 🎵 Creating Voice Clone from: ${audioUrl}`);
+            const payload = {
+                name: `voice_${callbackId}`,
+                audio_url: audioUrl,
+                callback_url: `${process.env.WEBHOOK_URL}/heygen/webhook`,
+                callback_id: callbackId
+            };
+            this.logger.debug(`[${requestId}] 📤 Voice Cloning payload:`, payload);
+            const response = await fetch(`${this.baseUrl}/v1/voice_cloning.create`, {
+                method: 'POST',
+                headers: {
+                    'X-API-KEY': this.apiKey,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            this.logger.log(`[${requestId}] 📥 Voice Cloning response: ${response.status} ${response.statusText}`);
+            if (!response.ok) {
+                const errorText = await response.text();
+                this.logger.error(`[${requestId}] ❌ Voice Cloning failed: ${response.status} - ${errorText}`);
+                throw new Error(`Voice Cloning failed: ${response.status} - ${errorText}`);
+            }
+            const result = await response.json();
+            const voiceId = result.data?.voice_id || result.voice_id;
+            if (!voiceId) {
+                this.logger.error(`[${requestId}] ❌ No voice_id in response:`, result);
+                throw new Error('No voice_id returned from Voice Cloning API');
+            }
+            this.logger.log(`[${requestId}] ✅ Voice Clone created successfully: ${voiceId}`);
+            return voiceId;
+        }
+        catch (error) {
+            this.logger.error(`[${requestId}] ❌ Error creating Voice Clone:`, error);
+            throw error;
+        }
+    }
+    async generateDigitalTwinVideo(avatarId, voiceId, script, videoTitle, callbackId) {
+        const requestId = `digital_twin_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        try {
+            this.logger.log(`[${requestId}] 🎬 Generating Digital Twin Video`);
+            this.logger.log(`[${requestId}] Avatar ID: ${avatarId}, Voice ID: ${voiceId}`);
+            this.logger.log(`[${requestId}] Script length: ${script.length} chars`);
+            const payload = {
+                image_key: avatarId,
+                video_title: videoTitle,
+                script: script,
+                voice_id: voiceId,
+                video_orientation: "portrait",
+                fit: "cover"
+            };
+            if (!validateAvatarIVPayload(payload)) {
+                this.logger.error(`[${requestId}] ❌ Invalid Avatar IV payload:`, payload);
+                throw new Error('Invalid Avatar IV payload');
+            }
+            this.logger.debug(`[${requestId}] 📤 Avatar IV payload (validated):`, payload);
+            const response = await fetch(`${this.baseUrl}${HEYGEN_API.endpoints.avatarIV}`, {
+                method: 'POST',
+                headers: {
+                    'X-API-KEY': this.apiKey,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            this.logger.log(`[${requestId}] 📥 Avatar IV response: ${response.status} ${response.statusText}`);
+            if (!response.ok) {
+                const errorText = await response.text();
+                this.logger.error(`[${requestId}] ❌ Avatar IV generation failed: ${response.status} - ${errorText}`);
+                throw new Error(`Avatar IV generation failed: ${response.status} - ${errorText}`);
+            }
+            const result = await response.json();
+            const videoId = result.data?.video_id || result.video_id;
+            if (!videoId) {
+                this.logger.error(`[${requestId}] ❌ No video_id in response:`, result);
+                throw new Error('No video_id returned from Avatar IV API');
+            }
+            this.logger.log(`[${requestId}] ✅ Digital Twin Video generation started: ${videoId}`);
+            return videoId;
+        }
+        catch (error) {
+            this.logger.error(`[${requestId}] ❌ Error generating Digital Twin Video:`, error);
+            throw error;
+        }
+    }
+    async setupWebhook() {
+        const webhookUrl = `${process.env.WEBHOOK_URL}/heygen/webhook`;
+        try {
+            this.logger.log(`🔗 Setting up HeyGen webhook: ${webhookUrl}`);
+            const response = await fetch(`${this.baseUrl}/v1/webhook/endpoint.add`, {
+                method: 'POST',
+                headers: {
+                    'X-API-KEY': this.apiKey,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    url: webhookUrl,
+                    events: [
+                        'photo_avatar.success',
+                        'photo_avatar.failed',
+                        'voice_clone.success',
+                        'voice_clone.failed',
+                        'video.success',
+                        'video.failed'
+                    ]
+                })
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                this.logger.error(`❌ Failed to setup webhook: ${response.status} - ${errorText}`);
+                throw new Error(`Webhook setup failed: ${response.status} - ${errorText}`);
+            }
+            const result = await response.json();
+            this.logger.log(`✅ HeyGen webhook setup successfully:`, result);
+        }
+        catch (error) {
+            this.logger.error(`❌ Error setting up HeyGen webhook:`, error);
+            throw error;
+        }
+    }
 };
 exports.HeyGenService = HeyGenService;
 exports.HeyGenService = HeyGenService = HeyGenService_1 = __decorate([

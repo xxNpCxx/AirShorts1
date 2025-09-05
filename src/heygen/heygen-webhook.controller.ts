@@ -158,7 +158,7 @@ export class HeyGenWebhookController {
   /**
    * Обработка ошибки создания Photo Avatar
    */
-  private async handlePhotoAvatarFailed(payload: HeyGenWebhookPayload) {
+  private async handlePhotoAvatarFailed(payload: HeyGenWebhookPayload, webhookId: string) {
     const { error, callback_id } = payload.event_data;
     this.logger.error(`❌ Photo Avatar creation failed for callback ${callback_id}: ${error}`);
     
@@ -178,7 +178,7 @@ export class HeyGenWebhookController {
   /**
    * Обработка успешного клонирования голоса
    */
-  private async handleVoiceCloneSuccess(payload: HeyGenWebhookPayload) {
+  private async handleVoiceCloneSuccess(payload: HeyGenWebhookPayload, webhookId: string) {
     const { voice_id, callback_id } = payload.event_data;
     this.logger.log(`✅ Voice Clone created successfully: ${voice_id} for callback ${callback_id}`);
     
@@ -197,7 +197,7 @@ export class HeyGenWebhookController {
   /**
    * Обработка ошибки клонирования голоса
    */
-  private async handleVoiceCloneFailed(payload: HeyGenWebhookPayload) {
+  private async handleVoiceCloneFailed(payload: HeyGenWebhookPayload, webhookId: string) {
     const { error, callback_id } = payload.event_data;
     this.logger.error(`❌ Voice Clone creation failed for callback ${callback_id}: ${error}`);
     
@@ -217,7 +217,7 @@ export class HeyGenWebhookController {
   /**
    * Обработка успешного создания видео
    */
-  private async handleVideoSuccess(payload: HeyGenWebhookPayload) {
+  private async handleVideoSuccess(payload: HeyGenWebhookPayload, webhookId: string) {
     const { video_id, video_url, callback_id } = payload.event_data;
     this.logger.log(`✅ Video created successfully: ${video_id} for callback ${callback_id}`);
     this.logger.log(`🎬 Video URL: ${video_url}`);
@@ -241,7 +241,7 @@ export class HeyGenWebhookController {
   /**
    * Обработка ошибки создания видео
    */
-  private async handleVideoFailed(payload: HeyGenWebhookPayload) {
+  private async handleVideoFailed(payload: HeyGenWebhookPayload, webhookId: string) {
     const { error, callback_id } = payload.event_data;
     this.logger.error(`❌ Video creation failed for callback ${callback_id}: ${error}`);
     

@@ -3,23 +3,17 @@ import { Context } from "telegraf";
 import type { Message } from "@telegraf/types";
 import { HeyGenService } from "../heygen/heygen.service";
 import { ProcessManagerService } from "../heygen/process-manager.service";
-import { ElevenLabsService } from "../elevenlabs/elevenlabs.service";
-import { VoiceNotificationService } from "../elevenlabs/voice-notification.service";
-import { UsersService } from "../users/users.service";
 import { Logger, Inject } from "@nestjs/common";
 import { Telegraf } from "telegraf";
 import { getBotToken } from "nestjs-telegraf";
 
 interface SessionData {
   photoFileId?: string;
-  audioFileId?: string;
-  voiceFileId?: string; // Добавляем для хранения голосового сообщения пользователя
-  clonedVoiceId?: string; // ID клонированного голоса в ElevenLabs
+  voiceFileId?: string;
   script?: string;
   platform?: "youtube-shorts";
   duration?: number;
   quality?: "720p" | "1080p";
-  textPrompt?: string;
 }
 
 // Типы для разных контекстов
@@ -45,9 +39,6 @@ export class VideoGenerationScene {
   constructor(
     private readonly heygenService: HeyGenService,
     private readonly processManager: ProcessManagerService,
-    private readonly elevenLabsService: ElevenLabsService,
-    private readonly voiceNotificationService: VoiceNotificationService,
-    private readonly usersService: UsersService,
     @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
   ) {}
 
@@ -215,11 +206,10 @@ export class VideoGenerationScene {
     this.logger.log(`🎬 [@SceneEnter] Пользователь ${ctx.from?.id} вошел в сцену video-generation`);
     await ctx.reply(
       "🎬 Добро пожаловать в генератор видео!\n\n" +
-        "Для создания видео мне понадобится:\n" +
+        "Для создания цифрового двойника мне понадобится:\n" +
         "1. 📸 Фото с человеком\n" +
         "2. 🎵 Голосовое сообщение (ваш голос)\n" +
-        "3. 📝 Сценарий ролика (текст для озвучки)\n" +
-        "4. ⚙️ Настройки видео\n\n" +
+        "3. 📝 Сценарий ролика (текст для озвучки)\n\n" +
         "🎵 **Голос:** Будет использован ваш голос из голосового сообщения!\n\n" +
         "📸 **Требования к фото:**\n" +
         "• Один человек в кадре (лицо хорошо видно)\n" +
@@ -432,12 +422,12 @@ export class VideoGenerationScene {
       // Сохраняем ID голосового сообщения в сессии
       session.voiceFileId = voice.file_id;
 
-    await ctx.reply(
+      await ctx.reply(
         "✅ Голосовое сообщение принято!\n\n" +
         `📊 Информация:\n` +
         `• Длительность: ${voice.duration || '?'} сек.\n` +
         `• Размер: ${voice.file_size ? Math.round(voice.file_size / 1024) + ' КБ' : 'неизвестен'}\n\n` +
-        "🎤 Ваш голос будет использован напрямую в видео!\n\n" +
+        "🎤 Ваш голос будет использован для создания цифрового двойника!\n\n" +
         "📝 Теперь введите текст сценария для озвучки:\n\n" +
         "💡 **Советы:**\n" +
         "• Используйте понятный и интересный текст\n" +
@@ -447,14 +437,11 @@ export class VideoGenerationScene {
         "✍️ Введите текст сценария:"
       );
 
-      // Голос готов к использованию для озвучки видео
-      session.clonedVoiceId = undefined; // Не используем ElevenLabs
     } catch (error) {
       this.logger.error("Error processing voice:", error);
       await ctx.reply("❌ Ошибка при обработке голосового сообщения. Попробуйте еще раз.");
     }
   }
-
 
   @On("text")
   async onText(@Ctx() ctx: TextContext) {
@@ -502,7 +489,7 @@ export class VideoGenerationScene {
           `💡 Длительность рассчитана автоматически на основе количества слов и средней скорости речи для русского языка.\n\n`
         );
         
-        await this.showDigitalTwinOptions(ctx);
+        await this.showQualitySelection(ctx);
       } else {
         // Все данные уже получены, но пользователь отправил еще текст
         await ctx.reply(
@@ -511,7 +498,7 @@ export class VideoGenerationScene {
           `• Фото: ✅ Загружено\n` +
           `• Голос: ✅ Загружен\n` +
           `• Сценарий: ✅ "${session.script}"\n\n` +
-          "🎬 Используйте кнопки ниже для выбора типа генерации и качества."
+          "🎬 Используйте кнопки ниже для выбора качества."
         );
       }
     } catch (error) {
@@ -520,41 +507,9 @@ export class VideoGenerationScene {
     }
   }
 
-  private async showPlatformSelection(@Ctx() ctx: Context) {
-    await ctx.reply(
-      "✅ Сценарий получен! Теперь выберите платформу:",
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: "📱 Короткие вертикальные видео", callback_data: "platform_youtube_shorts" }
-            ],
-            [
-              { text: "📺 Социальные сети (скоро)", callback_data: "platform_tiktok" }
-            ],
-            [
-              { text: "📸 Истории и рилс (скоро)", callback_data: "platform_instagram_reels" }
-            ],
-            [
-              { text: "❌ Отмена", callback_data: "cancel_video_generation" }
-            ]
-          ]
-        }
-      }
-    );
-  }
-
-  private async showDurationSelection(@Ctx() ctx: Context) {
-    await ctx.reply(
-      "✅ Платформа выбрана! Теперь укажите длительность видео в секундах:\n\n" +
-        "📏 От 15 до 60 секунд (рекомендуется 15-30 для коротких видео)\n\n" +
-        "Введите число секунд:",
-    );
-  }
-
   private async showQualitySelection(@Ctx() ctx: Context) {
     await ctx.reply(
-      "✅ Длительность выбрана! Теперь выберите качество видео:",
+      "🎥 Выберите качество видео:",
       {
         reply_markup: {
           inline_keyboard: [
@@ -571,268 +526,6 @@ export class VideoGenerationScene {
     );
   }
 
-  private async showTextPromptInput(@Ctx() ctx: Context) {
-    await ctx.reply(
-      "✅ Качество выбрано! Теперь добавьте текстовый промпт для улучшения генерации:\n\n" +
-        '💡 Например: "Создай видео с динамичными движениями и яркими переходами"\n\n' +
-        'Или просто напишите "нет" если промпт не нужен:',
-    );
-  }
-
-  private async showDigitalTwinOptions(@Ctx() ctx: Context) {
-    const session = (ctx as any).session as SessionData;
-    
-    this.logger.log(`🎬 [DIGITAL_TWIN_OPTIONS] Showing options to user`, {
-      userId: ctx.from?.id,
-      hasPhoto: !!session.photoFileId,
-      hasVoice: !!session.voiceFileId,
-      hasScript: !!session.script,
-      scriptLength: session.script?.length || 0,
-      timestamp: new Date().toISOString()
-    });
-    
-    if (!session.photoFileId || !session.voiceFileId || !session.script) {
-      this.logger.warn(`⚠️ [DIGITAL_TWIN_OPTIONS] Missing required data`, {
-        userId: ctx.from?.id,
-        hasPhoto: !!session.photoFileId,
-        hasVoice: !!session.voiceFileId,
-        hasScript: !!session.script,
-        timestamp: new Date().toISOString()
-      });
-      await ctx.reply("❌ Не все данные получены. Пожалуйста, загрузите фото, голосовое сообщение и введите текст.");
-      return;
-    }
-
-    this.logger.log(`📤 [DIGITAL_TWIN_OPTIONS] Sending options to user`, {
-      userId: ctx.from?.id,
-      timestamp: new Date().toISOString()
-    });
-
-    await ctx.reply(
-      "🎬 Все данные получены! Выберите тип генерации:\n\n" +
-      "🤖 **ИИ-Аватар (D-ID):**\n" +
-      "• Использует готовые аватары\n" +
-      "• Быстрая генерация\n" +
-      "• Стандартные голоса\n\n" +
-      "👤 **Цифровой двойник (HeyGen):**\n" +
-      "• Ваше фото + ваш голос\n" +
-      "• Персонализированный результат\n" +
-      "• Более длительная обработка (2-5 мин)\n\n" +
-      "Выберите вариант:",
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: "🤖 ИИ-Аватар (быстро)", callback_data: "generate_ai_avatar" }
-            ],
-            [
-              { text: "👤 Цифровой двойник (персонально)", callback_data: "create_digital_twin" }
-            ],
-            [
-              { text: "❌ Отмена", callback_data: "cancel_video_generation" }
-            ]
-          ]
-        }
-      }
-    );
-
-    this.logger.log(`✅ [DIGITAL_TWIN_OPTIONS] Options sent successfully`, {
-      userId: ctx.from?.id,
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  private async startVideoGeneration(@Ctx() ctx: Context) {
-    try {
-      const session = (ctx as unknown as { session: SessionData }).session;
-
-      // Определяем предпочтительный сервис пользователя
-      const userId = ctx.from?.id;
-      if (!userId) {
-        await ctx.reply("❌ Ошибка получения данных пользователя");
-        return;
-      }
-
-      const preferredService = await this.usersService.getUserPreferredService(userId);
-      const initialServiceName = preferredService === 'did' ? '🤖 ИИ-Аватар' : '👤 Цифровой двойник';
-
-      await ctx.reply(
-        `🚀 Начинаю генерацию видео...\n\n` +
-        `🔧 Используется: ${initialServiceName}\n` +
-        `⏱️ Это может занять несколько минут. Пожалуйста, подождите.`,
-      );
-
-      // Получаем URL файлов из Telegram
-      let photoUrl = "";
-      let voiceUrl = "";
-      let imageUrl = ""; // URL загруженного изображения
-
-      if (session.photoFileId) {
-        try {
-          const photoFile = await ctx.telegram.getFile(session.photoFileId);
-          if (photoFile.file_path) {
-            photoUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${photoFile.file_path}`;
-            
-            // Загружаем изображение для создания аватара
-            try {
-              const photoBuffer = await ctx.telegram.getFileLink(session.photoFileId);
-              const response = await fetch(photoBuffer.href);
-              const imageBuffer = Buffer.from(await response.arrayBuffer());
-              await ctx.reply("📤 Обрабатываю ваше фото...");
-              imageUrl = await this.heygenService.uploadImage(imageBuffer);
-              this.logger.log(`Image processed: ${imageUrl}`);
-              
-            } catch (error) {
-              this.logger.error("Error processing image:", error);
-              await ctx.reply("❌ Ошибка обработки фото. Попробуйте загрузить фото заново.");
-              return;
-            }
-          }
-        } catch (error) {
-          this.logger.error("Error getting photo URL:", error);
-          await ctx.reply("❌ Ошибка получения фото. Попробуйте загрузить фото заново.");
-          return;
-        }
-      }
-
-      if (session.voiceFileId) {
-        try {
-          await ctx.reply("🔄 Обрабатываю голосовое сообщение...");
-          
-          // Получаем файл из Telegram
-          const voiceFile = await ctx.telegram.getFile(session.voiceFileId);
-          if (!voiceFile.file_path) {
-            throw new Error("No file path received from Telegram");
-          }
-          
-          // Скачиваем файл
-          const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${voiceFile.file_path}`;
-          const response = await fetch(fileUrl);
-          if (!response.ok) {
-            throw new Error(`Failed to download voice file: ${response.status}`);
-          }
-          
-          const voiceBuffer = Buffer.from(await response.arrayBuffer());
-          this.logger.log(`Downloaded voice file: ${voiceBuffer.length} bytes`);
-          
-          // Обрабатываем пользовательское аудио
-          await ctx.reply("🎵 Обрабатываю ваш голос...");
-          voiceUrl = await this.heygenService.uploadAudio(voiceBuffer);
-          this.logger.log(`Voice processed: ${voiceUrl}`);
-          
-          
-        } catch (error) {
-          this.logger.error("Error processing voice file:", error);
-          await ctx.reply("❌ Ошибка обработки голосового сообщения. Попробуйте загрузить заново.");
-          return;
-        }
-      }
-
-      const request = {
-        photoUrl: photoUrl,
-        audioUrl: voiceUrl, // Используем голосовое сообщение пользователя
-        script: session.script || "",
-        platform: session.platform || "youtube-shorts",
-        duration: session.duration || 30,
-        quality: session.quality || "720p",
-        textPrompt: session.textPrompt,
-        imageUrl: imageUrl, // URL загруженного изображения
-      };
-
-      this.logger.log(`Starting ${preferredService.toUpperCase()} generation with photoUrl: ${photoUrl ? 'PROVIDED' : 'MISSING'}, voiceUrl: ${voiceUrl ? `PROVIDED (${voiceUrl.substring(0, 50)}...)` : `MISSING (${voiceUrl})`}`);
-      
-      // Генерируем видео
-      const requestId = `video_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-      
-      this.logger.log(`[${requestId}] 🎯 Генерируем видео с пользовательским контентом`);
-      this.logger.log(`[${requestId}] 📋 Request object:`, {
-        photoUrl: photoUrl ? `PROVIDED (${photoUrl.substring(0, 50)}...)` : 'MISSING',
-        audioUrl: voiceUrl ? `PROVIDED (${voiceUrl.substring(0, 50)}...)` : 'MISSING', 
-        script: request.script?.substring(0, 50) + '...',
-        imageUrl: imageUrl ? `PROVIDED (${imageUrl.substring(0, 50)}...)` : 'MISSING',
-        platform: request.platform,
-        duration: request.duration,
-        quality: request.quality
-      });
-      
-      const result = await this.heygenService.generateVideo(request);
-
-      const hasUserContent = (session.photoFileId && session.voiceFileId);
-      const hasCustomPhoto = session.photoFileId && imageUrl !== "heygen_use_available_avatar";
-      const hasCustomVoice = session.voiceFileId && voiceUrl && !voiceUrl.includes('heygen_audio_not_supported');
-      
-      let serviceExplanation = "";
-      if (session.photoFileId && session.voiceFileId) {
-        serviceExplanation = "📝 Сервис поддерживает только синтез речи и стандартные аватары\n🎭 Ваш контент сохранен, но используется синтез речи с доступным аватаром";
-      } else if (session.photoFileId) {
-        serviceExplanation = "📸 Загрузка фото временно недоступна, используется стандартный аватар";
-      } else if (session.voiceFileId) {
-        serviceExplanation = "🎵 Загрузка аудио временно недоступна, используется синтез речи";
-      } else {
-        serviceExplanation = "🤖 Используется предустановленный аватар и синтез речи";
-      }
-
-      await ctx.reply(
-          `🎬 Генерация началась! Это может занять 2-5 минут.\n\n` +
-          `🔧 Сервис: Цифровой двойник\n` +
-          `${serviceExplanation}\n\n` +
-          `📬 Готовое видео будет отправлено вам автоматически.`,
-      );
-
-      // Запускаем polling в фоне
-      this.pollVideoStatus(result.id, ctx.from?.id, 'heygen');
-
-      // Возвращаемся в главное меню
-      await (ctx as { scene?: { leave: () => Promise<void> } }).scene?.leave();
-    } catch (error) {
-      this.logger.error("Error starting video generation:", error);
-      await ctx.reply(
-        `❌ К сожалению, произошла ошибка при создании видео.\n\n` +
-        `💡 Попробуйте:\n` +
-        `• Создать видео заново\n` +
-        `• Использовать другое фото или голосовое сообщение\n` +
-        `• Обратиться к администратору`
-      );
-    }
-  }
-
-  @Action("platform_youtube_shorts")
-  async onYouTubeShortsSelected(@Ctx() ctx: Context) {
-    try {
-      await ctx.answerCbQuery();
-      const session = (ctx as unknown as { session: SessionData }).session;
-      session.platform = "youtube-shorts";
-      
-      await ctx.editMessageText(
-        `✅ Платформа выбрана: Короткие вертикальные видео\n\n` +
-        `⏱️ Длительность видео: ${session.duration || 30} сек. (рассчитана автоматически)`
-      );
-      
-      await this.showQualitySelection(ctx);
-    } catch (error) {
-      this.logger.error("Error selecting YouTube Shorts:", error);
-      await ctx.answerCbQuery("❌ Ошибка выбора платформы");
-    }
-  }
-
-  @Action("platform_tiktok")
-  async onTikTokSelected(@Ctx() ctx: Context) {
-    try {
-      await ctx.answerCbQuery("❌ Эта платформа пока не поддерживается");
-    } catch (error) {
-      this.logger.error("Error selecting TikTok:", error);
-    }
-  }
-
-  @Action("platform_instagram_reels")
-  async onInstagramReelsSelected(@Ctx() ctx: Context) {
-    try {
-      await ctx.answerCbQuery("❌ Эта платформа пока не поддерживается");
-    } catch (error) {
-      this.logger.error("Error selecting Instagram Reels:", error);
-    }
-  }
-
   @Action("quality_720p")
   async onQuality720Selected(@Ctx() ctx: Context) {
     try {
@@ -841,10 +534,12 @@ export class VideoGenerationScene {
       session.quality = "720p";
 
       await ctx.editMessageText(
-        "✅ Качество выбрано: 720p (быстрее генерация, меньше места)"
+        "✅ Качество выбрано: 720p (быстрее генерация, меньше места)\n\n" +
+        "🎬 Запускаю создание цифрового двойника..."
       );
 
-      await this.showDigitalTwinOptions(ctx);
+      // Сразу запускаем создание цифрового двойника
+      await this.createDigitalTwin(ctx);
     } catch (error) {
       this.logger.error("Error selecting 720p quality:", error);
       await ctx.answerCbQuery("❌ Ошибка выбора качества");
@@ -859,10 +554,12 @@ export class VideoGenerationScene {
       session.quality = "1080p";
 
       await ctx.editMessageText(
-        "✅ Качество выбрано: 1080p (лучшее качество, больше места)"
+        "✅ Качество выбрано: 1080p (лучшее качество, больше места)\n\n" +
+        "🎬 Запускаю создание цифрового двойника..."
       );
 
-      await this.showDigitalTwinOptions(ctx);
+      // Сразу запускаем создание цифрового двойника
+      await this.createDigitalTwin(ctx);
     } catch (error) {
       this.logger.error("Error selecting 1080p quality:", error);
       await ctx.answerCbQuery("❌ Ошибка выбора качества");
@@ -885,119 +582,5 @@ export class VideoGenerationScene {
   async onCancel(@Ctx() ctx: Context) {
     await ctx.reply("❌ Создание видео отменено.");
     await (ctx as { scene?: { leave: () => Promise<void> } }).scene?.leave();
-  }
-
-  @Action("create_digital_twin")
-  async onCreateDigitalTwin(@Ctx() ctx: Context) {
-    try {
-      await ctx.answerCbQuery();
-      this.logger.log(`🎬 [@Action create_digital_twin] Пользователь ${ctx.from?.id} запустил создание цифрового двойника`);
-      await this.createDigitalTwin(ctx);
-    } catch (error) {
-      this.logger.error("Error creating digital twin:", error);
-      await ctx.answerCbQuery("❌ Ошибка создания цифрового двойника");
-    }
-  }
-
-  @Action("generate_ai_avatar")
-  async onGenerateAiAvatar(@Ctx() ctx: Context) {
-    try {
-      await ctx.answerCbQuery();
-      this.logger.log(`🤖 [@Action generate_ai_avatar] Пользователь ${ctx.from?.id} запустил генерацию ИИ-аватара`);
-      await this.startVideoGeneration(ctx);
-    } catch (error) {
-      this.logger.error("Error generating AI avatar:", error);
-      await ctx.answerCbQuery("❌ Ошибка генерации ИИ-аватара");
-    }
-  }
-
-  /**
-   * Отслеживает статус генерации видео и автоматически отправляет готовое видео пользователю
-   */
-  private async pollVideoStatus(videoId: string, userId?: number, service: 'did' | 'heygen' = 'did'): Promise<void> {
-    if (!userId) return;
-    
-    const maxAttempts = 20; // 10 минут максимум
-    const interval = 30000; // 30 секунд между проверками
-    
-    this.logger.log(`🔄 Начинаем отслеживание статуса видео ${videoId} для пользователя ${userId} (сервис: ${service.toUpperCase()})`);
-    
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      try {
-        // Ждем перед проверкой
-        await new Promise(resolve => setTimeout(resolve, interval));
-        
-        // Проверяем статус генерации видео
-        const status = await this.heygenService.getVideoStatus(videoId);
-        
-        this.logger.log(`📊 Статус видео ${videoId}: ${status.status} (попытка ${attempt + 1}/${maxAttempts}, сервис: ${service.toUpperCase()})`);
-        
-        // Проверяем статус видео
-        const isCompleted = status.status === 'completed';
-        
-        if (isCompleted && status.result_url) {
-          this.logger.log(`✅ Видео ${videoId} готово! Отправляем пользователю ${userId}`);
-          
-          try {
-            await this.bot.telegram.sendVideo(userId, status.result_url, {
-              caption: "🎉 Ваше видео готово!\n\n✨ Спасибо за использование нашего сервиса!\n🎬 Создавайте новые видео когда захотите."
-            });
-          } catch (sendError) {
-            this.logger.warn(`⚠️ Не удалось отправить видео файлом, отправляем ссылкой: ${sendError}`);
-            // Fallback: отправляем ссылку текстом
-            await this.bot.telegram.sendMessage(userId,
-              `🎉 Ваше видео готово!\n\n` +
-              `📹 Ссылка для скачивания:\n${status.result_url}\n\n` +
-              `✨ Спасибо за использование нашего сервиса!`
-            );
-          }
-          return;
-        }
-        
-        // Проверяем ошибки генерации видео
-        const isError = status.status === 'failed' || status.error;
-        
-        if (isError) {
-          this.logger.error(`❌ Ошибка генерации видео ${videoId}: ${status.error}`, {
-            videoId,
-            userId,
-            errorDetails: status.error,
-            status: status.status
-          });
-          
-          await this.bot.telegram.sendMessage(userId, 
-            `❌ К сожалению, произошла ошибка при создании видео.\n\n` +
-            `🔧 Проблема была автоматически зарегистрирована для исправления.\n\n` +
-            `💡 Попробуйте:\n` +
-            `• Создать видео заново\n` +
-            `• Использовать другое фото\n` +
-            `• Обратиться к администратору`
-          );
-          return;
-        }
-        
-      } catch (error) {
-        this.logger.error(`Ошибка при проверке статуса видео ${videoId}:`, error);
-        
-        // Если слишком много ошибок подряд, прерываем
-        if (attempt > 5) {
-          await this.bot.telegram.sendMessage(userId,
-            `❌ Возникли технические проблемы при проверке статуса видео.\n\n` +
-            `🔄 Попробуйте создать видео заново.`
-          );
-          return;
-        }
-      }
-    }
-    
-    // Таймаут
-    this.logger.warn(`⏰ Таймаут ожидания видео ${videoId} для пользователя ${userId}`);
-    await this.bot.telegram.sendMessage(userId,
-      `⏰ Генерация видео заняла больше времени чем ожидалось.\n\n` +
-      `💡 Возможные причины:\n` +
-      `• Высокая нагрузка на сервер\n` +
-      `• Сложность обработки изображения\n\n` +
-      `🔄 Попробуйте создать видео заново.`
-    );
   }
 }
