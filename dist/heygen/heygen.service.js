@@ -232,18 +232,14 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
         const uploadId = `heygen_audio_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         try {
             this.logger.log(`[${uploadId}] 🎵 Загружаем пользовательское аудио в HeyGen Assets (${audioBuffer.length} bytes)`);
-            const base64Audio = audioBuffer.toString('base64');
-            const payload = {
-                file: base64Audio,
-                type: 'audio/wav'
-            };
+            const formData = new FormData();
+            formData.append('file', audioBuffer, 'user_audio.wav');
             const response = await fetch('https://upload.heygen.com/v1/asset', {
                 method: 'POST',
                 headers: {
                     'X-API-KEY': this.apiKey,
-                    'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(payload),
+                body: formData,
             });
             this.logger.log(`[${uploadId}] 📥 Upload Asset response: ${response.status} ${response.statusText}`);
             if (!response.ok) {
@@ -271,18 +267,14 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
         const uploadId = `heygen_image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         try {
             this.logger.log(`[${uploadId}] 🖼️ Загружаем пользовательское фото в HeyGen Assets (${imageBuffer.length} bytes)`);
-            const base64Image = imageBuffer.toString('base64');
-            const payload = {
-                file: base64Image,
-                type: 'image/jpeg'
-            };
+            const formData = new FormData();
+            formData.append('file', imageBuffer, 'user_photo.jpg');
             const response = await fetch('https://upload.heygen.com/v1/asset', {
                 method: 'POST',
                 headers: {
                     'X-API-KEY': this.apiKey,
-                    'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(payload),
+                body: formData,
             });
             this.logger.log(`[${uploadId}] 📥 Upload Asset response: ${response.status} ${response.statusText}`);
             if (!response.ok) {
