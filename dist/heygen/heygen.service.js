@@ -551,41 +551,22 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 fileType,
                 timestamp: new Date().toISOString()
             });
-            // Используем FormData для загрузки файла
-            const FormData = require('form-data');
-            const formData = new FormData();
-            // Добавляем обязательные поля согласно актуальной документации HeyGen API
-            // Обязательные поля: type и asset
-            formData.append('type', fileType);
-            formData.append('asset', buffer, {
-                filename: fileType === 'image' ? 'user_photo.jpg' : 'user_audio.wav',
-                contentType: fileType === 'image' ? 'image/jpeg' : 'audio/wav',
-                knownLength: buffer.length
-            });
-            // Проверяем, что FormData создан правильно
-            this.logger.debug(`[${requestId}] FormData created successfully`, {
-                hasType: formData._streams?.some((stream) => stream.name === 'type'),
-                hasAsset: formData._streams?.some((stream) => stream.name === 'asset'),
-                streamsCount: formData._streams?.length || 0
-            });
-            this.logger.log(`📤 [HEYGEN_UPLOAD] FormData prepared for HeyGen API`, {
+            // Определяем правильный Content-Type для файла
+            const contentType = fileType === 'image' ? 'image/jpeg' : 'audio/wav';
+            this.logger.log(`📤 [HEYGEN_UPLOAD] Preparing binary data for HeyGen API`, {
                 requestId,
                 fileSize: buffer.length,
-                formDataFields: formData.getHeaders(),
+                contentType,
                 timestamp: new Date().toISOString()
-            });
-            // Логируем детали FormData для отладки
-            this.logger.debug(`[${requestId}] FormData details:`, {
-                contentType: formData.getHeaders()['content-type'],
-                contentLength: formData.getHeaders()['content-length'],
-                boundary: formData.getHeaders()['content-type']?.split('boundary=')[1]
             });
             let response;
             try {
-                response = await axios_1.default.post(`${HEYGEN_API.uploadUrl}/v1/asset`, formData, {
+                // Используем data-binary подход вместо multipart/form-data
+                const uploadUrl = `${HEYGEN_API.uploadUrl}/v1/asset?type=${fileType}`;
+                response = await axios_1.default.post(uploadUrl, buffer, {
                     headers: {
-                        'X-Api-Key': this.apiKey, // Правильный заголовок для HeyGen
-                        ...formData.getHeaders()
+                        'X-Api-Key': this.apiKey,
+                        'Content-Type': contentType
                     },
                     maxBodyLength: Infinity,
                     maxContentLength: Infinity,
@@ -603,8 +584,8 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     responseData: data,
                     timestamp: new Date().toISOString()
                 });
-                // Ищем asset_key в разных возможных местах ответа
-                const assetKey = data.data?.asset_key || data.asset_key || data.data?.asset_id || data.asset_id;
+                // Извлекаем asset_key из нового формата ответа
+                const assetKey = data.data?.image_key || data.data?.asset_key || data.image_key || data.asset_key;
                 if (!assetKey) {
                     this.logger.error(`❌ [HEYGEN_UPLOAD] No asset_key found in response`, {
                         requestId,
