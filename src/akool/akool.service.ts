@@ -425,9 +425,17 @@ export class AkoolService {
       
       // Сначала клонируем голос через ElevenLabs
       this.logger.log(`[${requestId}] 🎤 Клонирую голос пользователя через ElevenLabs...`);
+      
+      // Загружаем аудиофайл из URL
+      this.logger.log(`[${requestId}] 📥 Загружаю аудиофайл из URL: ${voiceAudioUrl}`);
+      const audioResponse = await axios.get(voiceAudioUrl, { responseType: 'arraybuffer' });
+      const audioBuffer = Buffer.from(audioResponse.data);
+      
+      this.logger.log(`[${requestId}] ✅ Аудиофайл загружен, размер: ${audioBuffer.length} байт`);
+      
       const cloneResponse = await this.elevenlabsService.cloneVoice({
         name: voiceName,
-        audioBuffer: Buffer.from(voiceAudioUrl), // В реальном проекте нужно загрузить файл
+        audioBuffer: audioBuffer,
         description: `Voice clone for user ${voiceName}`,
       });
       
