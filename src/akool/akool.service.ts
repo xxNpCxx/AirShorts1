@@ -331,7 +331,7 @@ export class AkoolService {
       const token = await this.getAccessToken();
       
       const response = await axios.get(
-        `${this.baseUrl}/content/video/result/${videoId}`,
+        `${this.baseUrl}/content/video/status/${videoId}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -361,7 +361,14 @@ export class AkoolService {
         throw new Error(`AKOOL API error: ${response.data.msg}`);
       }
     } catch (error) {
-      this.logger.error(`❌ Ошибка проверки статуса видео:`, error);
+      this.logger.error(`❌ Ошибка проверки статуса видео:`, {
+        videoId,
+        error: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        stack: error.stack
+      });
       throw error;
     }
   }

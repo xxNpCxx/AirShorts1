@@ -15,7 +15,10 @@ export class AkoolController {
   }
 
   @Get("status/:id")
-  async getVideoStatus(id: string): Promise<AkoolVideoResponse> {
-    return this.akoolService.getVideoStatus(id);
+  async getVideoStatus(@Param('id') id: string): Promise<{ message: string; status: string }> {
+    return {
+      message: "AKOOL использует webhook для уведомлений о готовности видео. Проверьте логи приложения или дождитесь уведомления в Telegram.",
+      status: "webhook-based"
+    };
   }
 }
