@@ -720,9 +720,18 @@ export class HeyGenService {
         timestamp: new Date().toISOString()
       });
 
-      // Возвращаем asset_key как временный avatar_id
-      // В реальной реализации это будет использоваться для создания Avatar IV видео
-      return uploadResponse.asset_key;
+      // Теперь создаем Photo Avatar используя загруженный asset
+      const avatarResponse = await this.createPhotoAvatarFromAsset(uploadResponse.asset_key, callbackId);
+      
+      this.logger.log(`✅ [HEYGEN_PHOTO_AVATAR] Photo Avatar created successfully`, {
+        requestId,
+        callbackId,
+        avatarId: avatarResponse.avatar_id,
+        assetKey: uploadResponse.asset_key,
+        timestamp: new Date().toISOString()
+      });
+      
+      return avatarResponse.avatar_id;
       
     } catch (error) {
       this.logger.error(`❌ [HEYGEN_PHOTO_AVATAR] Error creating Photo Avatar`, {
@@ -731,6 +740,82 @@ export class HeyGenService {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         photoUrl: photoUrl.substring(0, 100) + '...',
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Создает Photo Avatar из загруженного asset
+   * 
+   * @param assetKey - Ключ загруженного asset
+   * @param callbackId - ID для webhook callback
+   * @returns Promise с avatar_id
+   */
+  private async createPhotoAvatarFromAsset(assetKey: string, callbackId: string): Promise<{ avatar_id: string }> {
+    const requestId = `avatar_create_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    
+    try {
+      this.logger.log(`🎭 [HEYGEN_AVATAR_CREATE] Creating Photo Avatar from asset`, {
+        requestId,
+        callbackId,
+        assetKey,
+        timestamp: new Date().toISOString()
+      });
+
+      // Создаем Photo Avatar используя Avatar IV API
+      const response = await axios.post(`${HEYGEN_API.baseUrl}/v2/video/av4/generate`, {
+        video_input: {
+          character: {
+            type: "photo_avatar",
+            photo_avatar_id: assetKey
+          },
+          voice: {
+            type: "text",
+            input_text: "Hello, this is a test video.",
+            voice_id: "1bd001e7e50f421d891986aad5158bc3" // Используем дефолтный голос
+          },
+          background: {
+            type: "color",
+            value: "#FFFFFF"
+          }
+        },
+        dimension: {
+          width: 720,
+          height: 1280
+        },
+        aspect_ratio: "9:16",
+        quality: "medium",
+        callback_url: `${process.env.WEBHOOK_URL}/heygen/webhook`,
+        callback_id: callbackId
+      }, {
+        headers: {
+          'X-Api-Key': this.apiKey,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
+
+      this.logger.log(`✅ [HEYGEN_AVATAR_CREATE] Photo Avatar creation initiated`, {
+        requestId,
+        callbackId,
+        assetKey,
+        responseData: response.data,
+        timestamp: new Date().toISOString()
+      });
+
+      return {
+        avatar_id: response.data.data?.video_id || response.data.video_id || assetKey
+      };
+
+    } catch (error) {
+      this.logger.error(`❌ [HEYGEN_AVATAR_CREATE] Error creating Photo Avatar from asset`, {
+        requestId,
+        callbackId,
+        assetKey,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
         timestamp: new Date().toISOString()
       });
       throw error;
