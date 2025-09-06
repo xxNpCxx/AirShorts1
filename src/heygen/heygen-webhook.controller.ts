@@ -267,7 +267,7 @@ export class HeyGenWebhookController {
         caption: `🎬 Ваше видео с цифровым двойником готово!\n\n` +
                 `📝 Сценарий: ${process.script.substring(0, 100)}...\n` +
                 `🎥 Качество: ${process.quality}\n` +
-                `⏱️ Длительность: ~${this.calculateVideoDuration(process.script)} сек`
+                `⏱️ Длительность: рассчитана автоматически`
       });
       this.logger.log(`📤 Video sent to user ${process.userId} for process ${process.id}`);
     } catch (error) {
@@ -292,20 +292,4 @@ export class HeyGenWebhookController {
     }
   }
 
-  /**
-   * Рассчитывает длительность видео на основе текста
-   */
-  private calculateVideoDuration(text: string): number {
-    if (!text || text.trim().length === 0) {
-      return 30;
-    }
-
-    const wordCount = text.trim().split(/\s+/).length;
-    const wordsPerSecond = 2.5; // Средняя скорость речи для русского языка
-    let duration = Math.ceil(wordCount / wordsPerSecond);
-    duration = Math.ceil(duration * 1.25); // Буфер для пауз и интонации
-    duration = Math.max(15, Math.min(60, duration));
-    
-    return duration;
-  }
 }
