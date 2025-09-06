@@ -475,10 +475,10 @@ export class HeyGenService {
    * @throws Error if upload fails
    */
   /**
-   * Upload audio asset to HeyGen API
+   * Upload audio asset to HeyGen API using presigned upload URL
    * 
    * @see https://docs.heygen.com/reference/upload-asset
-   * @endpoint POST https://upload.heygen.com/v1/asset
+   * @endpoint POST /v2/audio_assets (create resource) + PUT to presigned URL (upload file)
    * @param audioBuffer - Audio file buffer
    * @returns Promise with audio asset ID
    * @throws Error if upload fails
@@ -489,45 +489,65 @@ export class HeyGenService {
     try {
       this.logger.log(`[${uploadId}] 🎵 Загружаем пользовательское аудио в HeyGen Assets (${audioBuffer.length} bytes)`);
       
-      // Используем правильный endpoint для аудио assets
-      const uploadUrl = `https://upload.heygen.com/v2/audio_assets`;
+      // Шаг 1: Создаем аудио-ресурс и получаем presigned upload URL
+      this.logger.log(`[${uploadId}] 📤 Step 1: Creating audio resource...`);
       
-      this.logger.debug(`[${uploadId}] 📤 Preparing binary data for HeyGen API`, {
-        uploadId,
-        audioSize: audioBuffer.length,
-        contentType: 'audio/mpeg',
-        uploadUrl,
-        timestamp: new Date().toISOString()
-      });
-      
-      const response = await fetch(uploadUrl, {
+      const createResponse = await fetch(`${this.baseUrl}/v2/audio_assets`, {
         method: 'POST',
         headers: {
           'X-Api-Key': this.apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: `audio_${uploadId}`,
+          size: audioBuffer.length,
+          content_type: 'audio/mpeg'
+        })
+      });
+
+      this.logger.log(`[${uploadId}] 📥 Create audio resource response: ${createResponse.status} ${createResponse.statusText}`);
+
+      if (!createResponse.ok) {
+        const errorText = await createResponse.text();
+        this.logger.error(`[${uploadId}] ❌ Failed to create audio resource: ${createResponse.status} - ${errorText}`);
+        throw new Error(`Failed to create audio resource: ${createResponse.status} - ${errorText}`);
+      }
+
+      const createResult = await createResponse.json() as any;
+      this.logger.log(`[${uploadId}] 📋 Create audio resource response:`, createResult);
+      
+      const audioAssetId = createResult.data?.id || createResult.id;
+      const uploadUrl = createResult.data?.upload_url || createResult.upload_url;
+      
+      if (!audioAssetId) {
+        this.logger.error(`[${uploadId}] ❌ No audio asset ID in response:`, createResult);
+        throw new Error('No audio asset ID returned from HeyGen Create Audio Resource API');
+      }
+      
+      if (!uploadUrl) {
+        this.logger.error(`[${uploadId}] ❌ No upload URL in response:`, createResult);
+        throw new Error('No upload URL returned from HeyGen Create Audio Resource API');
+      }
+
+      this.logger.log(`[${uploadId}] ✅ Audio resource created: ${audioAssetId}`);
+      this.logger.log(`[${uploadId}] 📤 Step 2: Uploading file to presigned URL...`);
+
+      // Шаг 2: Загружаем файл на presigned URL
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
           'Content-Type': 'audio/mpeg',
           'Content-Length': audioBuffer.length.toString()
         },
         body: audioBuffer
       });
 
-      this.logger.log(`[${uploadId}] 📥 Upload Asset response: ${response.status} ${response.statusText}`);
+      this.logger.log(`[${uploadId}] 📥 Upload file response: ${uploadResponse.status} ${uploadResponse.statusText}`);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        this.logger.error(`[${uploadId}] ❌ Audio upload failed: ${response.status} ${response.statusText}`);
-        this.logger.error(`[${uploadId}] Error details: ${errorText}`);
-        throw new Error(`Audio upload failed: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json() as any;
-      this.logger.log(`[${uploadId}] 📋 Upload Asset response data:`, result);
-      
-      // Для аудио файлов HeyGen возвращает id вместо asset_id
-      const audioAssetId = result.data?.id || result.data?.asset_id || result.asset_id || result.id;
-      
-      if (!audioAssetId) {
-        this.logger.error(`[${uploadId}] ❌ No asset_id in response:`, result);
-        throw new Error('No asset_id returned from HeyGen Upload Asset API');
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        this.logger.error(`[${uploadId}] ❌ Audio file upload failed: ${uploadResponse.status} - ${errorText}`);
+        throw new Error(`Audio file upload failed: ${uploadResponse.status} - ${errorText}`);
       }
       
       this.logger.log(`[${uploadId}] ✅ Audio uploaded successfully: ${audioAssetId}`);
