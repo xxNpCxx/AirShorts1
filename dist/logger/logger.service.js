@@ -70,6 +70,7 @@ let CustomLoggerService = class CustomLoggerService {
             console.log(this.formatMessage(LogLevel.VERBOSE, message, context));
         }
     }
+    // Специальные методы для Telegram бота
     telegramUpdate(update, context) {
         if (this.isDebugMode) {
             const type = this.getUpdateType(update);
@@ -78,6 +79,7 @@ let CustomLoggerService = class CustomLoggerService {
             const text = this.getText(update);
             const callback = this.getCallbackData(update);
             this.debug(`Telegram Update: type=${type}, userId=${userId}, username=${username}, text="${text}", callback="${callback}"`, context);
+            // Всегда логируем полный webhook в DEBUG режиме
             this.debug(`Full webhook data: ${JSON.stringify(update, null, 2)}`, context);
             if (this.isVerboseMode) {
                 this.verbose(`Full update: ${JSON.stringify(update, null, 2)}`, context);
@@ -161,4 +163,3 @@ exports.CustomLoggerService = CustomLoggerService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [])
 ], CustomLoggerService);
-//# sourceMappingURL=logger.service.js.map

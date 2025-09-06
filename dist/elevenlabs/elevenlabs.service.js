@@ -23,15 +23,20 @@ let ElevenLabsService = ElevenLabsService_1 = class ElevenLabsService {
             this.logger.warn("ELEVENLABS_API_KEY не найден в переменных окружения");
         }
     }
+    /**
+     * Создает клон голоса из аудиофайла (асинхронно через fine-tuning)
+     */
     async cloneVoiceAsync(request) {
         const cloneId = `clone_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         try {
             this.logger.log(`[${cloneId}] 🎤 Starting voice fine-tuning with ElevenLabs`);
             this.logger.debug(`[${cloneId}] Voice name: ${request.name}, Audio size: ${request.audioBuffer.length} bytes`);
+            // Сначала создаем базовый голос
             const formData = new FormData();
             formData.append("name", request.name);
             formData.append("description", request.description || "Клонированный голос пользователя");
             formData.append("files", new Blob([request.audioBuffer], { type: "audio/wav" }), "voice_sample.wav");
+            // Добавляем метки для fine-tuning
             formData.append("labels", JSON.stringify({
                 "accent": "russian",
                 "age": "young_adult",
@@ -55,6 +60,7 @@ let ElevenLabsService = ElevenLabsService_1 = class ElevenLabsService {
                     audioSize: request.audioBuffer.length,
                     errorBody: errorText
                 });
+                // Если instant cloning недоступен, пробуем fine-tuning
                 if (errorText.includes("can_not_use_instant_voice_cloning")) {
                     this.logger.warn(`[${cloneId}] Instant cloning недоступен, используем fine-tuning`);
                     return await this.createVoiceWithFineTuning(request, cloneId);
@@ -80,9 +86,13 @@ let ElevenLabsService = ElevenLabsService_1 = class ElevenLabsService {
             throw error;
         }
     }
+    /**
+     * Создает голос через fine-tuning (для бесплатных аккаунтов)
+     */
     async createVoiceWithFineTuning(request, cloneId) {
         try {
             this.logger.log(`[${cloneId}] 🔧 Using fine-tuning approach for voice creation`);
+            // Создаем голос без instant cloning
             const formData = new FormData();
             formData.append("name", request.name);
             formData.append("description", request.description || "Клонированный голос пользователя (fine-tuning)");
@@ -113,6 +123,9 @@ let ElevenLabsService = ElevenLabsService_1 = class ElevenLabsService {
             throw error;
         }
     }
+    /**
+     * Создает клон голоса из аудиофайла (синхронно - для обратной совместимости)
+     */
     async cloneVoice(request) {
         const cloneId = `clone_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         try {
@@ -159,6 +172,9 @@ let ElevenLabsService = ElevenLabsService_1 = class ElevenLabsService {
             throw error;
         }
     }
+    /**
+     * Генерирует речь с использованием клонированного голоса
+     */
     async textToSpeech(request) {
         const ttsId = `tts_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         try {
@@ -207,6 +223,9 @@ let ElevenLabsService = ElevenLabsService_1 = class ElevenLabsService {
             throw error;
         }
     }
+    /**
+     * Получает список всех голосов пользователя
+     */
     async getVoices() {
         try {
             this.logger.debug("📋 Fetching user voices from ElevenLabs");
@@ -236,6 +255,9 @@ let ElevenLabsService = ElevenLabsService_1 = class ElevenLabsService {
             throw error;
         }
     }
+    /**
+     * Проверяет статус клонирования голоса
+     */
     async getVoiceStatus(voiceId) {
         try {
             this.logger.debug(`🔍 Checking voice status: ${voiceId}`);
@@ -254,6 +276,7 @@ let ElevenLabsService = ElevenLabsService_1 = class ElevenLabsService {
                 return { status: "error", ready: false, error: errorText };
             }
             const result = await response.json();
+            // Проверяем статус клонирования
             const isReady = result.fine_tuning?.finetuning_state === "completed" ||
                 result.fine_tuning?.finetuning_state === "ready";
             this.logger.debug(`📊 Voice ${voiceId} status:`, {
@@ -275,6 +298,9 @@ let ElevenLabsService = ElevenLabsService_1 = class ElevenLabsService {
             return { status: "error", ready: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
+    /**
+     * Удаляет клонированный голос
+     */
     async deleteVoice(voiceId) {
         try {
             this.logger.log(`🗑️ Deleting voice: ${voiceId}`);
@@ -310,4 +336,3 @@ exports.ElevenLabsService = ElevenLabsService = ElevenLabsService_1 = __decorate
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [config_1.ConfigService])
 ], ElevenLabsService);
-//# sourceMappingURL=elevenlabs.service.js.map

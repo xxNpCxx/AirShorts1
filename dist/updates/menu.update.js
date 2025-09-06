@@ -93,4 +93,3 @@ __decorate([
 exports.MenuUpdate = MenuUpdate = __decorate([
     (0, nestjs_telegraf_1.Update)()
 ], MenuUpdate);
-//# sourceMappingURL=menu.update.js.map

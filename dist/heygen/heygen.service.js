@@ -10,11 +10,14 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 var HeyGenService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.HeyGenService = void 0;
-exports.validateStandardVideoPayload = validateStandardVideoPayload;
-exports.validateAvatarIVPayload = validateAvatarIVPayload;
+exports.HeyGenService = exports.validateAvatarIVPayload = exports.validateStandardVideoPayload = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
+/**
+ * Validates Standard Video API payload against API specification
+ * @param payload - Object to validate
+ * @returns true if valid, false otherwise
+ */
 function validateStandardVideoPayload(payload) {
     return (Array.isArray(payload.video_inputs) &&
         payload.video_inputs.length > 0 &&
@@ -26,6 +29,12 @@ function validateStandardVideoPayload(payload) {
             input.voice &&
             ['text', 'audio'].includes(input.voice.type)));
 }
+exports.validateStandardVideoPayload = validateStandardVideoPayload;
+/**
+ * Validates Avatar IV payload against API specification
+ * @param payload - Object to validate
+ * @returns true if valid, false otherwise
+ */
 function validateAvatarIVPayload(payload) {
     return (typeof payload.image_key === 'string' &&
         typeof payload.video_title === 'string' &&
@@ -34,6 +43,21 @@ function validateAvatarIVPayload(payload) {
         (!payload.video_orientation || ['portrait', 'landscape'].includes(payload.video_orientation)) &&
         (!payload.fit || ['cover', 'contain'].includes(payload.fit)));
 }
+exports.validateAvatarIVPayload = validateAvatarIVPayload;
+/**
+ * HeyGen API Configuration
+ *
+ * @version Avatar IV API v2 (current)
+ * @baseUrl https://api.heygen.com
+ * @endpoints
+ *   - POST /v2/video/av4/generate (Avatar IV)
+ *   - POST /v2/video/generate (Standard Avatar)
+ *   - POST /v1/upload (Asset Upload)
+ *   - GET /v1/avatar.list (List Avatars)
+ *   - GET /v1/video_status.get (Video Status)
+ * @lastUpdated 2025-09-06
+ * @documentation https://docs.heygen.com/reference/create-avatar-iv-video
+ */
 const HEYGEN_API = {
     baseUrl: 'https://api.heygen.com',
     version: 'v2',
@@ -55,31 +79,45 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             this.logger.warn("HEYGEN_API_KEY не найден в переменных окружения");
         }
     }
+    /**
+     * Generate video using HeyGen API
+     *
+     * @see https://docs.heygen.com/reference/create-an-avatar-video-v2
+     * @see https://docs.heygen.com/reference/create-avatar-iv-video
+     * @endpoint POST /v2/video/generate (Standard Avatar API)
+     * @endpoint POST /v2/video/av4/generate (Avatar IV API)
+     * @param request - Video generation parameters
+     * @returns Promise with video generation response
+     * @throws Error if API validation fails or request is invalid
+     */
     async generateVideo(request) {
         const requestId = `heygen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         try {
             this.logger.log(`[${requestId}] 🚀 Starting video generation with HeyGen API`);
             this.logger.debug(`[${requestId}] Request params: platform=${request.platform}, quality=${request.quality}, duration=${request.duration}`);
             this.logger.debug(`[${requestId}] Audio provided: ${!!request.audioUrl}, Script length: ${request.script?.length || 0} chars`);
+            // Определяем, использовать ли пользовательское аудио или TTS
             const useCustomAudio = request.audioUrl &&
                 request.audioUrl.trim() !== "" &&
                 request.audioUrl !== "undefined" &&
                 request.audioUrl !== "null" &&
                 !request.audioUrl.includes('heygen_tts_required');
+            // Получаем список доступных аватаров для дефолтного значения
             const availableAvatars = await this.getAvailableAvatars();
             const defaultAvatarId = availableAvatars[0] || "1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b";
+            // HeyGen API v2 структура согласно документации
             let payload = {
                 video_inputs: [
                     {
                         character: {
                             type: "avatar",
-                            avatar_id: defaultAvatarId,
+                            avatar_id: defaultAvatarId, // Рабочий аватар для бесплатного плана
                             avatar_style: "normal"
                         },
                         voice: {
                             type: "text",
                             input_text: request.script,
-                            voice_id: "119caed25533477ba63822d5d1552d25",
+                            voice_id: "119caed25533477ba63822d5d1552d25", // Голос из документации
                             speed: 1.0
                         }
                     }
@@ -89,9 +127,12 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     height: 720
                 }
             };
+            // Если есть пользовательское фото, создаем TalkingPhoto в Standard API
             if (request.imageUrl && request.imageUrl.trim() !== "" && request.imageUrl !== "undefined" && request.imageUrl !== "null" && request.imageUrl !== "heygen_placeholder_image_url" && request.imageUrl !== "heygen_use_available_avatar") {
                 this.logger.log(`[${requestId}] 📸 Используем пользовательское фото в Standard API: ${request.imageUrl}`);
+                // Определяем тип загруженного изображения
                 if (request.imageUrl.includes('photo_avatar_')) {
+                    // Photo Avatar - используем TalkingPhoto
                     this.logger.log(`[${requestId}] 🎭 Используем Photo Avatar как TalkingPhoto`);
                     payload.video_inputs[0].character = {
                         type: "talking_photo",
@@ -104,6 +145,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     };
                 }
                 else {
+                    // Asset или image_key - используем как Image Background
                     this.logger.log(`[${requestId}] 🖼️ Используем изображение как Background`);
                     payload.video_inputs[0].background = {
                         type: "image",
@@ -112,6 +154,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     };
                 }
             }
+            // Если есть валидное пользовательское аудио, используем его
             if (useCustomAudio) {
                 this.logger.log(`[${requestId}] 🎵 Используем пользовательское аудио asset: ${request.audioUrl}`);
                 payload.video_inputs[0].voice = {
@@ -119,15 +162,19 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     audio_asset_id: request.audioUrl
                 };
             }
+            // Если нет пользовательского фото, используем доступный аватар
             if (!request.imageUrl || request.imageUrl === "heygen_use_available_avatar" || request.imageUrl === "heygen_placeholder_image_url") {
                 this.logger.log(`[${requestId}] 📸 Using available avatar: ${defaultAvatarId}`);
+                // defaultAvatarId уже установлен в payload выше
             }
+            // Логируем финальный тип голоса
             if (useCustomAudio) {
                 this.logger.log(`[${requestId}] 🎵 Using custom user audio from: ${request.audioUrl}`);
             }
             else {
                 this.logger.log(`[${requestId}] 🎵 Using TTS with script: ${request.script?.substring(0, 50)}...`);
             }
+            // Валидация payload согласно API стандартам
             if (!validateStandardVideoPayload(payload)) {
                 this.logger.error(`[${requestId}] ❌ Invalid Standard Video API parameters:`, payload);
                 throw new Error('Invalid Standard Video API parameters');
@@ -203,6 +250,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 hasError: !!result.data?.error,
                 errorMessage: result.data?.error
             });
+            // Логируем особые статусы
             if (result.data?.status === 'completed' && result.data?.video_url) {
                 this.logger.log(`✅ Video ${videoId} completed successfully with URL: ${result.data.video_url}`);
             }
@@ -228,12 +276,32 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             throw error;
         }
     }
+    /**
+     * Upload audio to HeyGen Assets API for Standard Avatar API
+     *
+     * @see https://docs.heygen.com/reference/upload-asset
+     * @endpoint POST /v1/upload
+     * @param audioBuffer - Audio file buffer
+     * @returns Promise with audio asset ID
+     * @throws Error if upload fails
+     */
+    /**
+     * Upload audio asset to HeyGen API
+     *
+     * @see https://docs.heygen.com/reference/upload-asset
+     * @endpoint POST https://upload.heygen.com/v1/asset
+     * @param audioBuffer - Audio file buffer
+     * @returns Promise with audio asset ID
+     * @throws Error if upload fails
+     */
     async uploadAudio(audioBuffer) {
         const uploadId = `heygen_audio_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         try {
             this.logger.log(`[${uploadId}] 🎵 Загружаем пользовательское аудио в HeyGen Assets (${audioBuffer.length} bytes)`);
+            // Используем правильный FormData для Node.js
             const FormData = require('form-data');
             const formData = new FormData();
+            // Добавляем файл с правильными параметрами
             formData.append('file', audioBuffer, {
                 filename: 'user_audio.wav',
                 contentType: 'audio/wav',
@@ -270,12 +338,22 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             throw error;
         }
     }
+    /**
+     * Upload image asset to HeyGen API for Avatar IV
+     *
+     * @see https://docs.heygen.com/reference/upload-asset
+     * @endpoint POST https://upload.heygen.com/v1/asset
+     * @param imageBuffer - Image file buffer
+     * @returns Promise with image_key for Avatar IV or asset_id for Standard API
+     */
     async uploadImage(imageBuffer) {
         const uploadId = `heygen_image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         try {
             this.logger.log(`[${uploadId}] 🖼️ Загружаем пользовательское фото в HeyGen Assets (${imageBuffer.length} bytes)`);
+            // Используем правильный FormData для Node.js
             const FormData = require('form-data');
             const formData = new FormData();
+            // Добавляем файл с правильными параметрами
             formData.append('file', imageBuffer, {
                 filename: 'user_photo.jpg',
                 contentType: 'image/jpeg',
@@ -299,6 +377,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             }
             const result = await response.json();
             this.logger.log(`[${uploadId}] 📋 Upload Asset response data:`, result);
+            // Ищем image_key для Avatar IV или asset_id для Standard API
             const imageKey = result.data?.image_key || result.image_key;
             const assetId = result.data?.asset_id || result.asset_id;
             if (imageKey) {
@@ -349,6 +428,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             return "heygen_placeholder_image_url";
         }
     }
+    // Получаем список доступных аватаров для fallback
     async getAvailableAvatars() {
         try {
             const response = await fetch(`${this.baseUrl}/v1/avatar.list`, {
@@ -375,15 +455,26 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             return this.getHardcodedAvatars();
         }
     }
+    // Список проверенных аватаров, которые работают с HeyGen API
     getHardcodedAvatars() {
         return [
             "Abigail_expressive_2024112501",
             "Abigail_standing_office_front",
             "Abigail_sitting_sofa_front",
-            "1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b",
+            "1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b", // Fallback ID
             "Abigail_standing_office_front_2024112501"
         ];
     }
+    /**
+     * Создает Photo Avatar из пользовательского фото
+     *
+     * @see https://docs.heygen.com/reference/create-photo-avatar
+     * @endpoint POST /v1/photo_avatar.create
+     * @param photoUrl - URL фото пользователя
+     * @param callbackId - ID для webhook callback
+     * @returns Promise с avatar_id
+     * @throws Error если создание не удалось
+     */
     async createPhotoAvatar(photoUrl, callbackId) {
         const requestId = `photo_avatar_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         try {
@@ -477,6 +568,16 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             throw error;
         }
     }
+    /**
+     * Создает клон голоса из пользовательского аудио
+     *
+     * @see https://docs.heygen.com/reference/create-voice-cloning
+     * @endpoint POST /v1/voice_cloning.create
+     * @param audioUrl - URL аудио пользователя
+     * @param callbackId - ID для webhook callback
+     * @returns Promise с voice_id
+     * @throws Error если клонирование не удалось
+     */
     async createVoiceClone(audioUrl, callbackId) {
         const requestId = `voice_clone_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         try {
@@ -516,6 +617,19 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             throw error;
         }
     }
+    /**
+     * Генерирует видео с цифровым двойником используя Avatar IV API
+     *
+     * @see https://docs.heygen.com/reference/create-avatar-iv-video
+     * @endpoint POST /v2/video/av4/generate
+     * @param avatarId - ID созданного Photo Avatar
+     * @param voiceId - ID созданного Voice Clone
+     * @param script - Текст для озвучивания
+     * @param videoTitle - Название видео
+     * @param callbackId - ID для webhook callback
+     * @returns Promise с video_id
+     * @throws Error если генерация не удалась
+     */
     async generateDigitalTwinVideo(avatarId, voiceId, script, videoTitle, callbackId) {
         const requestId = `digital_twin_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         try {
@@ -530,6 +644,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 video_orientation: "portrait",
                 fit: "cover"
             };
+            // Валидация payload
             if (!validateAvatarIVPayload(payload)) {
                 this.logger.error(`[${requestId}] ❌ Invalid Avatar IV payload:`, payload);
                 throw new Error('Invalid Avatar IV payload');
@@ -563,6 +678,12 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             throw error;
         }
     }
+    /**
+     * Настраивает webhook для HeyGen API
+     *
+     * @see https://docs.heygen.com/reference/webhook-events
+     * @endpoint POST /v1/webhook/endpoint.add
+     */
     async setupWebhook() {
         const webhookUrl = `${process.env.WEBHOOK_URL}/heygen/webhook`;
         try {
@@ -604,4 +725,3 @@ exports.HeyGenService = HeyGenService = HeyGenService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [config_1.ConfigService])
 ], HeyGenService);
-//# sourceMappingURL=heygen.service.js.map

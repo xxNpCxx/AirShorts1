@@ -22,4 +22,3 @@ exports.ElevenLabsModule = ElevenLabsModule = __decorate([
         exports: [elevenlabs_service_1.ElevenLabsService, voice_notification_service_1.VoiceNotificationService],
     })
 ], ElevenLabsModule);
-//# sourceMappingURL=elevenlabs.module.js.map

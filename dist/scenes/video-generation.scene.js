@@ -18,6 +18,7 @@ const nestjs_telegraf_1 = require("nestjs-telegraf");
 const telegraf_1 = require("telegraf");
 const heygen_service_1 = require("../heygen/heygen.service");
 const process_manager_service_1 = require("../heygen/process-manager.service");
+// import { MockHeyGenService, MockProcessManagerService } from "../heygen/mock-heygen.service";
 const common_1 = require("@nestjs/common");
 const telegraf_2 = require("telegraf");
 const nestjs_telegraf_2 = require("nestjs-telegraf");
@@ -28,17 +29,29 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
         this.bot = bot;
         this.logger = new common_1.Logger(VideoGenerationScene_1.name);
     }
+    /**
+     * Рассчитывает длительность видео на основе текста
+     * Средняя скорость речи: ~150 слов в минуту для русского языка
+     */
     calculateVideoDuration(text) {
         if (!text || text.trim().length === 0) {
-            return 30;
+            return 30; // По умолчанию 30 секунд
         }
+        // Считаем количество слов (разделенных пробелами)
         const wordCount = text.trim().split(/\s+/).length;
+        // Средняя скорость речи для русского языка: ~150 слов/мин = 2.5 слов/сек
         const wordsPerSecond = 2.5;
+        // Рассчитываем базовую длительность
         let duration = Math.ceil(wordCount / wordsPerSecond);
+        // Добавляем небольшой буфер для пауз и интонации (25% для русского языка)
         duration = Math.ceil(duration * 1.25);
+        // Минимум 15 секунд, максимум 60 секунд
         duration = Math.max(15, Math.min(60, duration));
         return duration;
     }
+    /**
+     * Создает цифровой двойник с Photo Avatar и Voice Clone
+     */
     async createDigitalTwin(ctx) {
         const requestId = `digital_twin_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         try {
@@ -73,6 +86,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 voiceFileId: session.voiceFileId,
                 timestamp: new Date().toISOString()
             });
+            // Получаем URL файлов из Telegram
             const photoFile = await ctx.telegram.getFile(session.photoFileId);
             const voiceFile = await ctx.telegram.getFile(session.voiceFileId);
             this.logger.log(`📁 [DIGITAL_TWIN_CREATE] Telegram file info received`, {
@@ -110,6 +124,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 audioUrl: audioUrl.substring(0, 100) + '...',
                 timestamp: new Date().toISOString()
             });
+            // Создаем процесс создания цифрового двойника
             const digitalTwinProcess = await this.processManager.createDigitalTwinProcess(ctx.from.id, photoUrl, audioUrl, session.script, `Digital Twin Video ${new Date().toISOString()}`, session.quality || "720p");
             this.logger.log(`✅ [DIGITAL_TWIN_CREATE] Process created successfully`, {
                 requestId,
@@ -176,9 +191,11 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 return;
             }
             this.logger.log(`📸 Получено фото: количество=${photo.length}, file_id=${photo[photo.length - 1].file_id}`);
+            // Берем фото наилучшего качества (последнее в массиве)
             const bestPhoto = photo[photo.length - 1];
             const photoFileId = bestPhoto.file_id;
-            if (bestPhoto.file_size && bestPhoto.file_size > 10 * 1024 * 1024) {
+            // Валидация размера фото
+            if (bestPhoto.file_size && bestPhoto.file_size > 10 * 1024 * 1024) { // 10 МБ
                 await ctx.reply("❌ Фото слишком большое! Максимальный размер: 10 МБ\n\n" +
                     "💡 Попробуйте:\n" +
                     "• Сжать фото в настройках камеры\n" +
@@ -186,6 +203,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                     "• Отправить как файл и выбрать сжатие");
                 return;
             }
+            // Валидация разрешения
             if (bestPhoto.width && bestPhoto.height) {
                 if (bestPhoto.width < 512 || bestPhoto.height < 512) {
                     await ctx.reply("❌ Разрешение фото слишком низкое!\n" +
@@ -194,6 +212,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                         "Отправьте фото лучшего качества.");
                     return;
                 }
+                // Проверка соотношения сторон (рекомендация)
                 const aspectRatio = bestPhoto.height / bestPhoto.width;
                 if (aspectRatio < 1.5) {
                     await ctx.reply("⚠️ Фото принято, но рекомендуется портретная ориентация!\n\n" +
@@ -202,6 +221,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                         "Для лучшего результата используйте вертикальное фото.");
                 }
             }
+            // Получаем информацию о файле для дополнительной валидации
             try {
                 const file = await ctx.telegram.getFile(photoFileId);
                 if (file.file_path) {
@@ -218,7 +238,9 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             }
             catch (fileError) {
                 this.logger.warn("Could not validate file format:", fileError);
+                // Продолжаем, так как это не критичная ошибка
             }
+            // Сохраняем ID фото в сессии
             ctx.session.photoFileId = photoFileId;
             await ctx.reply("✅ Фото принято и прошло валидацию!\n\n" +
                 `📊 Информация:\n` +
@@ -248,6 +270,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             const message = ctx.message;
             if (message && "document" in message && message.document) {
                 const document = message.document;
+                // Проверяем, является ли документ изображением
                 const isImage = document.mime_type && (document.mime_type.startsWith("image/") ||
                     ["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(document.mime_type));
                 if (isImage) {
@@ -294,16 +317,19 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             }
             this.logger.log(`🎤 Получено голосовое сообщение: file_id=${voice.file_id}, duration=${voice.duration}`);
             const session = ctx.session;
+            // Проверяем, что фото уже загружено
             if (!session.photoFileId) {
                 await ctx.reply("❌ Сначала отправьте фото с человеком!");
                 return;
             }
+            // Проверяем длительность голосового сообщения
             if (voice.duration && (voice.duration < 10 || voice.duration > 60)) {
                 await ctx.reply(`❌ Длительность голосового сообщения должна быть от 10 до 60 секунд!\n\n` +
                     `Текущая длительность: ${voice.duration} сек.\n\n` +
                     `💡 Запишите голосовое сообщение подходящей длительности.`);
                 return;
             }
+            // Сохраняем ID голосового сообщения в сессии
             session.voiceFileId = voice.file_id;
             await ctx.reply("✅ Голосовое сообщение принято!\n\n" +
                 `📊 Информация:\n` +
@@ -331,6 +357,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 return;
             }
             const session = ctx.session;
+            // Проверяем, что фото и голос уже загружены
             if (!session.photoFileId) {
                 await ctx.reply("❌ Сначала отправьте фото с человеком!");
                 return;
@@ -340,7 +367,9 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 return;
             }
             if (!session.script) {
+                // Первый текстовый ввод - это сценарий
                 session.script = text;
+                // Автоматически рассчитываем длительность на основе текста
                 const calculatedDuration = this.calculateVideoDuration(text);
                 session.duration = calculatedDuration;
                 this.logger.log(`📝 [TEXT_INPUT] Script received`, {
@@ -358,6 +387,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 await this.showQualitySelection(ctx);
             }
             else {
+                // Все данные уже получены, но пользователь отправил еще текст
                 await ctx.reply("❌ Все необходимые данные уже получены!\n\n" +
                     "📋 Текущий статус:\n" +
                     `• Фото: ✅ Загружено\n` +
@@ -393,6 +423,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             session.quality = "720p";
             await ctx.editMessageText("✅ Качество выбрано: 720p (быстрее генерация, меньше места)\n\n" +
                 "🎬 Запускаю создание цифрового двойника...");
+            // Сразу запускаем создание цифрового двойника
             await this.createDigitalTwin(ctx);
         }
         catch (error) {
@@ -407,6 +438,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             session.quality = "1080p";
             await ctx.editMessageText("✅ Качество выбрано: 1080p (лучшее качество, больше места)\n\n" +
                 "🎬 Запускаю создание цифрового двойника...");
+            // Сразу запускаем создание цифрового двойника
             await this.createDigitalTwin(ctx);
         }
         catch (error) {
@@ -527,4 +559,3 @@ exports.VideoGenerationScene = VideoGenerationScene = VideoGenerationScene_1 = _
         process_manager_service_1.ProcessManagerService,
         telegraf_2.Telegraf])
 ], VideoGenerationScene);
-//# sourceMappingURL=video-generation.scene.js.map

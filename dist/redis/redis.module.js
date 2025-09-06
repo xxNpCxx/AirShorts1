@@ -36,4 +36,3 @@ exports.RedisModule = RedisModule = __decorate([
         exports: [exports.REDIS_TOKEN],
     })
 ], RedisModule);
-//# sourceMappingURL=redis.module.js.map

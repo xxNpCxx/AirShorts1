@@ -28,6 +28,7 @@ let WebhookController = class WebhookController {
             if (update.message?.text) {
                 this.logger.log(`📝 Сообщение: "${update.message.text}" от пользователя ${update.message.from?.id}`, 'WebhookController');
             }
+            // Передаем обновление в Telegraf для обработки
             await this.bot.handleUpdate(update);
             this.logger.log(`✅ Webhook обработан успешно`, 'WebhookController');
             res.status(common_1.HttpStatus.OK).json({ ok: true });
@@ -56,4 +57,3 @@ exports.WebhookController = WebhookController = __decorate([
     __metadata("design:paramtypes", [logger_service_1.CustomLoggerService,
         telegraf_1.Telegraf])
 ], WebhookController);
-//# sourceMappingURL=webhook.controller.js.map

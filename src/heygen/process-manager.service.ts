@@ -52,11 +52,13 @@ export interface DigitalTwinProcess {
 export class ProcessManagerService {
   private readonly logger = new Logger(ProcessManagerService.name);
   private readonly processes = new Map<string, DigitalTwinProcess>();
+  private readonly bot: Telegraf;
 
   constructor(
-    @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
     private readonly heygenService: HeyGenService,
-  ) {}
+  ) {
+    this.bot = new Telegraf(process.env.BOT_TOKEN || "");
+  }
 
   /**
    * Создает новый процесс создания цифрового двойника

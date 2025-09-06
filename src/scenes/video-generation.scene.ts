@@ -3,6 +3,7 @@ import { Context } from "telegraf";
 import type { Message } from "telegraf/types";
 import { HeyGenService } from "../heygen/heygen.service";
 import { ProcessManagerService } from "../heygen/process-manager.service";
+// import { MockHeyGenService, MockProcessManagerService } from "../heygen/mock-heygen.service";
 import { Logger, Inject } from "@nestjs/common";
 import { Telegraf } from "telegraf";
 import { getBotToken } from "nestjs-telegraf";

@@ -20,4 +20,3 @@ exports.WebhookModule = WebhookModule = __decorate([
         controllers: [webhook_controller_1.WebhookController],
     })
 ], WebhookModule);
-//# sourceMappingURL=webhook.module.js.map

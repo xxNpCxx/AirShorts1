@@ -19,4 +19,3 @@ exports.LoggerModule = LoggerModule = __decorate([
         exports: [logger_service_1.CustomLoggerService],
     })
 ], LoggerModule);
-//# sourceMappingURL=logger.module.js.map

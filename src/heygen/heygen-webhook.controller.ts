@@ -31,15 +31,17 @@ interface HeyGenWebhookPayload {
 @Controller('heygen/webhook')
 export class HeyGenWebhookController {
   private readonly logger = new Logger(HeyGenWebhookController.name);
+  private readonly bot: Telegraf;
 
   constructor(
-    @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
     private readonly processManager: ProcessManagerService,
-  ) {}
+  ) {
+    this.bot = new Telegraf(process.env.BOT_TOKEN || "");
+  }
 
   @Post()
   @HttpCode(HttpStatus.OK)
-  async handleWebhook(@Body() payload: HeyGenWebhookPayload) {
+  async handleWebhook(payload: HeyGenWebhookPayload) {
     const webhookId = `webhook_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
     try {

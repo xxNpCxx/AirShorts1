@@ -28,6 +28,7 @@ let DidService = DidService_1 = class DidService {
             this.logger.log(`[${requestId}] 🚀 Starting video generation with D-ID API`);
             this.logger.debug(`[${requestId}] Request params: platform=${request.platform}, quality=${request.quality}, duration=${request.duration}`);
             this.logger.debug(`[${requestId}] Audio provided: ${!!request.audioUrl}, Script length: ${request.script?.length || 0} chars`);
+            // Определяем, использовать ли пользовательское аудио или TTS
             const useCustomAudio = request.audioUrl &&
                 request.audioUrl.trim() !== "" &&
                 request.audioUrl !== "undefined" &&
@@ -39,7 +40,7 @@ let DidService = DidService_1 = class DidService {
                     pad_audio: 0.1,
                     stitch: true,
                     align_driver: true,
-                    align_expand_factor: 0.9,
+                    align_expand_factor: 0.9, // Исправлено: D-ID требует значение [0.0, 1.0)
                     auto_match: true,
                     normalization_factor: 1,
                     motion_factor: 1,
@@ -55,6 +56,7 @@ let DidService = DidService_1 = class DidService {
                 },
             };
             if (useCustomAudio) {
+                // Используем пользовательское аудио
                 payload.script = {
                     type: "audio",
                     audio_url: request.audioUrl,
@@ -62,12 +64,13 @@ let DidService = DidService_1 = class DidService {
                 this.logger.log(`[${requestId}] 🎵 Using custom user audio from: ${request.audioUrl}`);
             }
             else {
+                // Используем TTS
                 payload.script = {
                     type: "text",
                     input: request.script,
                     provider: {
                         type: "microsoft",
-                        voice_id: "ru-RU-SvetlanaNeural",
+                        voice_id: "ru-RU-SvetlanaNeural", // Русский женский голос
                     },
                 };
                 this.logger.log(`[${requestId}] 🎵 Using TTS with script: ${request.script?.substring(0, 50)}...`);
@@ -99,6 +102,7 @@ let DidService = DidService_1 = class DidService {
                         resolution: payload.config.output_resolution
                     }
                 });
+                // Пытаемся распарсить JSON ошибку
                 try {
                     const errorJson = JSON.parse(errorText);
                     this.logger.error(`[${requestId}] 📋 Parsed D-ID error:`, errorJson);
@@ -157,6 +161,7 @@ let DidService = DidService_1 = class DidService {
                 hasError: !!result.error,
                 errorMessage: result.error?.message
             });
+            // Логируем особые статусы
             if (result.status === 'done' && result.result_url) {
                 this.logger.log(`✅ Video ${videoId} completed successfully with URL: ${result.result_url}`);
             }
@@ -209,6 +214,7 @@ let DidService = DidService_1 = class DidService {
             }
             const result = await response.json();
             this.logger.debug(`[${uploadId}] 📋 Full audio upload response:`, result);
+            // D-ID API может возвращать разные поля для URL аудио
             const audioUrl = result.audio_url || result.url || result.audio;
             if (!audioUrl) {
                 this.logger.error(`[${uploadId}] ❌ No audio URL in response:`, result);
@@ -270,4 +276,3 @@ exports.DidService = DidService = DidService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [config_1.ConfigService])
 ], DidService);
-//# sourceMappingURL=did.service.js.map

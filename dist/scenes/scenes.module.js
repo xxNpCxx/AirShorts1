@@ -19,4 +19,3 @@ exports.ScenesModule = ScenesModule = __decorate([
         exports: [video_generation_scene_1.VideoGenerationScene],
     })
 ], ScenesModule);
-//# sourceMappingURL=scenes.module.js.map

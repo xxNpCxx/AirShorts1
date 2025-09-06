@@ -45,4 +45,3 @@ exports.DidController = DidController = __decorate([
     (0, common_1.Controller)("did"),
     __metadata("design:paramtypes", [did_service_1.DidService])
 ], DidController);
-//# sourceMappingURL=did.controller.js.map

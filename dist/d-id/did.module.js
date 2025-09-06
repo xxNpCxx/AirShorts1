@@ -22,4 +22,3 @@ exports.DidModule = DidModule = __decorate([
         exports: [did_service_1.DidService],
     })
 ], DidModule);
-//# sourceMappingURL=did.module.js.map

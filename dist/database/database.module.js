@@ -33,4 +33,3 @@ exports.DatabaseModule = DatabaseModule = __decorate([
         exports: [exports.PG_POOL],
     })
 ], DatabaseModule);
-//# sourceMappingURL=database.module.js.map

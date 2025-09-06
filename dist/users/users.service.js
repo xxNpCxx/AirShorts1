@@ -57,16 +57,17 @@ let UsersService = UsersService_1 = class UsersService {
         try {
             const res = await this.pool.query("SELECT preferred_service FROM users WHERE telegram_id = $1", [telegramId]);
             if (res.rowCount === 0) {
-                return 'did';
+                return 'did'; // По умолчанию D-ID для новых пользователей
             }
             return res.rows[0].preferred_service || 'did';
         }
         catch (error) {
+            // Если колонка не существует, возвращаем значение по умолчанию
             if (error.code === '42703' && error.message.includes('preferred_service')) {
                 this.logger.warn(`[users][pg] Колонка preferred_service не существует, используем значение по умолчанию для пользователя ${telegramId}`);
                 return 'did';
             }
-            throw error;
+            throw error; // Перебрасываем другие ошибки
         }
     }
     async setUserPreferredService(telegramId, service) {
@@ -76,11 +77,12 @@ let UsersService = UsersService_1 = class UsersService {
             return true;
         }
         catch (error) {
+            // Если колонка не существует, логируем предупреждение
             if (error.code === '42703' && error.message.includes('preferred_service')) {
                 this.logger.warn(`[users][pg] Колонка preferred_service не существует, не можем сохранить предпочтение для пользователя ${telegramId}`);
                 return false;
             }
-            throw error;
+            throw error; // Перебрасываем другие ошибки
         }
     }
 };
@@ -90,4 +92,3 @@ exports.UsersService = UsersService = UsersService_1 = __decorate([
     __param(0, (0, common_1.Inject)(database_module_1.PG_POOL)),
     __metadata("design:paramtypes", [pg_1.Pool])
 ], UsersService);
-//# sourceMappingURL=users.service.js.map

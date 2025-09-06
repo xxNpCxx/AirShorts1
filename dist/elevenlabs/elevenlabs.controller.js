@@ -65,4 +65,3 @@ exports.ElevenLabsController = ElevenLabsController = __decorate([
     (0, common_1.Controller)("elevenlabs"),
     __metadata("design:paramtypes", [elevenlabs_service_1.ElevenLabsService])
 ], ElevenLabsController);
-//# sourceMappingURL=elevenlabs.controller.js.map

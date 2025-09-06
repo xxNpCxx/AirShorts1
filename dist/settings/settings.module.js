@@ -29,4 +29,3 @@ exports.SettingsModule = SettingsModule = SettingsModule_1 = __decorate([
     }),
     __metadata("design:paramtypes", [])
 ], SettingsModule);
-//# sourceMappingURL=settings.module.js.map

@@ -99,4 +99,3 @@ exports.SettingsService = SettingsService = __decorate([
     __param(0, (0, common_1.Inject)(database_module_1.PG_POOL)),
     __metadata("design:paramtypes", [pg_1.Pool])
 ], SettingsService);
-//# sourceMappingURL=settings.service.js.map

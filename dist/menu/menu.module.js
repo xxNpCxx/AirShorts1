@@ -21,4 +21,3 @@ exports.MenuModule = MenuModule = __decorate([
         exports: [menu_service_1.MenuService],
     })
 ], MenuModule);
-//# sourceMappingURL=menu.module.js.map

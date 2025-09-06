@@ -20,4 +20,3 @@ exports.KeyboardsModule = KeyboardsModule = __decorate([
         exports: [keyboards_service_1.KeyboardsService],
     })
 ], KeyboardsModule);
-//# sourceMappingURL=keyboards.module.js.map

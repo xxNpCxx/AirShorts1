@@ -24,6 +24,9 @@ let VoiceNotificationService = VoiceNotificationService_1 = class VoiceNotificat
         this.logger = new common_1.Logger(VoiceNotificationService_1.name);
         this.pendingNotifications = new Map();
     }
+    /**
+     * Регистрирует ожидающее уведомление о готовности голоса
+     */
     registerVoiceNotification(userId, chatId, voiceId, voiceName) {
         const notificationData = {
             userId,
@@ -35,6 +38,9 @@ let VoiceNotificationService = VoiceNotificationService_1 = class VoiceNotificat
         this.pendingNotifications.set(voiceId, notificationData);
         this.logger.log(`Registered voice notification for user ${userId}, voice ${voiceId}`);
     }
+    /**
+     * Отправляет уведомление пользователю о готовности голоса
+     */
     async notifyVoiceReady(voiceId) {
         const notification = this.pendingNotifications.get(voiceId);
         if (!notification) {
@@ -54,6 +60,9 @@ let VoiceNotificationService = VoiceNotificationService_1 = class VoiceNotificat
             this.logger.error(`Failed to send voice ready notification to user ${notification.userId}:`, error);
         }
     }
+    /**
+     * Отправляет уведомление пользователю об ошибке клонирования голоса
+     */
     async notifyVoiceError(voiceId, error) {
         const notification = this.pendingNotifications.get(voiceId);
         if (!notification) {
@@ -73,10 +82,18 @@ let VoiceNotificationService = VoiceNotificationService_1 = class VoiceNotificat
             this.logger.error(`Failed to send voice error notification to user ${notification.userId}:`, error);
         }
     }
+    /**
+     * Получает список ожидающих уведомлений
+     */
     getPendingNotifications() {
         return Array.from(this.pendingNotifications.values());
     }
+    /**
+     * Очищает старые уведомления (старше 24 часов)
+     */
     cleanupOldNotifications() {
+        // В реальном приложении здесь можно добавить логику очистки старых уведомлений
+        // Пока оставляем простую реализацию
         this.logger.debug(`Current pending notifications: ${this.pendingNotifications.size}`);
     }
 };
@@ -86,4 +103,3 @@ exports.VoiceNotificationService = VoiceNotificationService = VoiceNotificationS
     __param(0, (0, common_2.Inject)((0, nestjs_telegraf_1.getBotToken)("airshorts1_bot"))),
     __metadata("design:paramtypes", [telegraf_1.Telegraf])
 ], VoiceNotificationService);
-//# sourceMappingURL=voice-notification.service.js.map

@@ -15,29 +15,20 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.runMigrations = runMigrations;
+exports.runMigrations = void 0;
 const fs_1 = require("fs");
 const path_1 = require("path");
 const pg_1 = require("pg");
 const dotenv = __importStar(require("dotenv"));
+// Загружаем переменные окружения
 dotenv.config();
 async function runMigrations() {
     console.log("🚀 Запуск миграций базы данных...");
@@ -52,10 +43,12 @@ async function runMigrations() {
         console.log("🔌 Подключение к базе данных...");
         await client.connect();
         console.log("✅ Подключение успешно");
+        // Проверяем существующую структуру таблицы migrations
         let tableExists = false;
         let hasNameColumn = false;
         let hasFilenameColumn = false;
         try {
+            // Сначала проверяем, существует ли таблица вообще
             const tableExistsCheck = await client.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
@@ -88,6 +81,7 @@ async function runMigrations() {
             console.log("🏗️ Ошибка при проверке таблицы migrations, создаем новую:", error);
             tableExists = false;
         }
+        // Создаем или обновляем таблицу migrations
         if (!tableExists) {
             console.log("🏗️ Создаем таблицу migrations...");
             await client.query(`
@@ -117,6 +111,7 @@ async function runMigrations() {
             }
         }
         else if (hasFilenameColumn && !hasNameColumn) {
+            // Если есть filename, но нет name, переименовываем
             console.log("🔄 Переименовываем filename в name...");
             try {
                 await client.query(`
@@ -132,24 +127,29 @@ async function runMigrations() {
         else {
             console.log("✅ Таблица migrations уже имеет правильную структуру");
         }
+        // Читаем все SQL файлы миграций
+        // На Render папка migrations находится в /opt/render/project/src/migrations
+        // В локальной разработке папка migrations находится относительно src/
         const migrationsDir = process.cwd().includes('/opt/render/project')
-            ? (0, path_1.join)(process.cwd(), "migrations")
+            ? (0, path_1.join)(process.cwd(), "migrations") // process.cwd() = /opt/render/project/src, нужен /opt/render/project/src/migrations
             : (0, path_1.join)(__dirname, "../../migrations");
         console.log(`📁 Ищем миграции в: ${migrationsDir}`);
+        // Проверяем существование папки миграций
         if (!(0, fs_1.existsSync)(migrationsDir)) {
             console.log(`⚠️ Папка миграций не найдена: ${migrationsDir}`);
             console.log(`📁 Текущая рабочая директория: ${process.cwd()}`);
             console.log(`📁 __dirname: ${__dirname}`);
             console.log(`📁 NODE_ENV: ${process.env.NODE_ENV}`);
-            return;
+            return; // Выходим без ошибки, если папки нет
         }
         const migrationFiles = (0, fs_1.readdirSync)(migrationsDir)
             .filter((file) => file.endsWith(".sql"))
-            .sort();
+            .sort(); // Сортируем по имени файла
         console.log(`📁 Найдено ${migrationFiles.length} файлов миграций`);
         let failuresCount = 0;
         for (const filename of migrationFiles) {
             try {
+                // Проверяем, была ли миграция уже выполнена (только если таблица migrations существует)
                 let shouldSkip = false;
                 if (tableExists) {
                     try {
@@ -169,8 +169,10 @@ async function runMigrations() {
                 console.log(`🚀 Выполняем миграцию: ${filename}`);
                 const sqlPath = (0, path_1.join)(migrationsDir, filename);
                 const sql = (0, fs_1.readFileSync)(sqlPath, "utf8");
+                // Выполняем весь файл одной транзакцией, без разбиения по ';'
                 await client.query("BEGIN");
                 await client.query(sql);
+                // Записываем в таблицу migrations только если она существует
                 if (tableExists) {
                     await client.query("INSERT INTO migrations (name) VALUES ($1)", [
                         filename,
@@ -185,8 +187,10 @@ async function runMigrations() {
                     await client.query("ROLLBACK");
                 }
                 catch {
+                    // Игнорируем ошибку rollback
                 }
                 console.error(`❌ Ошибка при выполнении миграции ${filename}:`, error);
+                // Продолжаем с другими миграциями
                 continue;
             }
         }
@@ -205,6 +209,8 @@ async function runMigrations() {
         await client.end();
     }
 }
+exports.runMigrations = runMigrations;
+// Запускаем миграции если файл вызван напрямую
 if (require.main === module) {
     runMigrations()
         .then(() => {
@@ -216,4 +222,3 @@ if (require.main === module) {
         process.exit(1);
     });
 }
-//# sourceMappingURL=migrate.js.map

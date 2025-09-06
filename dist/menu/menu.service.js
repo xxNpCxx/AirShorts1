@@ -21,9 +21,11 @@ let MenuService = class MenuService {
     async sendMainMenu(ctx) {
         this._logger.debug(`Отправка главного меню пользователю ${ctx.from?.id}`, "MenuService");
         try {
+            // Отправляем текстовое сообщение с inline-клавиатурой (баннеры отключены)
             await ctx.reply("🎬 ГЕНЕРАТОР ВИДЕО\n\nДобро пожаловать в генератор видео!\n\n✨ Создавайте персонализированные видео\n🎭 3D аватары с вашим голосом\n📱 Оптимизировано для коротких роликов\n🚀 Быстрая и качественная генерация", {
                 reply_markup: this._kb.mainInline().reply_markup,
             });
+            // Затем отдельно отправляем reply-клавиатуру (разделяем клавиатуры)
             await this.sendReplyKeyboard(ctx);
             this._logger.debug(`Главное меню успешно отправлено пользователю ${ctx.from?.id}`, "MenuService");
         }
@@ -32,8 +34,14 @@ let MenuService = class MenuService {
             throw error;
         }
     }
+    // Шаблон не содержит экранов обменов; функции отправки картинок удалены
+    /**
+     * Отправляет reply-клавиатуру для навигации (отдельно от inline-клавиатуры)
+     * @param ctx Telegram контекст
+     */
     async sendReplyKeyboard(ctx) {
         try {
+            // Отправляем reply-клавиатуру без баннера (баннеры отключены)
             await ctx.reply("🎬", {
                 reply_markup: this._kb.mainReply().reply_markup,
             });
@@ -41,6 +49,7 @@ let MenuService = class MenuService {
         }
         catch (error) {
             this._logger.error(`Ошибка при отправке reply-клавиатуры: ${error}`, undefined, "MenuService");
+            // Fallback: отправляем только reply-клавиатуру
             try {
                 await ctx.reply("🎬", {
                     reply_markup: this._kb.mainReply().reply_markup,
@@ -58,4 +67,3 @@ exports.MenuService = MenuService = __decorate([
     __metadata("design:paramtypes", [keyboards_service_1.KeyboardsService,
         logger_service_1.CustomLoggerService])
 ], MenuService);
-//# sourceMappingURL=menu.service.js.map

@@ -52,6 +52,7 @@ let ElevenLabsWebhookController = ElevenLabsWebhookController_1 = class ElevenLa
     }
     async handleVoiceCreated(payload) {
         this.logger.log(`✅ Voice created successfully: ${payload.voice_id}`);
+        // Проверяем статус голоса и уведомляем пользователя
         const voiceStatus = await this.elevenLabsService.getVoiceStatus(payload.voice_id);
         if (voiceStatus.ready) {
             await this.voiceNotificationService.notifyVoiceReady(payload.voice_id);
@@ -62,6 +63,7 @@ let ElevenLabsWebhookController = ElevenLabsWebhookController_1 = class ElevenLa
     }
     async handleVoiceUpdated(payload) {
         this.logger.log(`🔄 Voice updated: ${payload.voice_id}`);
+        // Проверяем, готов ли голос после обновления
         const voiceStatus = await this.elevenLabsService.getVoiceStatus(payload.voice_id);
         if (voiceStatus.ready) {
             await this.voiceNotificationService.notifyVoiceReady(payload.voice_id);
@@ -69,12 +71,14 @@ let ElevenLabsWebhookController = ElevenLabsWebhookController_1 = class ElevenLa
     }
     async handleVoiceDeleted(payload) {
         this.logger.log(`🗑️ Voice deleted: ${payload.voice_id}`);
+        // Обработка удаления голоса
     }
     async handleVoiceFailed(payload) {
         this.logger.error(`❌ Voice creation failed: ${payload.voice_id}`, {
             error: payload.error,
             status: payload.status
         });
+        // Уведомляем пользователя об ошибке
         await this.voiceNotificationService.notifyVoiceError(payload.voice_id, payload.error || "Неизвестная ошибка");
     }
 };
@@ -92,4 +96,3 @@ exports.ElevenLabsWebhookController = ElevenLabsWebhookController = ElevenLabsWe
     __metadata("design:paramtypes", [elevenlabs_service_1.ElevenLabsService,
         voice_notification_service_1.VoiceNotificationService])
 ], ElevenLabsWebhookController);
-//# sourceMappingURL=elevenlabs-webhook.controller.js.map

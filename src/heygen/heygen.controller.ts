@@ -10,16 +10,12 @@ export class HeyGenController {
   constructor(private readonly heygenService: HeyGenService) {}
 
   @Post("generate")
-  async generateVideo(
-    @Body() request: HeyGenVideoRequest,
-  ): Promise<HeyGenVideoResponse> {
+  async generateVideo(request: HeyGenVideoRequest): Promise<HeyGenVideoResponse> {
     return this.heygenService.generateVideo(request);
   }
 
   @Get("status/:id")
-  async getVideoStatus(
-    @Param("id") id: string,
-  ): Promise<HeyGenVideoResponse> {
+  async getVideoStatus(id: string): Promise<HeyGenVideoResponse> {
     return this.heygenService.getVideoStatus(id);
   }
 }
