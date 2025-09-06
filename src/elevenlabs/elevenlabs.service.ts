@@ -270,7 +270,10 @@ export class ElevenLabsService {
       const formData = new FormData();
       formData.append("name", request.name);
       formData.append("description", request.description || "Клонированный голос пользователя");
-      formData.append("files", new Blob([request.audioBuffer], { type: "audio/wav" }), "voice_sample.wav");
+      
+      // Создаем Blob для Node.js совместимости
+      const audioBlob = new Blob([request.audioBuffer], { type: "audio/wav" });
+      formData.append("files", audioBlob, "voice_sample.wav");
 
       const response = await fetch(`${this.baseUrl}/voices/add`, {
         method: "POST",

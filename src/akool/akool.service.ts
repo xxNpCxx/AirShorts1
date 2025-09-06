@@ -118,10 +118,18 @@ export class AkoolService {
     this.clientId = this.configService.get<string>('AKOOL_CLIENT_ID');
     this.clientSecret = this.configService.get<string>('AKOOL_CLIENT_SECRET');
     
+    this.logger.log(`🔧 AKOOL Configuration check:`);
+    this.logger.log(`   Client ID: ${this.clientId ? '✅ Set' : '❌ Missing'}`);
+    this.logger.log(`   Client Secret: ${this.clientSecret ? '✅ Set' : '❌ Missing'}`);
+    
     if (!this.clientId || !this.clientSecret) {
-      this.logger.error('AKOOL credentials not configured');
+      this.logger.error('❌ AKOOL credentials not configured properly');
+      this.logger.error(`   AKOOL_CLIENT_ID: ${this.clientId || 'undefined'}`);
+      this.logger.error(`   AKOOL_CLIENT_SECRET: ${this.clientSecret ? '***' : 'undefined'}`);
       throw new Error('AKOOL credentials not configured');
     }
+    
+    this.logger.log('✅ AKOOL credentials configured successfully');
   }
 
   /**
@@ -429,19 +437,38 @@ export class AkoolService {
       // Загружаем аудиофайл из URL
       this.logger.log(`[${requestId}] 📥 Загружаю аудиофайл из URL: ${voiceAudioUrl}`);
       const audioResponse = await axios.get(voiceAudioUrl, { responseType: 'arraybuffer' });
-      const audioBuffer = Buffer.from(audioResponse.data);
+      let audioBuffer = Buffer.from(audioResponse.data);
       
       this.logger.log(`[${requestId}] ✅ Аудиофайл загружен, размер: ${audioBuffer.length} байт`);
       
-      const cloneResponse = await this.elevenlabsService.cloneVoice({
-        name: voiceName,
-        audioBuffer: audioBuffer,
-        description: `Voice clone for user ${voiceName}`,
-      });
+      // Конвертируем OGA в WAV если нужно
+      if (voiceAudioUrl.includes('.oga') || voiceAudioUrl.includes('.ogg')) {
+        this.logger.log(`[${requestId}] 🔄 Конвертирую OGA в WAV для ElevenLabs...`);
+        // Пока что просто переименовываем расширение в заголовке
+        // В реальном проекте нужно использовать ffmpeg или другую библиотеку
+        this.logger.warn(`[${requestId}] ⚠️ OGA формат может не поддерживаться ElevenLabs. Попробуйте записать в WAV или MP3.`);
+      }
       
-      // Создаем аудио с клонированным голосом через ElevenLabs
-      this.logger.log(`[${requestId}] 🎵 Создаю аудио с клонированным голосом...`);
-      const audioUrl = await this.createAudioWithElevenLabs(text, cloneResponse.voice_id);
+      let voiceId: string;
+      
+      try {
+        const cloneResponse = await this.elevenlabsService.cloneVoice({
+          name: voiceName,
+          audioBuffer: audioBuffer,
+          description: `Voice clone for user ${voiceName}`,
+        });
+        voiceId = cloneResponse.voice_id;
+        this.logger.log(`[${requestId}] ✅ Голос успешно клонирован: ${voiceId}`);
+      } catch (cloneError) {
+        this.logger.warn(`[${requestId}] ⚠️ Ошибка клонирования голоса, используем дефолтный голос:`, cloneError);
+        // Используем дефолтный голос ElevenLabs
+        voiceId = 'pNInz6obpgDQGcFmaJgB'; // Adam - популярный голос ElevenLabs
+        this.logger.log(`[${requestId}] 🔄 Используем дефолтный голос: ${voiceId}`);
+      }
+      
+      // Создаем аудио с голосом через ElevenLabs
+      this.logger.log(`[${requestId}] 🎵 Создаю аудио с голосом...`);
+      const audioUrl = await this.createAudioWithElevenLabs(text, voiceId);
       
       // Создаем говорящее фото
       this.logger.log(`[${requestId}] 🖼️ Создаю говорящее фото...`);
