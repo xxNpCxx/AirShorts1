@@ -8,6 +8,7 @@ import { AkoolService } from "../akool/akool.service";
 import { Logger, Inject } from "@nestjs/common";
 import { Telegraf } from "telegraf";
 import { getBotToken } from "nestjs-telegraf";
+import { AkoolFileUploader } from "../utils/akool-file-uploader";
 
 interface SessionData {
   photoFileId?: string;
@@ -440,14 +441,26 @@ export class VideoGenerationScene {
         const file = await ctx.telegram.getFile(photoFileId);
         if (file.file_path) {
           const fileExtension = file.file_path.split('.').pop()?.toLowerCase();
-          const allowedFormats = ['jpg', 'jpeg', 'png', 'webp'];
+          const fileName = file.file_path.split('/').pop() || '';
           
-          if (!fileExtension || !allowedFormats.includes(fileExtension)) {
+          // Проверяем поддержку формата AKOOL
+          if (!AkoolFileUploader.isSupportedImageFormat(fileName, 'image/jpeg')) {
             await ctx.reply(
-              "❌ Неподдерживаемый формат файла!\n\n" +
+              "❌ Неподдерживаемый формат файла для AKOOL!\n\n" +
               `Обнаружен: ${fileExtension || 'неизвестный'}\n` +
-              "Поддерживаются: JPG, PNG, WebP\n\n" +
+              "Поддерживаются AKOOL: JPG, PNG, WebP\n\n" +
               "Отправьте фото в поддерживаемом формате."
+            );
+            return;
+          }
+          
+          // Дополнительная валидация размера
+          if (file.file_size && file.file_size > 10 * 1024 * 1024) {
+            await ctx.reply(
+              "❌ Файл слишком большой для AKOOL!\n\n" +
+              `Размер: ${Math.round(file.file_size / (1024 * 1024) * 100) / 100} МБ\n` +
+              "Максимум: 10 МБ\n\n" +
+              "Сожмите фото и попробуйте снова."
             );
             return;
           }
@@ -571,6 +584,38 @@ export class VideoGenerationScene {
           `💡 Запишите голосовое сообщение подходящей длительности.`
         );
         return;
+      }
+
+      // Дополнительная валидация для AKOOL
+      try {
+        const file = await ctx.telegram.getFile(voice.file_id);
+        if (file.file_path) {
+          const fileName = file.file_path.split('/').pop() || '';
+          
+          // Проверяем размер файла
+          if (file.file_size && file.file_size > 10 * 1024 * 1024) {
+            await ctx.reply(
+              "❌ Голосовое сообщение слишком большое!\n\n" +
+              `Размер: ${Math.round(file.file_size / (1024 * 1024) * 100) / 100} МБ\n` +
+              "Максимум: 10 МБ\n\n" +
+              "Запишите более короткое сообщение."
+            );
+            return;
+          }
+          
+          // Информируем о конвертации OGA
+          if (fileName.includes('.oga') || fileName.includes('.ogg')) {
+            await ctx.reply(
+              "⚠️ Обнаружен формат OGA/OGG\n\n" +
+              "💡 Файл будет автоматически конвертирован в MP3 для AKOOL.\n" +
+              "Это может занять немного больше времени.\n\n" +
+              "✅ Голосовое сообщение принято!"
+            );
+          }
+        }
+      } catch (fileError) {
+        this.logger.warn("Could not validate voice file:", fileError);
+        // Продолжаем, так как это не критичная ошибка
       }
 
       // Сохраняем ID голосового сообщения в сессии

@@ -4,6 +4,8 @@ import axios from 'axios';
 import { ElevenLabsService } from '../elevenlabs/elevenlabs.service';
 import { Telegraf } from 'telegraf';
 import { getBotToken } from 'nestjs-telegraf';
+import { AudioConverter } from '../utils/audio-converter';
+import { AkoolFileUploader } from '../utils/akool-file-uploader';
 
 /**
  * AKOOL Video Request Interface
@@ -540,23 +542,56 @@ export class AkoolService {
     try {
       this.logger.log(`[${requestId}] 🎭 Создаю цифровой двойник с клонированием голоса...`);
       
-      // Сначала клонируем голос через ElevenLabs
-      this.logger.log(`[${requestId}] 🎤 Клонирую голос пользователя через ElevenLabs...`);
+      // Получаем токен для загрузки файлов
+      const token = await this.getAccessToken();
       
-      // Загружаем аудиофайл из URL
-      this.logger.log(`[${requestId}] 📥 Загружаю аудиофайл из URL: ${voiceAudioUrl}`);
+      // Загружаем и обрабатываем фото
+      this.logger.log(`[${requestId}] 📸 Загружаю и обрабатываю фото...`);
+      const photoResponse = await axios.get(photoUrl, { responseType: 'arraybuffer' });
+      const photoBuffer = Buffer.from(photoResponse.data);
+      
+      // Валидируем фото
+      if (!AkoolFileUploader.validateFileSize(photoBuffer, 10)) {
+        throw new Error('Photo file too large (max 10MB)');
+      }
+      
+      const photoFileName = `photo_${requestId}.jpg`;
+      const uploadedPhotoUrl = await AkoolFileUploader.uploadImage(
+        photoBuffer, 
+        photoFileName, 
+        token, 
+        this.baseUrl
+      );
+      
+      // Загружаем и обрабатываем аудио
+      this.logger.log(`[${requestId}] 🎵 Загружаю и обрабатываю аудио...`);
       const audioResponse = await axios.get(voiceAudioUrl, { responseType: 'arraybuffer' });
       let audioBuffer = Buffer.from(audioResponse.data);
       
       this.logger.log(`[${requestId}] ✅ Аудиофайл загружен, размер: ${audioBuffer.length} байт`);
       
-      // Конвертируем OGA в WAV если нужно
-      if (voiceAudioUrl.includes('.oga') || voiceAudioUrl.includes('.ogg')) {
-        this.logger.log(`[${requestId}] 🔄 Конвертирую OGA в WAV для ElevenLabs...`);
-        // Пока что просто переименовываем расширение в заголовке
-        // В реальном проекте нужно использовать ffmpeg или другую библиотеку
-        this.logger.warn(`[${requestId}] ⚠️ OGA формат может не поддерживаться ElevenLabs. Попробуйте записать в WAV или MP3.`);
+      // Конвертируем OGA в MP3 если нужно
+      if (AudioConverter.needsConversion(voiceAudioUrl)) {
+        this.logger.log(`[${requestId}] 🔄 Конвертирую OGA в MP3 для AKOOL...`);
+        audioBuffer = await AudioConverter.convertOgaToMp3(audioBuffer, voiceAudioUrl);
+        this.logger.log(`[${requestId}] ✅ Конвертация завершена, новый размер: ${audioBuffer.length} байт`);
       }
+      
+      // Валидируем аудио
+      if (!AkoolFileUploader.validateFileSize(audioBuffer, 10)) {
+        throw new Error('Audio file too large (max 10MB)');
+      }
+      
+      const audioFileName = `audio_${requestId}.mp3`;
+      const uploadedAudioUrl = await AkoolFileUploader.uploadAudio(
+        audioBuffer, 
+        audioFileName, 
+        token, 
+        this.baseUrl
+      );
+      
+      // Клонируем голос через ElevenLabs (используем оригинальный буфер)
+      this.logger.log(`[${requestId}] 🎤 Клонирую голос пользователя через ElevenLabs...`);
       
       let voiceId: string;
       
@@ -579,11 +614,11 @@ export class AkoolService {
       this.logger.log(`[${requestId}] 🎵 Создаю аудио с голосом...`);
       const audioUrl = await this.createAudioWithElevenLabs(text, voiceId);
       
-      // Создаем говорящее фото
+      // Создаем говорящее фото с загруженными файлами
       this.logger.log(`[${requestId}] 🖼️ Создаю говорящее фото...`);
       const videoRequest: AkoolVideoRequest = {
-        photoUrl: photoUrl,
-        audioUrl: audioUrl,
+        photoUrl: uploadedPhotoUrl,
+        audioUrl: uploadedAudioUrl,
         script: text,
         platform: "youtube-shorts",
         duration: 30,
