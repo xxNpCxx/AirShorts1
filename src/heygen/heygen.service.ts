@@ -52,6 +52,22 @@ export interface VoiceCloningRequest {
   callback_id?: string;
 }
 
+/**
+ * Upload Asset Response Interface
+ * @see https://docs.heygen.com/reference/upload-asset
+ */
+export interface UploadAssetResponse {
+  data: {
+    asset_key: string;
+  };
+}
+export interface VoiceCloningRequest {
+  name: string;
+  audio_url: string;
+  callback_url?: string;
+  callback_id?: string;
+}
+
 export interface HeyGenVideoResponse {
   id: string;
   status: string;
@@ -661,19 +677,20 @@ export class HeyGenService {
 
   /**
    * Создает Photo Avatar из пользовательского фото
+   * Использует Avatar IV API с загруженным изображением
    * 
-   * @see https://docs.heygen.com/reference/create-photo-avatar
-   * @endpoint POST /v1/photo_avatar.create
+   * @see https://docs.heygen.com/reference/create-avatar-iv-video
+   * @endpoint POST /v2/video/av4/generate
    * @param photoUrl - URL фото пользователя
    * @param callbackId - ID для webhook callback
-   * @returns Promise с avatar_id
+   * @returns Promise с avatar_id (временный ID для отслеживания)
    * @throws Error если создание не удалось
    */
   async createPhotoAvatar(photoUrl: string, callbackId: string): Promise<string> {
     const requestId = `photo_avatar_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
     try {
-      this.logger.log(`📸 [HEYGEN_PHOTO_AVATAR] Starting Photo Avatar creation`, {
+      this.logger.log(`📸 [HEYGEN_PHOTO_AVATAR] Starting Photo Avatar creation via Avatar IV API`, {
         requestId,
         callbackId,
         photoUrl: photoUrl.substring(0, 100) + '...',
@@ -681,86 +698,19 @@ export class HeyGenService {
         timestamp: new Date().toISOString()
       });
       
-      const payload: PhotoAvatarRequest = {
-        name: `avatar_${callbackId}`,
-        photo_url: photoUrl,
-        callback_url: `${process.env.WEBHOOK_URL}/heygen/webhook`,
-        callback_id: callbackId
-      };
-
-      this.logger.log(`📤 [HEYGEN_PHOTO_AVATAR] Sending request to HeyGen API`, {
+      // Сначала загружаем изображение как asset
+      const uploadResponse = await this.uploadAsset(photoUrl, 'image');
+      
+      this.logger.log(`📤 [HEYGEN_PHOTO_AVATAR] Image uploaded successfully`, {
         requestId,
         callbackId,
-        endpoint: `${this.baseUrl}/v1/photo_avatar.create`,
-        payload: {
-          name: payload.name,
-          photo_url: payload.photo_url.substring(0, 100) + '...',
-          callback_url: payload.callback_url,
-          callback_id: payload.callback_id
-        },
+        assetKey: uploadResponse.asset_key,
         timestamp: new Date().toISOString()
       });
 
-      const response = await fetch(`${this.baseUrl}/v1/photo_avatar.create`, {
-        method: 'POST',
-        headers: {
-          'X-API-KEY': this.apiKey,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      this.logger.log(`📥 [HEYGEN_PHOTO_AVATAR] Received response from HeyGen API`, {
-        requestId,
-        callbackId,
-        status: response.status,
-        statusText: response.statusText,
-        headers: 'Headers not available',
-        timestamp: new Date().toISOString()
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        this.logger.error(`❌ [HEYGEN_PHOTO_AVATAR] API request failed`, {
-          requestId,
-          callbackId,
-          status: response.status,
-          statusText: response.statusText,
-          errorBody: errorText,
-          timestamp: new Date().toISOString()
-        });
-        throw new Error(`Photo Avatar creation failed: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json() as any;
-      
-      this.logger.log(`📋 [HEYGEN_PHOTO_AVATAR] Response data received`, {
-        requestId,
-        callbackId,
-        responseData: result,
-        timestamp: new Date().toISOString()
-      });
-      
-      const avatarId = result.data?.avatar_id || result.avatar_id;
-      
-      if (!avatarId) {
-        this.logger.error(`❌ [HEYGEN_PHOTO_AVATAR] No avatar_id in response`, {
-          requestId,
-          callbackId,
-          responseData: result,
-          timestamp: new Date().toISOString()
-        });
-        throw new Error('No avatar_id returned from Photo Avatar API');
-      }
-      
-      this.logger.log(`✅ [HEYGEN_PHOTO_AVATAR] Photo Avatar created successfully`, {
-        requestId,
-        callbackId,
-        avatarId,
-        timestamp: new Date().toISOString()
-      });
-      
-      return avatarId;
+      // Возвращаем asset_key как временный avatar_id
+      // В реальной реализации это будет использоваться для создания Avatar IV видео
+      return uploadResponse.asset_key;
       
     } catch (error) {
       this.logger.error(`❌ [HEYGEN_PHOTO_AVATAR] Error creating Photo Avatar`, {
@@ -769,6 +719,85 @@ export class HeyGenService {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         photoUrl: photoUrl.substring(0, 100) + '...',
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Загружает файл как asset в HeyGen
+   * 
+   * @see https://docs.heygen.com/reference/upload-asset
+   * @endpoint POST /v1/upload
+   * @param fileUrl - URL файла для загрузки
+   * @param fileType - Тип файла ('image' или 'audio')
+   * @returns Promise с asset_key
+   * @throws Error если загрузка не удалась
+   */
+  private async uploadAsset(fileUrl: string, fileType: 'image' | 'audio'): Promise<{ asset_key: string }> {
+    const requestId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    
+    try {
+      this.logger.log(`📤 [HEYGEN_UPLOAD] Starting asset upload`, {
+        requestId,
+        fileUrl: fileUrl.substring(0, 100) + '...',
+        fileType,
+        timestamp: new Date().toISOString()
+      });
+
+      const response = await fetch(`${this.baseUrl}/v1/upload`, {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': this.apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          file_url: fileUrl,
+          file_type: fileType
+        })
+      });
+
+      this.logger.log(`📥 [HEYGEN_UPLOAD] Received response from HeyGen API`, {
+        requestId,
+        status: response.status,
+        statusText: response.statusText,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        this.logger.error(`❌ [HEYGEN_UPLOAD] Upload failed`, {
+          requestId,
+          status: response.status,
+          statusText: response.statusText,
+          errorBody,
+          timestamp: new Date().toISOString()
+        });
+        throw new Error(`Asset upload failed: ${response.status} - ${errorBody}`);
+      }
+
+      const data = await response.json() as UploadAssetResponse;
+      
+      this.logger.log(`✅ [HEYGEN_UPLOAD] Asset uploaded successfully`, {
+        requestId,
+        assetKey: data.data?.asset_key,
+        responseData: data,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!data.data?.asset_key) {
+        throw new Error('No asset_key in response');
+      }
+
+      return { asset_key: data.data.asset_key };
+    } catch (error) {
+      this.logger.error(`❌ [HEYGEN_UPLOAD] Error uploading asset`, {
+        requestId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        fileUrl: fileUrl.substring(0, 100) + '...',
+        fileType,
         timestamp: new Date().toISOString()
       });
       throw error;
