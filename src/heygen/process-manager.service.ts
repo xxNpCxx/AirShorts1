@@ -287,6 +287,9 @@ export class ProcessManagerService {
         error: error instanceof Error ? error.message : String(error) 
       });
       await this.notifyUserError(process, 'Ошибка создания аватара из фото');
+      
+      // Останавливаем процесс после ошибки
+      return;
     }
   }
 
@@ -483,6 +486,9 @@ export class ProcessManagerService {
         error: error instanceof Error ? error.message : String(error) 
       });
       await this.notifyUserError(process, 'Ошибка создания видео');
+      
+      // Останавливаем процесс после ошибки
+      return;
     }
   }
 
