@@ -23,7 +23,7 @@ import { WebhookModule } from "./webhook/webhook.module";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ".env",
+      envFilePath: process.env.NODE_ENV === 'production' ? undefined : ".env",
     }),
     LoggerModule,
     DatabaseModule,
