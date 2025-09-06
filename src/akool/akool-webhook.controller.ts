@@ -118,7 +118,53 @@ export class AkoolWebhookController {
       this.logger.log(`⏰ Timestamp: ${timestamp}`);
       this.logger.log(`🔢 Nonce: ${nonce}`);
       
-      // Метод 1: Base64 декодирование
+      // Получаем ключ расшифровки из переменных окружения
+      const webhookSecret = process.env.AKOOL_WEBHOOK_SECRET;
+      
+      if (webhookSecret) {
+        this.logger.log("🔑 Используем ключ из переменных окружения");
+        
+        // Метод 1: AES расшифровка с ключом из окружения
+        try {
+          const crypto = require('crypto');
+          const key = Buffer.from(webhookSecret, 'hex');
+          const iv = Buffer.from(nonce, 'hex');
+          
+          const decipher = crypto.createDecipher('aes-256-cbc', key);
+          let decrypted = decipher.update(dataEncrypt, 'base64', 'utf8');
+          decrypted += decipher.final('utf8');
+          
+          this.logger.log("✅ AES расшифровка с ключом успешна:", decrypted);
+          return JSON.parse(decrypted);
+        } catch (aesError) {
+          this.logger.debug("❌ AES расшифровка с ключом не удалась:", aesError.message);
+        }
+        
+        // Метод 2: XOR с ключом из окружения
+        try {
+          const dataBuffer = Buffer.from(dataEncrypt, 'base64');
+          const keyBuffer = Buffer.from(webhookSecret, 'hex');
+          const decrypted = Buffer.alloc(dataBuffer.length);
+          
+          for (let i = 0; i < dataBuffer.length; i++) {
+            decrypted[i] = dataBuffer[i] ^ keyBuffer[i % keyBuffer.length];
+          }
+          
+          const result = decrypted.toString('utf8');
+          this.logger.log("✅ XOR расшифровка с ключом успешна:", result);
+          return JSON.parse(result);
+        } catch (xorError) {
+          this.logger.debug("❌ XOR расшифровка с ключом не удалась:", xorError.message);
+        }
+      } else {
+        this.logger.warn("⚠️ AKOOL_WEBHOOK_SECRET не найден в переменных окружения");
+        this.logger.log("💡 Получите ключ в панели AKOOL и добавьте в .env файл");
+      }
+      
+      // Fallback: старые методы без ключа
+      this.logger.log("🔄 Пробуем fallback методы...");
+      
+      // Метод 3: Base64 декодирование
       try {
         const base64Decoded = Buffer.from(dataEncrypt, 'base64').toString('utf-8');
         this.logger.log("🔓 Base64 декодирование:", base64Decoded);
@@ -131,23 +177,7 @@ export class AkoolWebhookController {
         this.logger.debug("❌ Base64 декодирование не удалось:", base64Error.message);
       }
       
-      // Метод 2: Попробуем использовать signature как ключ
-      try {
-        const crypto = require('crypto');
-        const key = Buffer.from(signature, 'hex');
-        const iv = Buffer.from(nonce, 'hex');
-        
-        const decipher = crypto.createDecipher('aes-256-cbc', key);
-        let decrypted = decipher.update(dataEncrypt, 'base64', 'utf8');
-        decrypted += decipher.final('utf8');
-        
-        this.logger.log("✅ AES расшифровка успешна:", decrypted);
-        return JSON.parse(decrypted);
-      } catch (aesError) {
-        this.logger.debug("❌ AES расшифровка не удалась:", aesError.message);
-      }
-      
-      // Метод 3: Простое XOR с nonce
+      // Метод 4: Простое XOR с nonce
       try {
         const dataBuffer = Buffer.from(dataEncrypt, 'base64');
         const nonceBuffer = Buffer.from(nonce, 'hex');
@@ -164,7 +194,7 @@ export class AkoolWebhookController {
         this.logger.debug("❌ XOR расшифровка не удалась:", xorError.message);
       }
       
-      throw new Error("Все методы расшифровки не удались");
+      throw new Error("Все методы расшифровки не удались. Нужен AKOOL_WEBHOOK_SECRET");
       
     } catch (error) {
       this.logger.error("❌ Ошибка расшифровки webhook данных:", error);
