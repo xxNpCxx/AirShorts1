@@ -3,13 +3,13 @@ import { Markup } from "telegraf";
 
 @Injectable()
 export class KeyboardsService {
-  mainReply() {
+  mainReply(): ReturnType<typeof Markup.keyboard> {
     return Markup.keyboard([["🏠 Главное меню"]])
       .resize()
       .persistent();
   }
 
-  mainInline(newsChannel?: string) {
+  mainInline(newsChannel?: string): ReturnType<typeof Markup.inlineKeyboard> {
     const rows = [
       [Markup.button.callback("🎬 Создать видео", "create_video")],
       [Markup.button.callback("⚙️ Настройки сервиса", "service_settings")],
@@ -21,7 +21,7 @@ export class KeyboardsService {
     return Markup.inlineKeyboard(rows);
   }
 
-  serviceSettings() {
+  serviceSettings(): ReturnType<typeof Markup.inlineKeyboard> {
     return Markup.inlineKeyboard([
       [Markup.button.callback("🤖 ИИ-Аватар (D-ID)", "set_service_did")],
       [Markup.button.callback("👤 Цифровой двойник (HeyGen)", "set_service_heygen")],

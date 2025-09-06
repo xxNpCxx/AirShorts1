@@ -1,6 +1,6 @@
 import { Ctx, Scene, SceneEnter, On, Action } from "nestjs-telegraf";
 import { Context } from "telegraf";
-import type { Message } from "@telegraf/types";
+import type { Message } from "telegraf/types";
 import { HeyGenService } from "../heygen/heygen.service";
 import { ProcessManagerService } from "../heygen/process-manager.service";
 import { Logger, Inject } from "@nestjs/common";

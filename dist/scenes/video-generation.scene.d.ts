@@ -1,5 +1,5 @@
 import { Context } from "telegraf";
-import type { Message } from "@telegraf/types";
+import type { Message } from "telegraf/types";
 import { HeyGenService } from "../heygen/heygen.service";
 import { ProcessManagerService } from "../heygen/process-manager.service";
 import { Telegraf } from "telegraf";
