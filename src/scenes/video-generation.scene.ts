@@ -173,6 +173,16 @@ export class VideoGenerationScene {
         timestamp: new Date().toISOString()
       });
 
+      // Запускаем первый шаг процесса - создание Photo Avatar
+      this.logger.log(`🚀 [DIGITAL_TWIN_CREATE] Starting first step execution`, {
+        requestId,
+        userId,
+        processId: digitalTwinProcess.id,
+        timestamp: new Date().toISOString()
+      });
+      
+      await this.processManager.executeNextStep(digitalTwinProcess.id);
+
       await ctx.reply(
         `🎬 Создание цифрового двойника запущено!\n\n` +
         `📋 ID процесса: ${digitalTwinProcess.id}\n` +
