@@ -120,46 +120,73 @@ export class AkoolWebhookController {
       
       // Получаем ключ расшифровки из переменных окружения
       const webhookSecret = process.env.AKOOL_WEBHOOK_SECRET;
+      const clientSecret = process.env.AKOOL_CLIENT_SECRET;
       
-      if (webhookSecret) {
-        this.logger.log("🔑 Используем ключ из переменных окружения");
+      // Пробуем разные ключи
+      const keysToTry = [
+        { name: "AKOOL_WEBHOOK_SECRET", key: webhookSecret },
+        { name: "AKOOL_CLIENT_SECRET", key: clientSecret },
+        { name: "Signature as key", key: signature }
+      ];
+      
+      for (const keyInfo of keysToTry) {
+        if (keyInfo.key) {
+          this.logger.log(`🔑 Пробуем ключ: ${keyInfo.name}`);
         
-        // Метод 1: AES расшифровка с ключом из окружения
-        try {
-          const crypto = require('crypto');
-          const key = Buffer.from(webhookSecret, 'hex');
-          const iv = Buffer.from(nonce, 'hex');
-          
-          const decipher = crypto.createDecipher('aes-256-cbc', key);
-          let decrypted = decipher.update(dataEncrypt, 'base64', 'utf8');
-          decrypted += decipher.final('utf8');
-          
-          this.logger.log("✅ AES расшифровка с ключом успешна:", decrypted);
-          return JSON.parse(decrypted);
-        } catch (aesError) {
-          this.logger.debug("❌ AES расшифровка с ключом не удалась:", aesError.message);
-        }
-        
-        // Метод 2: XOR с ключом из окружения
-        try {
-          const dataBuffer = Buffer.from(dataEncrypt, 'base64');
-          const keyBuffer = Buffer.from(webhookSecret, 'hex');
-          const decrypted = Buffer.alloc(dataBuffer.length);
-          
-          for (let i = 0; i < dataBuffer.length; i++) {
-            decrypted[i] = dataBuffer[i] ^ keyBuffer[i % keyBuffer.length];
+          // Метод 1: AES расшифровка
+          try {
+            const crypto = require('crypto');
+            const key = Buffer.from(keyInfo.key, 'hex');
+            const iv = Buffer.from(nonce, 'hex');
+            
+            const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+            let decrypted = decipher.update(dataEncrypt, 'base64', 'utf8');
+            decrypted += decipher.final('utf8');
+            
+            this.logger.log(`✅ AES расшифровка с ${keyInfo.name} успешна:`, decrypted);
+            return JSON.parse(decrypted);
+          } catch (aesError) {
+            this.logger.debug(`❌ AES расшифровка с ${keyInfo.name} не удалась:`, aesError.message);
           }
           
-          const result = decrypted.toString('utf8');
-          this.logger.log("✅ XOR расшифровка с ключом успешна:", result);
-          return JSON.parse(result);
-        } catch (xorError) {
-          this.logger.debug("❌ XOR расшифровка с ключом не удалась:", xorError.message);
+          // Метод 2: XOR расшифровка
+          try {
+            const dataBuffer = Buffer.from(dataEncrypt, 'base64');
+            const keyBuffer = Buffer.from(keyInfo.key, 'hex');
+            const decrypted = Buffer.alloc(dataBuffer.length);
+            
+            for (let i = 0; i < dataBuffer.length; i++) {
+              decrypted[i] = dataBuffer[i] ^ keyBuffer[i % keyBuffer.length];
+            }
+            
+            const result = decrypted.toString('utf8');
+            this.logger.log(`✅ XOR расшифровка с ${keyInfo.name} успешна:`, result);
+            return JSON.parse(result);
+          } catch (xorError) {
+            this.logger.debug(`❌ XOR расшифровка с ${keyInfo.name} не удалась:`, xorError.message);
+          }
+          
+          // Метод 3: Простое XOR с ключом как строкой
+          try {
+            const dataBuffer = Buffer.from(dataEncrypt, 'base64');
+            const keyBuffer = Buffer.from(keyInfo.key, 'utf8');
+            const decrypted = Buffer.alloc(dataBuffer.length);
+            
+            for (let i = 0; i < dataBuffer.length; i++) {
+              decrypted[i] = dataBuffer[i] ^ keyBuffer[i % keyBuffer.length];
+            }
+            
+            const result = decrypted.toString('utf8');
+            this.logger.log(`✅ String XOR расшифровка с ${keyInfo.name} успешна:`, result);
+            return JSON.parse(result);
+          } catch (stringXorError) {
+            this.logger.debug(`❌ String XOR расшифровка с ${keyInfo.name} не удалась:`, stringXorError.message);
+          }
         }
-      } else {
-        this.logger.warn("⚠️ AKOOL_WEBHOOK_SECRET не найден в переменных окружения");
-        this.logger.log("💡 Получите ключ в панели AKOOL и добавьте в .env файл");
       }
+      
+      this.logger.warn("⚠️ Ни один ключ не найден в переменных окружения");
+      this.logger.log("💡 Добавьте AKOOL_CLIENT_SECRET в .env файл");
       
       // Fallback: старые методы без ключа
       this.logger.log("🔄 Пробуем fallback методы...");
