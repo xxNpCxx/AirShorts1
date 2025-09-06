@@ -3,6 +3,7 @@ import { Telegraf } from 'telegraf';
 import { getBotToken } from 'nestjs-telegraf';
 import { Inject } from '@nestjs/common';
 import { HeyGenService } from './heygen.service';
+import { ElevenLabsService } from '../elevenlabs/elevenlabs.service';
 
 /**
  * Статусы процесса создания цифрового двойника
@@ -57,6 +58,7 @@ export class ProcessManagerService {
 
   constructor(
     private readonly heygenService: HeyGenService,
+    private readonly elevenlabsService: ElevenLabsService,
   ) {
     this.bot = new Telegraf(process.env.BOT_TOKEN || "");
   }
@@ -289,83 +291,97 @@ export class ProcessManagerService {
   }
 
   /**
-   * Запускает клонирование голоса
+   * Запускает клонирование голоса через ElevenLabs
    */
   private async startVoiceCloning(process: DigitalTwinProcess): Promise<void> {
     const requestId = `voice_clone_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
+    this.logger.log(`🎵 [VOICE_CLONE_START] Starting Voice Cloning via ElevenLabs`, {
+      requestId,
+      processId: process.id,
+      userId: process.userId,
+      audioUrl: process.audioUrl.substring(0, 100) + '...',
+      audioFileId: process.audioFileId,
+      callbackId: process.id,
+      retryCount: process.retryCount,
+      maxRetries: process.maxRetries,
+      timestamp: new Date().toISOString()
+    });
+
+    // Проверяем лимит повторных попыток
+    if (process.retryCount >= process.maxRetries) {
+      this.logger.error(`[${requestId}] ❌ [VOICE_CLONE_START] Max retries exceeded`);
+      this.updateProcessStatus(process.id, 'voice_clone_failed', { 
+        error: `Превышено максимальное количество попыток (${process.maxRetries})`
+      });
+      
+      // Уведомляем пользователя
+      await this.notifyUser(process.userId, 
+        `❌ Не удалось клонировать голос после ${process.maxRetries} попыток. Попробуйте позже.`);
+      return;
+    }
+
+    // Увеличиваем счетчик попыток
+    this.updateProcessStatus(process.id, 'voice_cloning', { 
+      retryCount: process.retryCount + 1
+    });
+
     try {
-      this.logger.log(`🎵 [VOICE_CLONE_START] Starting Voice Cloning`, {
+      this.logger.log(`[${requestId}] 🎵 [VOICE_CLONE_START] Calling ElevenLabs Service`, {
         requestId,
         processId: process.id,
         userId: process.userId,
         audioUrl: process.audioUrl.substring(0, 100) + '...',
         audioFileId: process.audioFileId,
         callbackId: process.id,
-        retryCount: process.retryCount,
-        maxRetries: process.maxRetries,
         timestamp: new Date().toISOString()
       });
-      
-      // Проверяем, не превышено ли количество попыток
-      if (process.retryCount >= process.maxRetries) {
-        this.logger.error(`❌ [VOICE_CLONE_START] Max retries exceeded`, {
-          requestId,
-          processId: process.id,
-          userId: process.userId,
-          retryCount: process.retryCount,
-          maxRetries: process.maxRetries,
-          timestamp: new Date().toISOString()
-        });
-        
-        await this.updateProcessStatus(process.id, 'voice_clone_failed', { 
-          error: `Max retries exceeded (${process.maxRetries})` 
-        });
-        await this.notifyUserError(process, 'Превышено максимальное количество попыток клонирования голоса');
-        return;
+
+      // Скачиваем аудио файл
+      const audioResponse = await fetch(process.audioUrl);
+      if (!audioResponse.ok) {
+        throw new Error(`Failed to download audio: ${audioResponse.status}`);
       }
       
-      // Увеличиваем счетчик попыток
-      await this.updateProcessStatus(process.id, 'voice_cloning', { 
-        retryCount: process.retryCount + 1 
-      });
+      const audioBuffer = Buffer.from(await audioResponse.arrayBuffer());
+      const contentType = audioResponse.headers.get('content-type') || 'application/octet-stream';
       
-      this.logger.log(`🎵 [VOICE_CLONE_START] Calling HeyGen Service`, {
+      this.logger.log(`[${requestId}] 📥 [VOICE_CLONE_START] Audio downloaded: ${audioBuffer.length} bytes`, {
+        requestId,
+        audioSize: audioBuffer.length,
+        contentType,
+        timestamp: new Date().toISOString()
+      });
+
+      // Клонируем голос через ElevenLabs
+      const voiceResult = await this.elevenlabsService.cloneVoiceAsync({
+        name: `voice_${process.id}`,
+        audioBuffer: audioBuffer,
+        description: `Клонированный голос для процесса ${process.id}`,
+        contentType: contentType
+      });
+
+      this.logger.log(`[${requestId}] ✅ [VOICE_CLONE_START] Voice cloned successfully`, {
         requestId,
         processId: process.id,
         userId: process.userId,
-        audioUrl: process.audioUrl.substring(0, 100) + '...',
-        audioFileId: process.audioFileId,
-        callbackId: process.id,
+        voiceId: voiceResult.voice_id,
+        voiceName: voiceResult.name,
+        status: voiceResult.status,
         timestamp: new Date().toISOString()
       });
-      
-      // Вызываем HeyGen Service для клонирования голоса
-      const voiceId = await this.heygenService.createVoiceClone(process.audioUrl, process.id, process.audioFileId);
-      
-      this.logger.log(`🎵 [VOICE_CLONE_START] HeyGen API call successful`, {
-        requestId,
-        processId: process.id,
-        userId: process.userId,
-        voiceId,
-        audioUrl: process.audioUrl.substring(0, 100) + '...',
-        audioFileId: process.audioFileId,
-        timestamp: new Date().toISOString()
+
+      // Обновляем статус процесса
+      this.updateProcessStatus(process.id, 'voice_clone_completed', { 
+        voiceCloneId: voiceResult.voice_id
       });
-      
-      await this.updateProcessStatus(process.id, 'voice_cloning', { voiceCloneId: voiceId });
-      
-      this.logger.log(`✅ [VOICE_CLONE_START] Voice Cloning initiated successfully`, {
-        requestId,
-        processId: process.id,
-        userId: process.userId,
-        voiceId,
-        status: 'voice_cloning',
-        retryCount: process.retryCount + 1,
-        timestamp: new Date().toISOString()
-      });
+
+      // Переходим к следующему шагу
+      this.logger.log(`[${requestId}] 🚀 [VOICE_CLONE_START] Proceeding to next step`);
+      await this.executeNextStep(process.id);
+
     } catch (error) {
-      this.logger.error(`❌ [VOICE_CLONE_START] Error creating Voice Clone`, {
+      this.logger.error(`[${requestId}] ❌ [VOICE_CLONE_START] Error creating Voice Clone`, {
         requestId,
         processId: process.id,
         userId: process.userId,
@@ -377,12 +393,11 @@ export class ProcessManagerService {
         maxRetries: process.maxRetries,
         timestamp: new Date().toISOString()
       });
-      
-      // Определяем, нужно ли повторить попытку
-      const shouldRetry = process.retryCount < process.maxRetries;
-      
-      if (shouldRetry) {
-        this.logger.log(`🔄 [VOICE_CLONE_START] Scheduling retry`, {
+
+      // Если еще есть попытки, планируем повтор
+      if (process.retryCount < process.maxRetries) {
+        this.logger.log(`[${requestId}] 🔄 [VOICE_CLONE_START] Scheduling retry`);
+        this.logger.log({
           requestId,
           processId: process.id,
           userId: process.userId,
@@ -391,35 +406,20 @@ export class ProcessManagerService {
           error: error instanceof Error ? error.message : String(error),
           timestamp: new Date().toISOString()
         });
-        
-        // Планируем повторную попытку через 5 секунд
-        setTimeout(async () => {
-          try {
-            await this.executeNextStep(process.id);
-          } catch (retryError) {
-            this.logger.error(`❌ [VOICE_CLONE_RETRY] Retry failed`, {
-              requestId,
-              processId: process.id,
-              userId: process.userId,
-              retryError: retryError instanceof Error ? retryError.message : String(retryError),
-              timestamp: new Date().toISOString()
-            });
-          }
+
+        // Планируем повтор через 5 секунд
+        setTimeout(() => {
+          this.executeNextStep(process.id);
         }, 5000);
       } else {
-        this.logger.error(`❌ [VOICE_CLONE_START] Max retries reached, marking as failed`, {
-          requestId,
-          processId: process.id,
-          userId: process.userId,
-          retryCount: process.retryCount,
-          maxRetries: process.maxRetries,
-          timestamp: new Date().toISOString()
+        // Превышено максимальное количество попыток
+        this.updateProcessStatus(process.id, 'voice_clone_failed', { 
+          error: error instanceof Error ? error.message : String(error)
         });
         
-        await this.updateProcessStatus(process.id, 'voice_clone_failed', { 
-          error: error instanceof Error ? error.message : String(error) 
-        });
-        await this.notifyUserError(process, 'Ошибка клонирования голоса');
+        // Уведомляем пользователя
+        await this.notifyUser(process.userId, 
+          `❌ Не удалось клонировать голос: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
   }
@@ -441,13 +441,14 @@ export class ProcessManagerService {
         timestamp: new Date().toISOString()
       });
       
-      // Вызываем HeyGen Service для генерации видео
+      // Вызываем HeyGen Service для генерации видео с ElevenLabs сервисом
       const videoId = await this.heygenService.generateDigitalTwinVideo(
         process.photoAvatarId!,
         process.voiceCloneId!,
         process.script,
         process.videoTitle,
-        process.id
+        process.id,
+        this.elevenlabsService // Передаем ElevenLabs сервис
       );
       
       this.logger.log(`🎬 [VIDEO_GENERATION_START] HeyGen API call successful`, {
@@ -532,6 +533,18 @@ export class ProcessManagerService {
       this.logger.log(`📤 Error notification sent to user ${process.userId}: ${errorMessage}`);
     } catch (error) {
       this.logger.error(`Error notifying user ${process.userId}:`, error);
+    }
+  }
+
+  /**
+   * Уведомляет пользователя
+   */
+  private async notifyUser(userId: number, message: string): Promise<void> {
+    try {
+      await this.bot.telegram.sendMessage(userId, message);
+      this.logger.log(`📤 Notification sent to user ${userId}: ${message}`);
+    } catch (error) {
+      this.logger.error(`Error notifying user ${userId}:`, error);
     }
   }
 

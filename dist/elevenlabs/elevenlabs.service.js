@@ -24,6 +24,39 @@ let ElevenLabsService = ElevenLabsService_1 = class ElevenLabsService {
         }
     }
     /**
+     * Конвертирует аудио в WAV формат для ElevenLabs
+     * Пока что возвращает оригинальный буфер, так как ElevenLabs поддерживает OGG
+     */
+    async convertToWav(audioBuffer, originalFormat) {
+        const convertId = `convert_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        try {
+            this.logger.log(`[${convertId}] 🔄 Audio format conversion`, {
+                convertId,
+                originalSize: audioBuffer.length,
+                originalFormat,
+                timestamp: new Date().toISOString()
+            });
+            // Пока что возвращаем оригинальный буфер
+            // ElevenLabs поддерживает OGG формат от Telegram
+            this.logger.log(`[${convertId}] ✅ Using original audio format (ElevenLabs supports OGG)`, {
+                convertId,
+                originalSize: audioBuffer.length,
+                originalFormat,
+                timestamp: new Date().toISOString()
+            });
+            return audioBuffer;
+        }
+        catch (error) {
+            this.logger.error(`[${convertId}] ❌ Error processing audio:`, {
+                convertId,
+                error: error instanceof Error ? error.message : String(error),
+                originalFormat,
+                timestamp: new Date().toISOString()
+            });
+            throw error;
+        }
+    }
+    /**
      * Создает клон голоса из аудиофайла (асинхронно через fine-tuning)
      */
     async cloneVoiceAsync(request) {
@@ -31,11 +64,18 @@ let ElevenLabsService = ElevenLabsService_1 = class ElevenLabsService {
         try {
             this.logger.log(`[${cloneId}] 🎤 Starting voice fine-tuning with ElevenLabs`);
             this.logger.debug(`[${cloneId}] Voice name: ${request.name}, Audio size: ${request.audioBuffer.length} bytes`);
-            // Сначала создаем базовый голос
+            // Конвертируем аудио в WAV формат если нужно
+            let audioBuffer = request.audioBuffer;
+            const contentType = request.contentType || 'application/octet-stream';
+            if (contentType !== 'audio/wav') {
+                this.logger.log(`[${cloneId}] 🔄 Converting audio from ${contentType} to WAV`);
+                audioBuffer = await this.convertToWav(request.audioBuffer, contentType);
+            }
+            // Создаем базовый голос
             const formData = new FormData();
             formData.append("name", request.name);
             formData.append("description", request.description || "Клонированный голос пользователя");
-            formData.append("files", new Blob([request.audioBuffer], { type: "audio/wav" }), "voice_sample.wav");
+            formData.append("files", new Blob([audioBuffer], { type: "audio/wav" }), "voice_sample.wav");
             // Добавляем метки для fine-tuning
             formData.append("labels", JSON.stringify({
                 "accent": "russian",

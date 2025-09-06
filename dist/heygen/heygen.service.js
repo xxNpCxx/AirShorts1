@@ -948,39 +948,88 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
         }
     }
     /**
-     * Генерирует видео с цифровым двойником используя Avatar IV API
+     * Генерирует видео с цифровым двойником используя Standard Avatar API
+     * Обязательно использует клонированный голос из ElevenLabs
      *
-     * @see https://docs.heygen.com/reference/create-avatar-iv-video
-     * @endpoint POST /v2/video/av4/generate
-     * @param avatarId - ID созданного Photo Avatar
-     * @param voiceId - ID созданного Voice Clone
+     * @see https://docs.heygen.com/reference/create-an-avatar-video-v2
+     * @endpoint POST /v2/video/generate
+     * @param avatarId - ID созданного Photo Avatar (image_key)
+     * @param voiceId - ID созданного Voice Clone из ElevenLabs
      * @param script - Текст для озвучивания
      * @param videoTitle - Название видео
      * @param callbackId - ID для webhook callback
+     * @param elevenlabsService - ElevenLabsService для генерации аудио (обязательно)
      * @returns Promise с video_id
-     * @throws Error если генерация не удалась
+     * @throws Error если генерация не удалась или отсутствует ElevenLabs сервис
      */
-    async generateDigitalTwinVideo(avatarId, voiceId, script, videoTitle, callbackId) {
+    async generateDigitalTwinVideo(avatarId, voiceId, script, videoTitle, callbackId, elevenlabsService // ElevenLabsService для генерации аудио (обязательно)
+    ) {
         const requestId = `digital_twin_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         try {
-            this.logger.log(`[${requestId}] 🎬 Generating Digital Twin Video`);
-            this.logger.log(`[${requestId}] Avatar ID: ${avatarId}, Voice ID: ${voiceId}`);
+            this.logger.log(`[${requestId}] 🎬 Generating Digital Twin Video with ElevenLabs voice`);
+            this.logger.log(`[${requestId}] Avatar ID: ${avatarId}, ElevenLabs Voice ID: ${voiceId}`);
             this.logger.log(`[${requestId}] Script length: ${script.length} chars`);
-            const payload = {
-                image_key: avatarId,
-                video_title: videoTitle,
-                script: script,
+            // Проверяем обязательные параметры
+            if (!elevenlabsService) {
+                throw new Error('ElevenLabs service is required for voice cloning');
+            }
+            if (!voiceId) {
+                throw new Error('Voice ID is required for voice cloning');
+            }
+            this.logger.log(`[${requestId}] 🎵 Generating audio with ElevenLabs cloned voice: ${voiceId}`);
+            // Генерируем аудио с клонированным голосом
+            const audioBuffer = await elevenlabsService.textToSpeech({
+                text: script,
                 voice_id: voiceId,
-                video_orientation: "portrait",
-                fit: "cover"
+                model_id: "eleven_multilingual_v2",
+                voice_settings: {
+                    stability: 0.5,
+                    similarity_boost: 0.75,
+                    style: 0.0,
+                    use_speaker_boost: true
+                }
+            });
+            this.logger.log(`[${requestId}] ✅ Audio generated: ${audioBuffer.length} bytes`);
+            // Загружаем аудио в HeyGen как asset
+            const audioAssetId = await this.uploadAudio(audioBuffer);
+            this.logger.log(`[${requestId}] ✅ Audio uploaded to HeyGen: ${audioAssetId}`);
+            // Используем загруженное аудио
+            const voiceConfig = {
+                type: "audio",
+                audio_asset_id: audioAssetId
+            };
+            // Используем Standard Avatar API с TalkingPhoto
+            const payload = {
+                video_inputs: [
+                    {
+                        character: {
+                            type: "talking_photo",
+                            talking_photo_id: avatarId, // image_key от загруженного фото
+                            talking_photo_style: "square",
+                            talking_style: "expressive",
+                            expression: "default",
+                            super_resolution: true,
+                            scale: 1.0
+                        },
+                        voice: voiceConfig
+                    }
+                ],
+                dimension: {
+                    width: 720,
+                    height: 1280
+                },
+                caption: true,
+                title: videoTitle,
+                callback_id: callbackId,
+                callback_url: `${process.env.WEBHOOK_URL}/heygen/webhook`
             };
             // Валидация payload
-            if (!validateAvatarIVPayload(payload)) {
-                this.logger.error(`[${requestId}] ❌ Invalid Avatar IV payload:`, payload);
-                throw new Error('Invalid Avatar IV payload');
+            if (!validateStandardVideoPayload(payload)) {
+                this.logger.error(`[${requestId}] ❌ Invalid Standard Video payload:`, payload);
+                throw new Error('Invalid Standard Video payload');
             }
-            this.logger.debug(`[${requestId}] 📤 Avatar IV payload (validated):`, payload);
-            const response = await fetch(`${this.baseUrl}${HEYGEN_API.endpoints.avatarIV}`, {
+            this.logger.debug(`[${requestId}] 📤 Standard Video payload (validated):`, payload);
+            const response = await fetch(`${this.baseUrl}${HEYGEN_API.endpoints.standardAvatar}`, {
                 method: 'POST',
                 headers: {
                     'X-API-KEY': this.apiKey,
@@ -988,17 +1037,17 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 },
                 body: JSON.stringify(payload)
             });
-            this.logger.log(`[${requestId}] 📥 Avatar IV response: ${response.status} ${response.statusText}`);
+            this.logger.log(`[${requestId}] 📥 Standard Avatar response: ${response.status} ${response.statusText}`);
             if (!response.ok) {
                 const errorText = await response.text();
-                this.logger.error(`[${requestId}] ❌ Avatar IV generation failed: ${response.status} - ${errorText}`);
-                throw new Error(`Avatar IV generation failed: ${response.status} - ${errorText}`);
+                this.logger.error(`[${requestId}] ❌ Standard Avatar generation failed: ${response.status} - ${errorText}`);
+                throw new Error(`Standard Avatar generation failed: ${response.status} - ${errorText}`);
             }
             const result = await response.json();
             const videoId = result.data?.video_id || result.video_id;
             if (!videoId) {
                 this.logger.error(`[${requestId}] ❌ No video_id in response:`, result);
-                throw new Error('No video_id returned from Avatar IV API');
+                throw new Error('No video_id returned from Standard Avatar API');
             }
             this.logger.log(`[${requestId}] ✅ Digital Twin Video generation started: ${videoId}`);
             return videoId;
