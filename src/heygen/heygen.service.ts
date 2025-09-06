@@ -787,6 +787,13 @@ export class HeyGenService {
       // Добавляем дополнительные параметры если нужно
       formData.append('type', fileType);
 
+      // Проверяем, что FormData создан правильно
+      this.logger.debug(`[${requestId}] FormData created successfully`, {
+        hasFile: 'file' in formData._streams,
+        hasType: 'type' in formData._streams,
+        streamsCount: formData._streams?.length || 0
+      });
+
       this.logger.log(`📤 [HEYGEN_UPLOAD] FormData prepared for HeyGen API`, {
         requestId,
         fileSize: buffer.length,
@@ -796,10 +803,9 @@ export class HeyGenService {
 
       // Логируем детали FormData для отладки
       this.logger.debug(`[${requestId}] FormData details:`, {
-        hasFile: formData.has('file'),
-        hasType: formData.has('type'),
         contentType: formData.getHeaders()['content-type'],
-        contentLength: formData.getHeaders()['content-length']
+        contentLength: formData.getHeaders()['content-length'],
+        boundary: formData.getHeaders()['content-type']?.split('boundary=')[1]
       });
 
       let response;
