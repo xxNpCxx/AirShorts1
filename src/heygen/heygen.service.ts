@@ -731,7 +731,7 @@ export class HeyGenService {
    * Загружает файл как asset в HeyGen
    * 
    * @see https://docs.heygen.com/reference/upload-asset
-   * @endpoint POST /v1/upload
+   * @endpoint POST /v1/asset
    * @param fileUrl - URL файла для загрузки
    * @param fileType - Тип файла ('image' или 'audio')
    * @returns Promise с asset_key
@@ -749,16 +749,40 @@ export class HeyGenService {
         timestamp: new Date().toISOString()
       });
 
+      // Сначала скачиваем файл по URL
+      const fileResponse = await fetch(fileUrl);
+      if (!fileResponse.ok) {
+        throw new Error(`Failed to download file: ${fileResponse.status} ${fileResponse.statusText}`);
+      }
+
+      const fileBuffer = await fileResponse.arrayBuffer();
+      const buffer = Buffer.from(fileBuffer);
+
+      this.logger.log(`📥 [HEYGEN_UPLOAD] File downloaded successfully`, {
+        requestId,
+        fileSize: buffer.length,
+        fileType,
+        timestamp: new Date().toISOString()
+      });
+
+      // Используем FormData для загрузки файла
+      const FormData = require('form-data');
+      const formData = new FormData();
+      
+      // Добавляем файл с правильными параметрами
+      formData.append('file', buffer, {
+        filename: fileType === 'image' ? 'user_photo.jpg' : 'user_audio.wav',
+        contentType: fileType === 'image' ? 'image/jpeg' : 'audio/wav',
+        knownLength: buffer.length
+      });
+
       const response = await fetch(`${HEYGEN_API.uploadUrl}/v1/asset`, {
         method: 'POST',
         headers: {
           'X-API-KEY': this.apiKey,
-          'Content-Type': 'application/json'
+          ...formData.getHeaders()
         },
-        body: JSON.stringify({
-          file_url: fileUrl,
-          file_type: fileType
-        })
+        body: formData
       });
 
       this.logger.log(`📥 [HEYGEN_UPLOAD] Received response from HeyGen API`, {
