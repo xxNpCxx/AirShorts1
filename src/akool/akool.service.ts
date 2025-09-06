@@ -343,9 +343,18 @@ export class AkoolService {
 
       if (response.data.code === 1000) {
         const data = response.data.data;
+        let status = 'processing';
+        
+        // Статусы AKOOL: 1 = processing, 2 = completed, 3 = error
+        if (data.video_status === 2) {
+          status = 'completed';
+        } else if (data.video_status === 3) {
+          status = 'error';
+        }
+        
         return {
           id: videoId,
-          status: data.video_status === 3 ? 'completed' : 'processing',
+          status: status,
           result_url: data.video,
         };
       } else {

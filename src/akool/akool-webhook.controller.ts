@@ -1,11 +1,14 @@
-import { Controller, Post, Body, Logger } from "@nestjs/common";
+import { Controller, Post, Body, Logger, Inject } from "@nestjs/common";
 import { Telegraf } from "telegraf";
+import { getBotToken } from "nestjs-telegraf";
 
 @Controller("akool/webhook")
 export class AkoolWebhookController {
   private readonly logger = new Logger(AkoolWebhookController.name);
 
-  constructor(private readonly telegraf: Telegraf) {}
+  constructor(
+    @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
+  ) {}
 
   @Post()
   async handleWebhook(@Body() body: any) {
@@ -45,7 +48,7 @@ export class AkoolWebhookController {
       // Пока отправляем в общий чат для тестирования
       const chatId = process.env.TEST_CHAT_ID || "161693997"; // Ваш ID для тестирования
       
-      await this.telegraf.telegram.sendVideo(chatId, videoUrl, {
+      await this.bot.telegram.sendVideo(chatId, videoUrl, {
         caption: `🎉 Ваше видео готово!\n\n📋 Task ID: ${taskId}\n🔗 Ссылка: ${videoUrl}`
       });
       
@@ -59,7 +62,7 @@ export class AkoolWebhookController {
     try {
       const chatId = process.env.TEST_CHAT_ID || "161693997";
       
-      await this.telegraf.telegram.sendMessage(chatId, 
+      await this.bot.telegram.sendMessage(chatId, 
         `❌ Произошла ошибка при создании видео.\n\n📋 Task ID: ${taskId}\n\nПопробуйте еще раз или обратитесь в поддержку.`
       );
       
