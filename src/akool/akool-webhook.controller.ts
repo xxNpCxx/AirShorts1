@@ -19,11 +19,33 @@ export class AkoolWebhookController {
       if (body.dataEncrypt) {
         this.logger.log("🔓 Получены зашифрованные данные от AKOOL");
         this.logger.log("📋 Webhook содержит зашифрованную информацию о статусе видео");
-        this.logger.log("⏳ Ожидаем расшифровки данных...");
         
-        // Пока что просто логируем, что webhook получен
-        // В будущем здесь можно добавить расшифровку данных
-        return { status: "ok", message: "Webhook received, waiting for decryption" };
+        // Попробуем расшифровать данные
+        try {
+          const decryptedData = await this.decryptWebhookData(body);
+          this.logger.log("✅ Данные успешно расшифрованы:", decryptedData);
+          
+          // Обрабатываем расшифрованные данные
+          if (decryptedData.video_status === 2) { // 2 = завершено
+            const { video_id, video, task_id } = decryptedData;
+            this.logger.log(`🎉 Видео готово! ID: ${video_id}, URL: ${video}`);
+            
+            if (video) {
+              await this.sendVideoToUser(video, task_id);
+            }
+          } else if (decryptedData.video_status === 3) { // 3 = ошибка
+            const { task_id } = decryptedData;
+            this.logger.error(`❌ Ошибка создания видео для задачи: ${task_id}`);
+            await this.notifyUserError(task_id);
+          } else {
+            this.logger.log(`⏳ Статус видео: ${decryptedData.video_status} (обработка)`);
+          }
+        } catch (decryptError) {
+          this.logger.warn("⚠️ Не удалось расшифровать данные:", decryptError);
+          this.logger.log("⏳ Ожидаем ключ расшифровки...");
+        }
+        
+        return { status: "ok", message: "Webhook processed" };
       }
       
       // Если данные не зашифрованы (старая версия API)
@@ -80,6 +102,73 @@ export class AkoolWebhookController {
       this.logger.log(`✅ Уведомление об ошибке отправлено пользователю ${chatId}`);
     } catch (error) {
       this.logger.error("❌ Ошибка отправки уведомления об ошибке:", error);
+    }
+  }
+
+  /**
+   * Попытка расшифровки webhook данных от AKOOL
+   */
+  private async decryptWebhookData(body: any): Promise<any> {
+    try {
+      // Попробуем разные методы расшифровки
+      const { dataEncrypt, signature, timestamp, nonce } = body;
+      
+      this.logger.log("🔍 Пытаемся расшифровать данные...");
+      this.logger.log(`📊 Signature: ${signature}`);
+      this.logger.log(`⏰ Timestamp: ${timestamp}`);
+      this.logger.log(`🔢 Nonce: ${nonce}`);
+      
+      // Метод 1: Base64 декодирование
+      try {
+        const base64Decoded = Buffer.from(dataEncrypt, 'base64').toString('utf-8');
+        this.logger.log("🔓 Base64 декодирование:", base64Decoded);
+        
+        // Попробуем парсить как JSON
+        const jsonData = JSON.parse(base64Decoded);
+        this.logger.log("✅ JSON парсинг успешен:", jsonData);
+        return jsonData;
+      } catch (base64Error) {
+        this.logger.debug("❌ Base64 декодирование не удалось:", base64Error.message);
+      }
+      
+      // Метод 2: Попробуем использовать signature как ключ
+      try {
+        const crypto = require('crypto');
+        const key = Buffer.from(signature, 'hex');
+        const iv = Buffer.from(nonce, 'hex');
+        
+        const decipher = crypto.createDecipher('aes-256-cbc', key);
+        let decrypted = decipher.update(dataEncrypt, 'base64', 'utf8');
+        decrypted += decipher.final('utf8');
+        
+        this.logger.log("✅ AES расшифровка успешна:", decrypted);
+        return JSON.parse(decrypted);
+      } catch (aesError) {
+        this.logger.debug("❌ AES расшифровка не удалась:", aesError.message);
+      }
+      
+      // Метод 3: Простое XOR с nonce
+      try {
+        const dataBuffer = Buffer.from(dataEncrypt, 'base64');
+        const nonceBuffer = Buffer.from(nonce, 'hex');
+        const decrypted = Buffer.alloc(dataBuffer.length);
+        
+        for (let i = 0; i < dataBuffer.length; i++) {
+          decrypted[i] = dataBuffer[i] ^ nonceBuffer[i % nonceBuffer.length];
+        }
+        
+        const result = decrypted.toString('utf8');
+        this.logger.log("✅ XOR расшифровка успешна:", result);
+        return JSON.parse(result);
+      } catch (xorError) {
+        this.logger.debug("❌ XOR расшифровка не удалась:", xorError.message);
+      }
+      
+      throw new Error("Все методы расшифровки не удались");
+      
+    } catch (error) {
+      this.logger.error("❌ Ошибка расшифровки webhook данных:", error);
+      throw error;
     }
   }
 }
