@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import axios from 'axios';
 
 /**
  * HeyGen Video Request Interface
@@ -776,48 +777,66 @@ export class HeyGenService {
         knownLength: buffer.length
       });
 
-      const response = await fetch(`${HEYGEN_API.uploadUrl}/v1/asset`, {
-        method: 'POST',
-        headers: {
-          'X-API-KEY': this.apiKey,
-          ...formData.getHeaders()
-        },
-        body: formData
-      });
-
-      this.logger.log(`📥 [HEYGEN_UPLOAD] Received response from HeyGen API`, {
+      this.logger.log(`📤 [HEYGEN_UPLOAD] FormData prepared with axios`, {
         requestId,
-        status: response.status,
-        statusText: response.statusText,
+        fileSize: buffer.length,
         timestamp: new Date().toISOString()
       });
 
-      if (!response.ok) {
-        const errorBody = await response.text();
-        this.logger.error(`❌ [HEYGEN_UPLOAD] Upload failed`, {
+      let response;
+      try {
+        response = await axios.post(`${HEYGEN_API.uploadUrl}/v1/asset`, formData, {
+          headers: {
+            'X-Api-Key': this.apiKey, // Правильный заголовок для HeyGen
+            ...formData.getHeaders()
+          },
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity
+        });
+
+        this.logger.log(`📥 [HEYGEN_UPLOAD] Received response from HeyGen API`, {
           requestId,
           status: response.status,
           statusText: response.statusText,
-          errorBody,
           timestamp: new Date().toISOString()
         });
-        throw new Error(`Asset upload failed: ${response.status} - ${errorBody}`);
+
+        const data = response.data as UploadAssetResponse;
+        
+        this.logger.log(`✅ [HEYGEN_UPLOAD] Asset uploaded successfully`, {
+          requestId,
+          assetKey: data.data?.asset_key,
+          responseData: data,
+          timestamp: new Date().toISOString()
+        });
+
+        if (!data.data?.asset_key) {
+          throw new Error('No asset_key in response');
+        }
+
+        return { asset_key: data.data.asset_key };
+      } catch (axiosError) {
+        if (axiosError.response) {
+          // Сервер ответил с кодом ошибки
+          const errorBody = axiosError.response.data;
+          this.logger.error(`❌ [HEYGEN_UPLOAD] Upload failed`, {
+            requestId,
+            status: axiosError.response.status,
+            statusText: axiosError.response.statusText,
+            errorBody,
+            timestamp: new Date().toISOString()
+          });
+          throw new Error(`Asset upload failed: ${axiosError.response.status} - ${JSON.stringify(errorBody)}`);
+        } else {
+          // Ошибка сети или другая ошибка
+          this.logger.error(`❌ [HEYGEN_UPLOAD] Network error`, {
+            requestId,
+            error: axiosError.message,
+            timestamp: new Date().toISOString()
+          });
+          throw new Error(`Asset upload network error: ${axiosError.message}`);
+        }
       }
-
-      const data = await response.json() as UploadAssetResponse;
-      
-      this.logger.log(`✅ [HEYGEN_UPLOAD] Asset uploaded successfully`, {
-        requestId,
-        assetKey: data.data?.asset_key,
-        responseData: data,
-        timestamp: new Date().toISOString()
-      });
-
-      if (!data.data?.asset_key) {
-        throw new Error('No asset_key in response');
-      }
-
-      return { asset_key: data.data.asset_key };
     } catch (error) {
       this.logger.error(`❌ [HEYGEN_UPLOAD] Error uploading asset`, {
         requestId,
