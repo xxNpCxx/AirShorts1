@@ -1029,7 +1029,8 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 throw new Error('Invalid Standard Video payload');
             }
             this.logger.debug(`[${requestId}] 📤 Standard Video payload (validated):`, payload);
-            const response = await fetch(`${this.baseUrl}${HEYGEN_API.endpoints.standardAvatar}`, {
+            // Используем правильный endpoint для TalkingPhoto
+            const response = await fetch(`${this.baseUrl}/v1/video/talking_photo`, {
                 method: 'POST',
                 headers: {
                     'X-API-KEY': this.apiKey,
