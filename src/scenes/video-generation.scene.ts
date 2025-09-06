@@ -3,6 +3,7 @@ import { Context } from "telegraf";
 import type { Message } from "telegraf/types";
 import { HeyGenService } from "../heygen/heygen.service";
 import { ProcessManagerService } from "../heygen/process-manager.service";
+import { AkoolService } from "../akool/akool.service";
 // import { MockHeyGenService, MockProcessManagerService } from "../heygen/mock-heygen.service";
 import { Logger, Inject } from "@nestjs/common";
 import { Telegraf } from "telegraf";
@@ -40,6 +41,7 @@ export class VideoGenerationScene {
   constructor(
     private readonly heygenService: HeyGenService,
     private readonly processManager: ProcessManagerService,
+    private readonly akoolService: AkoolService,
     @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
   ) {}
 
@@ -68,6 +70,144 @@ export class VideoGenerationScene {
     duration = Math.max(15, Math.min(60, duration));
     
     return duration;
+  }
+
+  /**
+   * Создает цифровой двойник с AKOOL
+   */
+  private async createDigitalTwinWithAkool(@Ctx() ctx: Context) {
+    const requestId = `akool_digital_twin_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    
+    try {
+      const session = (ctx as any).session as SessionData;
+      const userId = ctx.from?.id;
+      
+      this.logger.log(`🎬 [AKOOL_DIGITAL_TWIN_CREATE] Starting AKOOL Digital Twin creation`, {
+        requestId,
+        userId,
+        hasPhoto: !!session.photoFileId,
+        hasVoice: !!session.voiceFileId,
+        hasScript: !!session.script,
+        scriptLength: session.script?.length || 0,
+        quality: session.quality,
+        timestamp: new Date().toISOString()
+      });
+      
+      if (!session.photoFileId || !session.voiceFileId || !session.script) {
+        this.logger.warn(`⚠️ [AKOOL_DIGITAL_TWIN_CREATE] Missing required data`, {
+          requestId,
+          userId,
+          hasPhoto: !!session.photoFileId,
+          hasVoice: !!session.voiceFileId,
+          hasScript: !!session.script,
+          timestamp: new Date().toISOString()
+        });
+        await ctx.reply("❌ Не все данные получены. Пожалуйста, загрузите фото, голосовое сообщение и введите текст.");
+        return;
+      }
+
+      this.logger.log(`📁 [AKOOL_DIGITAL_TWIN_CREATE] Getting file URLs from Telegram`, {
+        requestId,
+        userId,
+        photoFileId: session.photoFileId,
+        voiceFileId: session.voiceFileId,
+        timestamp: new Date().toISOString()
+      });
+
+      // Получаем URL файлов из Telegram
+      const photoFile = await ctx.telegram.getFile(session.photoFileId);
+      const voiceFile = await ctx.telegram.getFile(session.voiceFileId);
+      
+      this.logger.log(`📁 [AKOOL_DIGITAL_TWIN_CREATE] Telegram file info received`, {
+        requestId,
+        userId,
+        photoFile: {
+          fileId: photoFile.file_id,
+          filePath: photoFile.file_path,
+          fileSize: photoFile.file_size
+        },
+        voiceFile: {
+          fileId: voiceFile.file_id,
+          filePath: voiceFile.file_path,
+          fileSize: voiceFile.file_size
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+      if (!photoFile.file_path || !voiceFile.file_path) {
+        this.logger.error(`❌ [AKOOL_DIGITAL_TWIN_CREATE] Missing file paths`, {
+          requestId,
+          userId,
+          photoFilePath: photoFile.file_path,
+          voiceFilePath: voiceFile.file_path,
+          timestamp: new Date().toISOString()
+        });
+        await ctx.reply("❌ Ошибка получения файлов. Попробуйте загрузить файлы заново.");
+        return;
+      }
+
+      const photoUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${photoFile.file_path}`;
+      const audioUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${voiceFile.file_path}`;
+
+      this.logger.log(`🔗 [AKOOL_DIGITAL_TWIN_CREATE] File URLs generated`, {
+        requestId,
+        userId,
+        photoUrl: photoUrl.substring(0, 100) + '...',
+        audioUrl: audioUrl.substring(0, 100) + '...',
+        timestamp: new Date().toISOString()
+      });
+
+      // Создаем цифровой двойник с AKOOL
+      this.logger.log(`🎭 [AKOOL_DIGITAL_TWIN_CREATE] Creating digital twin with AKOOL...`, {
+        requestId,
+        userId,
+        timestamp: new Date().toISOString()
+      });
+
+      const result = await this.akoolService.createDigitalTwinWithVoiceClone(
+        photoUrl,
+        session.script,
+        audioUrl,
+        `user_${userId}_voice_${Date.now()}`,
+        `${process.env.WEBHOOK_URL}/akool/webhook`
+      );
+
+      this.logger.log(`✅ [AKOOL_DIGITAL_TWIN_CREATE] Digital twin created successfully`, {
+        requestId,
+        userId,
+        resultId: result.id,
+        status: result.status,
+        resultUrl: result.result_url,
+        timestamp: new Date().toISOString()
+      });
+
+      await ctx.reply(
+        `🎬 Создание цифрового двойника запущено!\n\n` +
+        `📋 ID процесса: ${result.id}\n` +
+        `📸 Фото: ✅ Загружено\n` +
+        `🎵 Голос: ✅ Загружен\n` +
+        `📝 Текст: ${session.script.length} символов\n` +
+        `🎥 Качество: ${session.quality || '720p'}\n\n` +
+        `⏳ Обработка займет 2-5 минут. Вы получите уведомление когда видео будет готово!`
+      );
+
+      this.logger.log(`📤 [AKOOL_DIGITAL_TWIN_CREATE] User notification sent`, {
+        requestId,
+        userId,
+        resultId: result.id,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      this.logger.error(`❌ [AKOOL_DIGITAL_TWIN_CREATE] Error creating Digital Twin`, {
+        requestId,
+        userId: ctx.from?.id,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      });
+      await ctx.reply("❌ Ошибка при создании цифрового двойника. Попробуйте еще раз.");
+    }
   }
 
   /**
@@ -218,11 +358,12 @@ export class VideoGenerationScene {
     this.logger.log(`🎬 [@SceneEnter] Пользователь ${ctx.from?.id} вошел в сцену video-generation`);
     await ctx.reply(
       "🎬 Добро пожаловать в генератор видео!\n\n" +
-        "Для создания цифрового двойника мне понадобится:\n" +
+        "Для создания цифрового двойника с AKOOL мне понадобится:\n" +
         "1. 📸 Фото с человеком\n" +
         "2. 🎵 Голосовое сообщение (ваш голос)\n" +
         "3. 📝 Сценарий ролика (текст для озвучки)\n\n" +
-        "🎵 **Голос:** Будет использован ваш голос из голосового сообщения!\n\n" +
+        "🎵 **Голос:** Будет использован ваш голос из голосового сообщения!\n" +
+        "🤖 **Технология:** AKOOL для создания реалистичного цифрового двойника\n\n" +
         "📸 **Требования к фото:**\n" +
         "• Один человек в кадре (лицо хорошо видно)\n" +
         "• Размер: до 10 МБ\n" +
@@ -648,6 +789,6 @@ export class VideoGenerationScene {
     });
 
     await ctx.reply("🎬 Запускаю создание цифрового двойника...");
-    await this.createDigitalTwin(ctx);
+    await this.createDigitalTwinWithAkool(ctx);
   }
 }

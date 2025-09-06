@@ -23,6 +23,7 @@ const menu_update_1 = require("./updates/menu.update");
 const logger_module_1 = require("./logger/logger.module");
 const did_module_1 = require("./d-id/did.module");
 const heygen_module_1 = require("./heygen/heygen.module");
+const akool_module_1 = require("./akool/akool.module");
 // import { MockHeyGenService, MockProcessManagerService } from "./heygen/mock-heygen.service";
 const elevenlabs_module_1 = require("./elevenlabs/elevenlabs.module");
 const video_generation_scene_1 = require("./scenes/video-generation.scene");
@@ -46,6 +47,7 @@ exports.AppModule = AppModule = __decorate([
             redis_module_1.RedisModule,
             did_module_1.DidModule,
             heygen_module_1.HeyGenModule,
+            akool_module_1.AkoolModule,
             elevenlabs_module_1.ElevenLabsModule,
             webhook_module_1.WebhookModule,
             nestjs_telegraf_1.TelegrafModule.forRoot({

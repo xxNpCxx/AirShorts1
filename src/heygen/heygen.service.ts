@@ -1275,14 +1275,27 @@ export class HeyGenService {
         throw new Error('Voice ID is required for voice cloning');
       }
       
-      this.logger.log(`[${requestId}] 🎵 Using ElevenLabs voice directly in HeyGen: ${voiceId}`);
+      this.logger.log(`[${requestId}] 🎵 Generating audio with ElevenLabs cloned voice: ${voiceId}`);
       
-      // Используем ElevenLabs голос напрямую через интеграцию
-      const voiceConfig = {
-        type: "text" as const,
-        input_text: script,
-        voice_id: voiceId // Используем ElevenLabs voice_id напрямую
-      };
+      // Генерируем аудио с клонированным голосом через ElevenLabs
+      const audioBuffer = await elevenlabsService.textToSpeech({
+        text: script,
+        voice_id: voiceId,
+        model_id: "eleven_multilingual_v2",
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+          style: 0.0,
+          use_speaker_boost: true
+        }
+      });
+      
+      this.logger.log(`[${requestId}] ✅ Audio generated: ${audioBuffer.length} bytes`);
+      
+      // Загружаем аудио в HeyGen как asset
+      const audioAssetId = await this.uploadAudio(audioBuffer);
+      
+      this.logger.log(`[${requestId}] ✅ Audio uploaded to HeyGen: ${audioAssetId}`);
       
       // Извлекаем UUID из avatarId (убираем префикс "image/" и суффикс "/original")
       const talkingPhotoId = avatarId.replace(/^image\//, '').replace(/\/original$/, '');
@@ -1300,9 +1313,8 @@ export class HeyGenService {
               style: "normal"
             },
             voice: {
-              type: "text",
-              input_text: script,
-              voice_id: voiceId
+              type: "audio",
+              audio_asset_id: audioAssetId
             },
             background: {
               type: "color",
