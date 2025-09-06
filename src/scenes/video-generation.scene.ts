@@ -463,6 +463,13 @@ export class VideoGenerationScene {
         return;
       }
 
+      // ПРИОРИТЕТ: Проверяем сообщения главного меню ПЕРЕД обработкой текста
+      const { MainMenuHandler } = await import("../utils/main-menu-handler");
+      if (MainMenuHandler.isMainMenuMessage(text)) {
+        await MainMenuHandler.handleMainMenuRequest(ctx, "VideoGenerationScene");
+        return;
+      }
+
       const session = ctx.session as SessionData;
 
       // Проверяем, что фото и голос уже загружены

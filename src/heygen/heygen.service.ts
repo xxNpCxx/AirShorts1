@@ -493,8 +493,9 @@ export class HeyGenService {
       const FormData = require('form-data');
       const formData = new FormData();
       
-      // Добавляем файл с правильными параметрами
-      formData.append('file', audioBuffer, {
+      // Добавляем обязательные поля согласно актуальной документации HeyGen API
+      formData.append('type', 'audio');
+      formData.append('asset', audioBuffer, {
         filename: 'user_audio.wav',
         contentType: 'audio/wav',
         knownLength: audioBuffer.length
@@ -557,8 +558,9 @@ export class HeyGenService {
       const FormData = require('form-data');
       const formData = new FormData();
       
-      // Добавляем файл с правильными параметрами
-      formData.append('file', imageBuffer, {
+      // Добавляем обязательные поля согласно актуальной документации HeyGen API
+      formData.append('type', 'image');
+      formData.append('asset', imageBuffer, {
         filename: 'user_photo.jpg',
         contentType: 'image/jpeg',
         knownLength: imageBuffer.length
@@ -739,7 +741,7 @@ export class HeyGenService {
    * Загружает файл как asset в HeyGen
    * 
    * @see https://docs.heygen.com/reference/upload-asset
-   * @endpoint POST /v1/upload
+   * @endpoint POST /v1/asset
    * @param fileUrl - URL файла для загрузки
    * @param fileType - Тип файла ('image' или 'audio')
    * @returns Promise с asset_key
@@ -777,20 +779,19 @@ export class HeyGenService {
       const FormData = require('form-data');
       const formData = new FormData();
       
-      // Добавляем файл с правильными параметрами согласно документации HeyGen
-      formData.append('file', buffer, {
+      // Добавляем обязательные поля согласно актуальной документации HeyGen API
+      // Обязательные поля: type и asset
+      formData.append('type', fileType);
+      formData.append('asset', buffer, {
         filename: fileType === 'image' ? 'user_photo.jpg' : 'user_audio.wav',
         contentType: fileType === 'image' ? 'image/jpeg' : 'audio/wav',
         knownLength: buffer.length
       });
 
-      // Добавляем дополнительные параметры если нужно
-      formData.append('type', fileType);
-
       // Проверяем, что FormData создан правильно
       this.logger.debug(`[${requestId}] FormData created successfully`, {
-        hasFile: 'file' in formData._streams,
-        hasType: 'type' in formData._streams,
+        hasType: formData._streams?.some((stream: any) => stream.name === 'type'),
+        hasAsset: formData._streams?.some((stream: any) => stream.name === 'asset'),
         streamsCount: formData._streams?.length || 0
       });
 

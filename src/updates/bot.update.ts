@@ -121,13 +121,14 @@ export class BotUpdate {
     }
 
     // Обрабатываем сообщения главного меню напрямую
-    const hearsMessages = ["🏠 Главное меню", "Главное меню"];
-    if (hearsMessages.includes(messageText)) {
+    const { MainMenuHandler } = await import("../utils/main-menu-handler");
+    if (MainMenuHandler.isMainMenuMessage(messageText)) {
       this._logger.debug(
         `[@On text] Обнаружено сообщение главного меню: "${messageText}" - выход из сцены и показ главного меню`,
         "BotUpdate",
       );
-      await this.onMainMenu(ctx);
+      await this._users.upsertFromContext(ctx);
+      await MainMenuHandler.handleMainMenuRequest(ctx, "BotUpdate-OnText");
       return;
     }
 
@@ -231,25 +232,12 @@ export class BotUpdate {
     );
     
     try {
-      // Проверяем, находится ли пользователь в сцене
-      const sceneContext = ctx as unknown as {
-        scene: { 
-          current?: { id: string };
-          leave: () => Promise<void>;
-        };
-      };
-      
-      if (sceneContext.scene?.current) {
-        this._logger.log(
-          `🚪 Выходим из сцены "${sceneContext.scene.current.id}" для пользователя ${ctx.from?.id}`,
-          "BotUpdate",
-        );
-        await sceneContext.scene.leave();
-        this._logger.debug("Сцена успешно завершена", "BotUpdate");
-      }
-
       await this._users.upsertFromContext(ctx);
-      await this._menu.sendMainMenu(ctx);
+      
+      // Используем централизованный обработчик главного меню
+      const { MainMenuHandler } = await import("../utils/main-menu-handler");
+      await MainMenuHandler.handleMainMenuRequest(ctx, "BotUpdate");
+      
       this._logger.debug("Главное меню отправлено через @Hears", "BotUpdate");
     } catch (error) {
       this._logger.error(
@@ -271,24 +259,10 @@ export class BotUpdate {
     try {
       await ctx.answerCbQuery();
       
-      // Проверяем, находится ли пользователь в сцене
-      const sceneContext = ctx as unknown as {
-        scene: { 
-          current?: { id: string };
-          leave: () => Promise<void>;
-        };
-      };
+      // Используем централизованный обработчик главного меню
+      const { MainMenuHandler } = await import("../utils/main-menu-handler");
+      await MainMenuHandler.handleMainMenuRequest(ctx, "BotUpdate-Action");
       
-      if (sceneContext.scene?.current) {
-        this._logger.log(
-          `🚪 Выходим из сцены "${sceneContext.scene.current.id}" для пользователя ${ctx.from?.id}`,
-          "BotUpdate",
-        );
-        await sceneContext.scene.leave();
-        this._logger.debug("Сцена успешно завершена через @Action", "BotUpdate");
-      }
-      
-      await this._menu.sendMainMenu(ctx);
       this._logger.debug("Главное меню отправлено через @Action", "BotUpdate");
     } catch (error) {
       this._logger.error(
