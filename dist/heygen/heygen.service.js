@@ -331,7 +331,8 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             }
             const result = await response.json();
             this.logger.log(`[${uploadId}] 📋 Upload Asset response data:`, result);
-            const audioAssetId = result.data?.asset_id || result.asset_id;
+            // Для аудио файлов HeyGen возвращает id вместо asset_id
+            const audioAssetId = result.data?.id || result.data?.asset_id || result.asset_id || result.id;
             if (!audioAssetId) {
                 this.logger.error(`[${uploadId}] ❌ No asset_id in response:`, result);
                 throw new Error('No asset_id returned from HeyGen Upload Asset API');
