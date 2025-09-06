@@ -552,12 +552,11 @@ export class VideoGenerationScene {
       session.quality = "720p";
 
       await ctx.editMessageText(
-        "✅ Качество выбрано: 720p (быстрее генерация, меньше места)\n\n" +
-        "🎬 Запускаю создание цифрового двойника..."
+        "✅ Качество выбрано: 720p (быстрее генерация, меньше места)"
       );
 
-      // Сразу запускаем создание цифрового двойника
-      await this.createDigitalTwin(ctx);
+      // Проверяем, все ли данные собраны, и запускаем процесс
+      await this.checkDataCompletenessAndStart(ctx);
     } catch (error) {
       this.logger.error("Error selecting 720p quality:", error);
       await ctx.answerCbQuery("❌ Ошибка выбора качества");
@@ -572,12 +571,11 @@ export class VideoGenerationScene {
       session.quality = "1080p";
 
       await ctx.editMessageText(
-        "✅ Качество выбрано: 1080p (лучшее качество, больше места)\n\n" +
-        "🎬 Запускаю создание цифрового двойника..."
+        "✅ Качество выбрано: 1080p (лучшее качество, больше места)"
       );
 
-      // Сразу запускаем создание цифрового двойника
-      await this.createDigitalTwin(ctx);
+      // Проверяем, все ли данные собраны, и запускаем процесс
+      await this.checkDataCompletenessAndStart(ctx);
     } catch (error) {
       this.logger.error("Error selecting 1080p quality:", error);
       await ctx.answerCbQuery("❌ Ошибка выбора качества");
@@ -600,5 +598,55 @@ export class VideoGenerationScene {
   async onCancel(@Ctx() ctx: Context) {
     await ctx.reply("❌ Создание видео отменено.");
     await (ctx as { scene?: { leave: () => Promise<void> } }).scene?.leave();
+  }
+
+  /**
+   * Проверяет полноту собранных данных и запускает процесс создания цифрового двойника
+   */
+  private async checkDataCompletenessAndStart(@Ctx() ctx: Context) {
+    const session = (ctx as unknown as { session: SessionData }).session;
+    
+    // Проверяем, все ли данные собраны
+    const hasPhoto = !!session.photoFileId;
+    const hasVoice = !!session.voiceFileId;
+    const hasScript = !!session.script;
+    const hasQuality = !!session.quality;
+
+    this.logger.log(`🔍 [DATA_CHECK] Checking data completeness`, {
+      userId: ctx.from?.id,
+      hasPhoto,
+      hasVoice,
+      hasScript,
+      hasQuality,
+      timestamp: new Date().toISOString()
+    });
+
+    if (!hasPhoto || !hasVoice || !hasScript || !hasQuality) {
+      const missingData = [];
+      if (!hasPhoto) missingData.push("📸 Фото");
+      if (!hasVoice) missingData.push("🎵 Голосовое сообщение");
+      if (!hasScript) missingData.push("📝 Текст сценария");
+      if (!hasQuality) missingData.push("🎥 Качество видео");
+
+      await ctx.reply(
+        `❌ Не все данные собраны!\n\n` +
+        `📋 Отсутствует:\n${missingData.map(item => `• ${item}`).join('\n')}\n\n` +
+        `Пожалуйста, загрузите все необходимые данные.`
+      );
+      return;
+    }
+
+    // Все данные собраны, запускаем процесс
+    this.logger.log(`✅ [DATA_CHECK] All data collected, starting process`, {
+      userId: ctx.from?.id,
+      photoFileId: session.photoFileId,
+      voiceFileId: session.voiceFileId,
+      scriptLength: session.script?.length,
+      quality: session.quality,
+      timestamp: new Date().toISOString()
+    });
+
+    await ctx.reply("🎬 Запускаю создание цифрового двойника...");
+    await this.createDigitalTwin(ctx);
   }
 }

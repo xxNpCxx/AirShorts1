@@ -196,21 +196,38 @@ export class ProcessManagerService {
       return;
     }
 
-    this.logger.log(`🚀 Executing next step for process ${processId}: ${nextStep}`);
+    this.logger.log(`🚀 [STEP_EXECUTION] Executing next step for process ${processId}`, {
+      processId,
+      userId: process.userId,
+      currentStatus: process.status,
+      nextStep,
+      timestamp: new Date().toISOString()
+    });
 
-    switch (nextStep) {
-      case 'photo_avatar':
-        await this.startPhotoAvatarCreation(process);
-        break;
-      case 'voice_clone':
-        await this.startVoiceCloning(process);
-        break;
-      case 'video':
-        await this.startVideoGeneration(process);
-        break;
-      case 'completed':
-        await this.completeProcess(process);
-        break;
+    try {
+      switch (nextStep) {
+        case 'photo_avatar':
+          await this.startPhotoAvatarCreation(process);
+          break;
+        case 'voice_clone':
+          await this.startVoiceCloning(process);
+          break;
+        case 'video':
+          await this.startVideoGeneration(process);
+          break;
+        case 'completed':
+          await this.completeProcess(process);
+          break;
+      }
+    } catch (error) {
+      this.logger.error(`❌ [STEP_EXECUTION] Error executing step ${nextStep}`, {
+        processId,
+        userId: process.userId,
+        step: nextStep,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      });
+      throw error;
     }
   }
 
