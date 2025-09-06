@@ -998,37 +998,29 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 type: "audio",
                 audio_asset_id: audioAssetId
             };
-            // Используем Standard Avatar API с TalkingPhoto
+            // Используем правильную структуру для HeyGen v2 API
             const payload = {
-                video_inputs: [
-                    {
-                        character: {
-                            type: "talking_photo",
-                            talking_photo_id: avatarId, // image_key от загруженного фото
-                            talking_photo_style: "square",
-                            talking_style: "expressive",
-                            expression: "default",
-                            super_resolution: true,
-                            scale: 1.0
-                        },
-                        voice: voiceConfig
-                    }
-                ],
-                dimension: {
-                    width: 720,
-                    height: 1280
+                avatar: {
+                    type: "talking_photo",
+                    talking_photo_id: avatarId, // image_key от загруженного фото
+                    scale: 1.0,
+                    style: "normal"
+                },
+                voice: {
+                    type: "audio",
+                    audio_asset_id: audioAssetId
+                },
+                background: {
+                    type: "color",
+                    value: "#f6f6fc"
                 },
                 caption: true,
                 title: videoTitle,
                 callback_id: callbackId,
                 callback_url: `${process.env.WEBHOOK_URL}/heygen/webhook`
             };
-            // Валидация payload
-            if (!validateStandardVideoPayload(payload)) {
-                this.logger.error(`[${requestId}] ❌ Invalid Standard Video payload:`, payload);
-                throw new Error('Invalid Standard Video payload');
-            }
-            this.logger.debug(`[${requestId}] 📤 Standard Video payload (validated):`, payload);
+            // Логируем payload для отладки
+            this.logger.debug(`[${requestId}] 📤 HeyGen v2 API payload:`, payload);
             // Используем правильный endpoint для TalkingPhoto
             const response = await fetch(`${this.baseUrl}/v2/video/avatars`, {
                 method: 'POST',
