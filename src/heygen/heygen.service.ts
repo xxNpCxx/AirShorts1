@@ -1317,8 +1317,8 @@ export class HeyGenService {
 
       this.logger.debug(`[${requestId}] 📤 Standard Video payload (validated):`, payload);
 
-      // Используем правильный endpoint для TalkingPhoto
-      const response = await fetch(`${this.baseUrl}/v1/video/talking_photo`, {
+      // Используем стандартный endpoint для видео генерации
+      const response = await fetch(`${this.baseUrl}/v1/video/generate`, {
         method: 'POST',
         headers: {
           'X-API-KEY': this.apiKey,
