@@ -1285,19 +1285,27 @@ export class HeyGenService {
       
       // Используем правильную структуру для HeyGen v2 API
       const payload = {
-        avatar: {
-          type: "talking_photo",
-          talking_photo_id: avatarId, // image_key от загруженного фото
-          scale: 1.0,
-          style: "normal"
-        },
-        voice: {
-          type: "audio",
-          audio_asset_id: audioAssetId
-        },
-        background: {
-          type: "color",
-          value: "#f6f6fc"
+        video_inputs: [
+          {
+            character: {
+              type: "talking_photo",
+              talking_photo_id: avatarId, // image_key от загруженного фото
+              scale: 1.0,
+              style: "normal"
+            },
+            voice: {
+              type: "audio",
+              audio_asset_id: audioAssetId
+            },
+            background: {
+              type: "color",
+              value: "#f6f6fc"
+            }
+          }
+        ],
+        dimension: {
+          width: 1280,
+          height: 720
         },
         caption: true,
         title: videoTitle,
@@ -1309,7 +1317,7 @@ export class HeyGenService {
       this.logger.debug(`[${requestId}] 📤 HeyGen v2 API payload:`, payload);
 
       // Используем правильный endpoint для TalkingPhoto
-      const response = await fetch(`${this.baseUrl}/v1/video/generate`, {
+      const response = await fetch(`${this.baseUrl}/v2/video/generate`, {
         method: 'POST',
         headers: {
           'X-API-KEY': this.apiKey,
