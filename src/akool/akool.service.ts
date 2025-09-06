@@ -1,7 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { ElevenLabsService } from '../elevenlabs/elevenlabs.service';
+import { Telegraf } from 'telegraf';
+import { getBotToken } from 'nestjs-telegraf';
 
 /**
  * AKOOL Video Request Interface
@@ -114,6 +116,7 @@ export class AkoolService {
   constructor(
     private configService: ConfigService,
     private elevenlabsService: ElevenLabsService,
+    @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
   ) {
     this.clientId = this.configService.get<string>('AKOOL_CLIENT_ID');
     this.clientSecret = this.configService.get<string>('AKOOL_CLIENT_SECRET');
@@ -162,51 +165,156 @@ export class AkoolService {
   }
 
   /**
-   * Создание цифрового двойника с Talking Photo
+   * Уведомление пользователя о повторной попытке
    */
-  async createDigitalTwin(request: AkoolVideoRequest): Promise<AkoolVideoResponse> {
+  private async notifyUserRetry(userId: number, attempt: number, maxRetries: number, delay: number): Promise<void> {
+    try {
+      const message = `🔄 Повторная попытка ${attempt}/${maxRetries}\n\n` +
+        `⚠️ Временная ошибка сервера AKOOL\n` +
+        `⏳ Повтор через ${Math.ceil(delay / 1000)} сек...\n\n` +
+        `💡 Это нормально, сервис иногда перегружен`;
+      
+      await this.bot.telegram.sendMessage(userId, message);
+      this.logger.log(`📱 [${userId}] Уведомление о повторной попытке отправлено`);
+    } catch (error) {
+      this.logger.warn(`⚠️ Не удалось уведомить пользователя ${userId}:`, error);
+    }
+  }
+
+  /**
+   * Retry механизм с экспоненциальной задержкой
+   */
+  private async retryWithBackoff<T>(
+    operation: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelay: number = 1000,
+    maxDelay: number = 5000,
+    requestId: string,
+    userId?: number,
+  ): Promise<T> {
+    let lastError: Error;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
+        
+        // Проверяем, является ли это ошибкой 1015 (временная ошибка)
+        const isRetryableError = error.message?.includes('create video error, please try again later') ||
+                                error.message?.includes('1015') ||
+                                error.message?.includes('AKOOL API error');
+        
+        if (!isRetryableError || attempt === maxRetries) {
+          throw error;
+        }
+        
+        // Вычисляем задержку с экспоненциальным backoff
+        const delay = Math.min(baseDelay * Math.pow(2, attempt - 1), maxDelay);
+        
+        this.logger.warn(`[${requestId}] ⚠️ Попытка ${attempt}/${maxRetries} неудачна. Повтор через ${delay}мс...`);
+        this.logger.warn(`[${requestId}] Ошибка: ${error.message}`);
+        
+        // Уведомляем пользователя о повторной попытке
+        if (userId) {
+          await this.notifyUserRetry(userId, attempt, maxRetries, delay);
+        }
+        
+        // Ждем перед следующей попыткой
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    throw lastError!;
+  }
+
+  /**
+   * Создание цифрового двойника с Talking Photo с retry логикой
+   */
+  async createDigitalTwin(request: AkoolVideoRequest, userId?: number): Promise<AkoolVideoResponse> {
     const requestId = `akool_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     try {
       this.logger.log(`[${requestId}] 🎭 Создаю цифровой двойник с AKOOL...`);
       
-      const token = await this.getAccessToken();
-      
-      const talkingPhotoRequest: AkoolTalkingPhotoRequest = {
-        talking_photo_url: request.photoUrl,
-        audio_url: request.audioUrl,
-        webhookUrl: `${this.configService.get('WEBHOOK_URL')}/akool/webhook`,
-      };
+      return await this.retryWithBackoff(
+        async () => {
+          const token = await this.getAccessToken();
+          
+          const talkingPhotoRequest: AkoolTalkingPhotoRequest = {
+            talking_photo_url: request.photoUrl,
+            audio_url: request.audioUrl,
+            webhookUrl: `${this.configService.get('WEBHOOK_URL')}/akool/webhook`,
+          };
 
-      this.logger.log(`[${requestId}] 📤 Отправляю запрос на создание Talking Photo...`);
-      
-      const response = await axios.post<AkoolTalkingPhotoResponse>(
-        `${this.baseUrl}/content/video/createbytalkingphoto`,
-        talkingPhotoRequest,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
+          this.logger.log(`[${requestId}] 📤 Отправляю запрос на создание Talking Photo...`);
+          
+          const response = await axios.post<AkoolTalkingPhotoResponse>(
+            `${this.baseUrl}/content/video/createbytalkingphoto`,
+            talkingPhotoRequest,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+
+          this.logger.log(`[${requestId}] 📥 Ответ AKOOL:`, response.data);
+
+          if (response.data.code === 1000) {
+            const taskId = response.data.data?.task_id || 'unknown';
+            this.logger.log(`[${requestId}] ✅ Задача создана успешно. Task ID: ${taskId}`);
+            
+            return {
+              id: taskId,
+              status: 'processing',
+              result_url: response.data.data?.video,
+            };
+          } else {
+            throw new Error(`AKOOL API error: ${response.data.msg}`);
+          }
+        },
+        3, // maxRetries
+        1000, // baseDelay (1 секунда)
+        5000, // maxDelay (5 секунд)
+        requestId,
+        userId,
       );
-
-      this.logger.log(`[${requestId}] 📥 Ответ AKOOL:`, response.data);
-
-      if (response.data.code === 1000) {
-        const taskId = response.data.data?.task_id || 'unknown';
-        this.logger.log(`[${requestId}] ✅ Задача создана успешно. Task ID: ${taskId}`);
-        
-        return {
-          id: taskId,
-          status: 'processing',
-          result_url: response.data.data?.video,
-        };
-      } else {
-        throw new Error(`AKOOL API error: ${response.data.msg}`);
-      }
     } catch (error) {
-      this.logger.error(`[${requestId}] ❌ Ошибка создания цифрового двойника:`, error);
+      this.logger.error(`[${requestId}] ❌ Ошибка создания цифрового двойника после всех попыток:`, {
+        requestId,
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Уведомляем пользователя о финальной ошибке
+      if (userId) {
+        try {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          let userMessage = "❌ Не удалось создать цифровой двойник после всех попыток.\n\n";
+          
+          if (errorMessage.includes('create video error, please try again later')) {
+            userMessage += "⚠️ Сервер AKOOL временно недоступен.\n";
+            userMessage += "💡 Попробуйте создать видео через несколько минут.\n\n";
+            userMessage += "🔄 Или попробуйте еще раз сейчас.";
+          } else if (errorMessage.includes('1015')) {
+            userMessage += "⚠️ Ошибка обработки видео на сервере AKOOL.\n";
+            userMessage += "💡 Возможно, проблема с входными данными.\n\n";
+            userMessage += "🔄 Попробуйте загрузить другие файлы.";
+          } else {
+            userMessage += "💡 Попробуйте еще раз или обратитесь в поддержку.";
+          }
+          
+          await this.bot.telegram.sendMessage(userId, userMessage);
+          this.logger.log(`📱 [${requestId}] Уведомление об ошибке отправлено пользователю ${userId}`);
+        } catch (notifyError) {
+          this.logger.warn(`⚠️ [${requestId}] Не удалось уведомить пользователя об ошибке:`, notifyError);
+        }
+      }
+      
       throw error;
     }
   }
@@ -425,6 +533,7 @@ export class AkoolService {
     voiceAudioUrl: string,
     voiceName: string,
     webhookUrl?: string,
+    userId?: number,
   ): Promise<AkoolVideoResponse> {
     const requestId = `akool_voice_clone_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
@@ -481,7 +590,7 @@ export class AkoolService {
         quality: "720p",
       };
       
-      const result = await this.createDigitalTwin(videoRequest);
+      const result = await this.createDigitalTwin(videoRequest, userId);
       
       this.logger.log(`[${requestId}] ✅ Цифровой двойник с клонированным голосом создан успешно!`);
       return result;

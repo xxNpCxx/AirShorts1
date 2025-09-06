@@ -155,7 +155,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 userId,
                 timestamp: new Date().toISOString()
             });
-            const result = await this.akoolService.createDigitalTwinWithVoiceClone(photoUrl, session.script, audioUrl, `user_${userId}_voice_${Date.now()}`, `${process.env.WEBHOOK_URL}/akool/webhook`);
+            const result = await this.akoolService.createDigitalTwinWithVoiceClone(photoUrl, session.script, audioUrl, `user_${userId}_voice_${Date.now()}`, `${process.env.WEBHOOK_URL}/akool/webhook`, userId);
             this.logger.log(`✅ [AKOOL_DIGITAL_TWIN_CREATE] Digital twin created successfully`, {
                 requestId,
                 userId,

@@ -169,7 +169,8 @@ export class VideoGenerationScene {
         session.script,
         audioUrl,
         `user_${userId}_voice_${Date.now()}`,
-        `${process.env.WEBHOOK_URL}/akool/webhook`
+        `${process.env.WEBHOOK_URL}/akool/webhook`,
+        userId
       );
 
       this.logger.log(`✅ [AKOOL_DIGITAL_TWIN_CREATE] Digital twin created successfully`, {
