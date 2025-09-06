@@ -587,7 +587,7 @@ export class HeyGenService {
       this.logger.log(`[${uploadId}] 🔄 Fallback: trying direct image upload...`);
       
       const formData = new FormData();
-      formData.append('image', new Blob([imageBuffer]), 'user_photo.jpg');
+      formData.append('image', new Blob([new Uint8Array(imageBuffer)]), 'user_photo.jpg');
       
       const response = await fetch(`${this.baseUrl}/v2/image/upload`, {
         method: 'POST',
