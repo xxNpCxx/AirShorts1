@@ -495,7 +495,7 @@ export class HeyGenService {
       this.logger.debug(`[${uploadId}] 📤 Preparing binary data for HeyGen API`, {
         uploadId,
         audioSize: audioBuffer.length,
-        contentType: 'audio/wav',
+        contentType: 'audio/mpeg',
         uploadUrl,
         timestamp: new Date().toISOString()
       });
@@ -504,7 +504,7 @@ export class HeyGenService {
         method: 'POST',
         headers: {
           'X-Api-Key': this.apiKey,
-          'Content-Type': 'audio/wav',
+          'Content-Type': 'audio/mpeg',
           'Content-Length': audioBuffer.length.toString()
         },
         body: audioBuffer
