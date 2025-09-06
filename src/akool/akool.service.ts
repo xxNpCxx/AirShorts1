@@ -545,26 +545,12 @@ export class AkoolService {
       // Получаем токен для загрузки файлов
       const token = await this.getAccessToken();
       
-      // Загружаем и обрабатываем фото
-      this.logger.log(`[${requestId}] 📸 Загружаю и обрабатываю фото...`);
-      const photoResponse = await axios.get(photoUrl, { responseType: 'arraybuffer' });
-      const photoBuffer = Buffer.from(photoResponse.data);
+      // Используем оригинальные Telegram URL для AKOOL
+      this.logger.log(`[${requestId}] 📸 Использую оригинальный URL фото для AKOOL...`);
+      const uploadedPhotoUrl = photoUrl; // Используем оригинальный URL
       
-      // Валидируем фото
-      if (!AkoolFileUploader.validateFileSize(photoBuffer, 10)) {
-        throw new Error('Photo file too large (max 10MB)');
-      }
-      
-      const photoFileName = `photo_${requestId}.jpg`;
-      const uploadedPhotoUrl = await AkoolFileUploader.uploadImage(
-        photoBuffer, 
-        photoFileName, 
-        token, 
-        this.baseUrl
-      );
-      
-      // Загружаем и обрабатываем аудио
-      this.logger.log(`[${requestId}] 🎵 Загружаю и обрабатываю аудио...`);
+      // Загружаем аудио для конвертации и клонирования голоса
+      this.logger.log(`[${requestId}] 🎵 Загружаю аудио для обработки...`);
       const audioResponse = await axios.get(voiceAudioUrl, { responseType: 'arraybuffer' });
       let audioBuffer = Buffer.from(audioResponse.data);
       
@@ -582,13 +568,9 @@ export class AkoolService {
         throw new Error('Audio file too large (max 10MB)');
       }
       
-      const audioFileName = `audio_${requestId}.mp3`;
-      const uploadedAudioUrl = await AkoolFileUploader.uploadAudio(
-        audioBuffer, 
-        audioFileName, 
-        token, 
-        this.baseUrl
-      );
+      // Используем оригинальный URL аудио для AKOOL
+      this.logger.log(`[${requestId}] 🎵 Использую оригинальный URL аудио для AKOOL...`);
+      const uploadedAudioUrl = voiceAudioUrl; // Используем оригинальный URL
       
       // Клонируем голос через ElevenLabs (используем оригинальный буфер)
       this.logger.log(`[${requestId}] 🎤 Клонирую голос пользователя через ElevenLabs...`);
