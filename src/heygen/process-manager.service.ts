@@ -237,15 +237,19 @@ export class ProcessManagerService {
         timestamp: new Date().toISOString()
       });
       
-      await this.updateProcessStatus(process.id, 'photo_avatar_creating', { photoAvatarId: avatarId });
+      // Обновляем статус на completed, так как аватар уже готов (это asset)
+      await this.updateProcessStatus(process.id, 'photo_avatar_completed', { photoAvatarId: avatarId });
       
-      this.logger.log(`✅ [PHOTO_AVATAR_START] Photo Avatar creation initiated successfully`, {
+      this.logger.log(`✅ [PHOTO_AVATAR_START] Photo Avatar ready, proceeding to next step`, {
         processId: process.id,
         userId: process.userId,
         avatarId,
-        status: 'photo_avatar_creating',
+        status: 'photo_avatar_completed',
         timestamp: new Date().toISOString()
       });
+      
+      // Запускаем следующий шаг (Voice Cloning)
+      await this.executeNextStep(process.id);
     } catch (error) {
       this.logger.error(`❌ [PHOTO_AVATAR_START] Error creating Photo Avatar`, {
         processId: process.id,

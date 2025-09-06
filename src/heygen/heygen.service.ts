@@ -720,18 +720,16 @@ export class HeyGenService {
         timestamp: new Date().toISOString()
       });
 
-      // Теперь создаем Photo Avatar используя загруженный asset
-      const avatarResponse = await this.createPhotoAvatarFromAsset(uploadResponse.asset_key, callbackId);
-      
-      this.logger.log(`✅ [HEYGEN_PHOTO_AVATAR] Photo Avatar created successfully`, {
+      // Пока что возвращаем asset_key как avatar_id
+      // В будущем здесь будет создание аватара через отдельный API
+      this.logger.log(`✅ [HEYGEN_PHOTO_AVATAR] Asset uploaded, using as avatar_id`, {
         requestId,
         callbackId,
-        avatarId: avatarResponse.avatar_id,
         assetKey: uploadResponse.asset_key,
         timestamp: new Date().toISOString()
       });
       
-      return avatarResponse.avatar_id;
+      return uploadResponse.asset_key;
       
     } catch (error) {
       this.logger.error(`❌ [HEYGEN_PHOTO_AVATAR] Error creating Photo Avatar`, {
@@ -774,7 +772,7 @@ export class HeyGenService {
           voice: {
             type: "text",
             input_text: "Hello, this is a test video.",
-            voice_id: "1bd001e7e50f421d891986aad5158bc3" // Используем дефолтный голос
+            voice_id: "1bd001e7e50f421d891986aad5158bc3"
           },
           background: {
             type: "color",
@@ -810,14 +808,27 @@ export class HeyGenService {
       };
 
     } catch (error) {
-      this.logger.error(`❌ [HEYGEN_AVATAR_CREATE] Error creating Photo Avatar from asset`, {
-        requestId,
-        callbackId,
-        assetKey,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        timestamp: new Date().toISOString()
-      });
+      // Логируем подробную информацию об ошибке
+      if (error.response) {
+        this.logger.error(`❌ [HEYGEN_AVATAR_CREATE] HeyGen API Error`, {
+          requestId,
+          callbackId,
+          assetKey,
+          status: error.response.status,
+          statusText: error.response.statusText,
+          errorData: error.response.data,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        this.logger.error(`❌ [HEYGEN_AVATAR_CREATE] Network Error`, {
+          requestId,
+          callbackId,
+          assetKey,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          timestamp: new Date().toISOString()
+        });
+      }
       throw error;
     }
   }
