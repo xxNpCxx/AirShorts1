@@ -304,24 +304,23 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
         const uploadId = `heygen_audio_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         try {
             this.logger.log(`[${uploadId}] 🎵 Загружаем пользовательское аудио в HeyGen Assets (${audioBuffer.length} bytes)`);
-            // Используем правильный FormData для Node.js
-            const FormData = require('form-data');
-            const formData = new FormData();
-            // Добавляем обязательные поля согласно актуальной документации HeyGen API
-            formData.append('type', 'audio');
-            formData.append('asset', audioBuffer, {
-                filename: 'user_audio.wav',
+            // Используем data-binary подход вместо multipart/form-data
+            const uploadUrl = `https://upload.heygen.com/v1/asset?type=audio`;
+            this.logger.debug(`[${uploadId}] 📤 Preparing binary data for HeyGen API`, {
+                uploadId,
+                audioSize: audioBuffer.length,
                 contentType: 'audio/wav',
-                knownLength: audioBuffer.length
+                uploadUrl,
+                timestamp: new Date().toISOString()
             });
-            this.logger.debug(`[${uploadId}] 📤 FormData prepared with ${audioBuffer.length} bytes`);
-            const response = await fetch('https://upload.heygen.com/v1/asset', {
+            const response = await fetch(uploadUrl, {
                 method: 'POST',
                 headers: {
                     'X-Api-Key': this.apiKey,
-                    ...formData.getHeaders(),
+                    'Content-Type': 'audio/wav',
+                    'Content-Length': audioBuffer.length.toString()
                 },
-                body: formData,
+                body: audioBuffer
             });
             this.logger.log(`[${uploadId}] 📥 Upload Asset response: ${response.status} ${response.statusText}`);
             if (!response.ok) {
