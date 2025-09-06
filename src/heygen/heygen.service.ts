@@ -489,8 +489,8 @@ export class HeyGenService {
     try {
       this.logger.log(`[${uploadId}] 🎵 Загружаем пользовательское аудио в HeyGen Assets (${audioBuffer.length} bytes)`);
       
-      // Используем data-binary подход вместо multipart/form-data
-      const uploadUrl = `https://upload.heygen.com/v1/asset?type=audio`;
+      // Используем правильный endpoint для аудио assets
+      const uploadUrl = `https://upload.heygen.com/v2/audio_assets`;
       
       this.logger.debug(`[${uploadId}] 📤 Preparing binary data for HeyGen API`, {
         uploadId,
@@ -1283,13 +1283,18 @@ export class HeyGenService {
         audio_asset_id: audioAssetId
       };
       
+      // Извлекаем UUID из avatarId (убираем префикс "image/" и суффикс "/original")
+      const talkingPhotoId = avatarId.replace(/^image\//, '').replace(/\/original$/, '');
+      
+      this.logger.log(`[${requestId}] 🔧 Extracted talking_photo_id: ${talkingPhotoId} from avatarId: ${avatarId}`);
+
       // Используем правильную структуру для HeyGen v2 API
       const payload = {
         video_inputs: [
           {
             character: {
               type: "talking_photo",
-              talking_photo_id: avatarId, // image_key от загруженного фото
+              talking_photo_id: talkingPhotoId, // UUID без префиксов
               scale: 1.0,
               style: "normal"
             },
@@ -1306,11 +1311,7 @@ export class HeyGenService {
         dimension: {
           width: 1280,
           height: 720
-        },
-        caption: true,
-        title: videoTitle,
-        callback_id: callbackId,
-        callback_url: `${process.env.WEBHOOK_URL}/heygen/webhook`
+        }
       };
 
       // Логируем payload для отладки
