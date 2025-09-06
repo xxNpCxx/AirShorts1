@@ -58,8 +58,15 @@ export interface VoiceCloningRequest {
  * @see https://docs.heygen.com/reference/upload-asset
  */
 export interface UploadAssetResponse {
-  data: {
-    asset_key: string;
+  data?: {
+    asset_key?: string;
+    asset_id?: string;
+  };
+  asset_key?: string;
+  asset_id?: string;
+  error?: {
+    code: number;
+    message: string;
   };
 }
 export interface VoiceCloningRequest {
@@ -732,7 +739,7 @@ export class HeyGenService {
    * Загружает файл как asset в HeyGen
    * 
    * @see https://docs.heygen.com/reference/upload-asset
-   * @endpoint POST /v1/asset
+   * @endpoint POST /v1/upload
    * @param fileUrl - URL файла для загрузки
    * @param fileType - Тип файла ('image' или 'audio')
    * @returns Promise с asset_key
@@ -770,17 +777,29 @@ export class HeyGenService {
       const FormData = require('form-data');
       const formData = new FormData();
       
-      // Добавляем файл с правильными параметрами
+      // Добавляем файл с правильными параметрами согласно документации HeyGen
       formData.append('file', buffer, {
         filename: fileType === 'image' ? 'user_photo.jpg' : 'user_audio.wav',
         contentType: fileType === 'image' ? 'image/jpeg' : 'audio/wav',
         knownLength: buffer.length
       });
 
-      this.logger.log(`📤 [HEYGEN_UPLOAD] FormData prepared with axios`, {
+      // Добавляем дополнительные параметры если нужно
+      formData.append('type', fileType);
+
+      this.logger.log(`📤 [HEYGEN_UPLOAD] FormData prepared for HeyGen API`, {
         requestId,
         fileSize: buffer.length,
+        formDataFields: formData.getHeaders(),
         timestamp: new Date().toISOString()
+      });
+
+      // Логируем детали FormData для отладки
+      this.logger.debug(`[${requestId}] FormData details:`, {
+        hasFile: formData.has('file'),
+        hasType: formData.has('type'),
+        contentType: formData.getHeaders()['content-type'],
+        contentLength: formData.getHeaders()['content-length']
       });
 
       let response;
@@ -791,7 +810,8 @@ export class HeyGenService {
             ...formData.getHeaders()
           },
           maxBodyLength: Infinity,
-          maxContentLength: Infinity
+          maxContentLength: Infinity,
+          timeout: 30000 // 30 секунд таймаут
         });
 
         this.logger.log(`📥 [HEYGEN_UPLOAD] Received response from HeyGen API`, {
@@ -801,20 +821,33 @@ export class HeyGenService {
           timestamp: new Date().toISOString()
         });
 
-        const data = response.data as UploadAssetResponse;
+        const data = response.data as any;
         
         this.logger.log(`✅ [HEYGEN_UPLOAD] Asset uploaded successfully`, {
           requestId,
-          assetKey: data.data?.asset_key,
           responseData: data,
           timestamp: new Date().toISOString()
         });
 
-        if (!data.data?.asset_key) {
+        // Ищем asset_key в разных возможных местах ответа
+        const assetKey = data.data?.asset_key || data.asset_key || data.data?.asset_id || data.asset_id;
+        
+        if (!assetKey) {
+          this.logger.error(`❌ [HEYGEN_UPLOAD] No asset_key found in response`, {
+            requestId,
+            responseData: data,
+            timestamp: new Date().toISOString()
+          });
           throw new Error('No asset_key in response');
         }
 
-        return { asset_key: data.data.asset_key };
+        this.logger.log(`✅ [HEYGEN_UPLOAD] Asset key extracted: ${assetKey}`, {
+          requestId,
+          assetKey,
+          timestamp: new Date().toISOString()
+        });
+
+        return { asset_key: assetKey };
       } catch (axiosError) {
         if (axiosError.response) {
           // Сервер ответил с кодом ошибки
