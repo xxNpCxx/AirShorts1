@@ -425,7 +425,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 callbackId,
                 status: response.status,
                 statusText: response.statusText,
-                headers: Object.fromEntries(response.headers.entries()),
+                headers: 'Headers not available',
                 timestamp: new Date().toISOString()
             });
             if (!response.ok) {

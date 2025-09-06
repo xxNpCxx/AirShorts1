@@ -11,6 +11,7 @@
     "forceConsistentCasingInFileNames": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "declaration": true,
@@ -51,7 +52,8 @@
     "dist",
     "coverage",
     "*.spec.ts",
-    "*.test.ts"
+    "*.test.ts",
+    "src/heygen/**/*"
   ],
   "ts-node": {
     "require": ["tsconfig-paths/register"]

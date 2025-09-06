@@ -14,7 +14,7 @@ import { RedisModule } from "./redis/redis.module";
 import { MenuUpdate } from "./updates/menu.update";
 import { LoggerModule } from "./logger/logger.module";
 import { DidModule } from "./d-id/did.module";
-import { HeyGenModule } from "./heygen/heygen.module";
+// import { HeyGenModule } from "./heygen/heygen.module";
 import { ElevenLabsModule } from "./elevenlabs/elevenlabs.module";
 import { VideoGenerationScene } from "./scenes/video-generation.scene";
 import { WebhookModule } from "./webhook/webhook.module";
@@ -33,7 +33,7 @@ import { WebhookModule } from "./webhook/webhook.module";
     MenuModule,
     RedisModule,
     DidModule,
-    HeyGenModule,
+    // HeyGenModule,
     ElevenLabsModule,
     WebhookModule,
     TelegrafModule.forRoot({

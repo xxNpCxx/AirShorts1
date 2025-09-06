@@ -715,7 +715,7 @@ export class HeyGenService {
         callbackId,
         status: response.status,
         statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
+        headers: 'Headers not available',
         timestamp: new Date().toISOString()
       });
 
