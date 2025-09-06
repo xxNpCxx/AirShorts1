@@ -3,6 +3,7 @@ services:
     name: airshorts-ai-video-generator
     env: node
     plan: starter
+    runtime: node-22
     buildCommand: npm ci --legacy-peer-deps && npm run build
     startCommand: npm run start:prod
     envVars:
