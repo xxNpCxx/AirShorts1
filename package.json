@@ -100,7 +100,7 @@
     "url": "https://github.com/yourusername/telegram-bot-template.git"
   },
   "engines": {
-    "node": ">=22.19.0",
+    "node": "22.19.0",
     "npm": ">=10.0.0"
   }
 }
