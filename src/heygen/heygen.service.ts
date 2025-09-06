@@ -204,10 +204,11 @@ interface HeyGenStatusResponse {
  * 
  * @version Avatar IV API v2 (current)
  * @baseUrl https://api.heygen.com
+ * @uploadUrl https://upload.heygen.com
  * @endpoints
  *   - POST /v2/video/av4/generate (Avatar IV)
  *   - POST /v2/video/generate (Standard Avatar)
- *   - POST /v1/upload (Asset Upload)
+ *   - POST /v1/asset (Asset Upload)
  *   - GET /v1/avatar.list (List Avatars)
  *   - GET /v1/video_status.get (Video Status)
  * @lastUpdated 2025-09-06
@@ -215,11 +216,12 @@ interface HeyGenStatusResponse {
  */
 const HEYGEN_API = {
   baseUrl: 'https://api.heygen.com',
+  uploadUrl: 'https://upload.heygen.com',
   version: 'v2',
   endpoints: {
     avatarIV: '/v2/video/av4/generate',
     standardAvatar: '/v2/video/generate',
-    uploadAsset: '/v1/upload',
+    uploadAsset: '/v1/asset',
     listAvatars: '/v1/avatar.list',
     videoStatus: '/v1/video_status.get'
   }
@@ -743,10 +745,11 @@ export class HeyGenService {
         requestId,
         fileUrl: fileUrl.substring(0, 100) + '...',
         fileType,
+        endpoint: `${HEYGEN_API.uploadUrl}/v1/asset`,
         timestamp: new Date().toISOString()
       });
 
-      const response = await fetch(`${this.baseUrl}/v1/upload`, {
+      const response = await fetch(`${HEYGEN_API.uploadUrl}/v1/asset`, {
         method: 'POST',
         headers: {
           'X-API-KEY': this.apiKey,
