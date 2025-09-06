@@ -1309,7 +1309,7 @@ export class HeyGenService {
       this.logger.debug(`[${requestId}] 📤 HeyGen v2 API payload:`, payload);
 
       // Используем правильный endpoint для TalkingPhoto
-      const response = await fetch(`${this.baseUrl}/v2/video/avatars`, {
+      const response = await fetch(`${this.baseUrl}/v1/video/generate`, {
         method: 'POST',
         headers: {
           'X-API-KEY': this.apiKey,
