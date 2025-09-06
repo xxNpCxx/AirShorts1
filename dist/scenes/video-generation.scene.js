@@ -148,7 +148,7 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
                 timestamp: new Date().toISOString()
             });
             // Создаем процесс создания цифрового двойника
-            const digitalTwinProcess = await this.processManager.createDigitalTwinProcess(ctx.from.id, photoUrl, audioUrl, session.script, `Digital Twin Video ${new Date().toISOString()}`, session.quality || "720p");
+            const digitalTwinProcess = await this.processManager.createDigitalTwinProcess(ctx.from.id, photoUrl, audioUrl, session.script, `Digital Twin Video ${new Date().toISOString()}`, session.quality || "720p", session.voiceFileId);
             this.logger.log(`✅ [DIGITAL_TWIN_CREATE] Process created successfully`, {
                 requestId,
                 userId,
@@ -458,10 +458,9 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             await ctx.answerCbQuery();
             const session = ctx.session;
             session.quality = "720p";
-            await ctx.editMessageText("✅ Качество выбрано: 720p (быстрее генерация, меньше места)\n\n" +
-                "🎬 Запускаю создание цифрового двойника...");
-            // Сразу запускаем создание цифрового двойника
-            await this.createDigitalTwin(ctx);
+            await ctx.editMessageText("✅ Качество выбрано: 720p (быстрее генерация, меньше места)");
+            // Проверяем, все ли данные собраны, и запускаем процесс
+            await this.checkDataCompletenessAndStart(ctx);
         }
         catch (error) {
             this.logger.error("Error selecting 720p quality:", error);
@@ -473,10 +472,9 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
             await ctx.answerCbQuery();
             const session = ctx.session;
             session.quality = "1080p";
-            await ctx.editMessageText("✅ Качество выбрано: 1080p (лучшее качество, больше места)\n\n" +
-                "🎬 Запускаю создание цифрового двойника...");
-            // Сразу запускаем создание цифрового двойника
-            await this.createDigitalTwin(ctx);
+            await ctx.editMessageText("✅ Качество выбрано: 1080p (лучшее качество, больше места)");
+            // Проверяем, все ли данные собраны, и запускаем процесс
+            await this.checkDataCompletenessAndStart(ctx);
         }
         catch (error) {
             this.logger.error("Error selecting 1080p quality:", error);
@@ -497,6 +495,51 @@ let VideoGenerationScene = VideoGenerationScene_1 = class VideoGenerationScene {
     async onCancel(ctx) {
         await ctx.reply("❌ Создание видео отменено.");
         await ctx.scene?.leave();
+    }
+    /**
+     * Проверяет полноту собранных данных и запускает процесс создания цифрового двойника
+     */
+    async checkDataCompletenessAndStart(ctx) {
+        const session = ctx.session;
+        // Проверяем, все ли данные собраны
+        const hasPhoto = !!session.photoFileId;
+        const hasVoice = !!session.voiceFileId;
+        const hasScript = !!session.script;
+        const hasQuality = !!session.quality;
+        this.logger.log(`🔍 [DATA_CHECK] Checking data completeness`, {
+            userId: ctx.from?.id,
+            hasPhoto,
+            hasVoice,
+            hasScript,
+            hasQuality,
+            timestamp: new Date().toISOString()
+        });
+        if (!hasPhoto || !hasVoice || !hasScript || !hasQuality) {
+            const missingData = [];
+            if (!hasPhoto)
+                missingData.push("📸 Фото");
+            if (!hasVoice)
+                missingData.push("🎵 Голосовое сообщение");
+            if (!hasScript)
+                missingData.push("📝 Текст сценария");
+            if (!hasQuality)
+                missingData.push("🎥 Качество видео");
+            await ctx.reply(`❌ Не все данные собраны!\n\n` +
+                `📋 Отсутствует:\n${missingData.map(item => `• ${item}`).join('\n')}\n\n` +
+                `Пожалуйста, загрузите все необходимые данные.`);
+            return;
+        }
+        // Все данные собраны, запускаем процесс
+        this.logger.log(`✅ [DATA_CHECK] All data collected, starting process`, {
+            userId: ctx.from?.id,
+            photoFileId: session.photoFileId,
+            voiceFileId: session.voiceFileId,
+            scriptLength: session.script?.length,
+            quality: session.quality,
+            timestamp: new Date().toISOString()
+        });
+        await ctx.reply("🎬 Запускаю создание цифрового двойника...");
+        await this.createDigitalTwin(ctx);
     }
 };
 exports.VideoGenerationScene = VideoGenerationScene;
@@ -589,6 +632,12 @@ __decorate([
     __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], VideoGenerationScene.prototype, "onCancel", null);
+__decorate([
+    __param(0, (0, nestjs_telegraf_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [telegraf_1.Context]),
+    __metadata("design:returntype", Promise)
+], VideoGenerationScene.prototype, "checkDataCompletenessAndStart", null);
 exports.VideoGenerationScene = VideoGenerationScene = VideoGenerationScene_1 = __decorate([
     (0, nestjs_telegraf_1.Scene)("video-generation"),
     __param(2, (0, common_1.Inject)((0, nestjs_telegraf_2.getBotToken)("airshorts1_bot"))),

@@ -162,7 +162,8 @@ export class VideoGenerationScene {
         audioUrl,
         session.script,
         `Digital Twin Video ${new Date().toISOString()}`,
-        session.quality || "720p"
+        session.quality || "720p",
+        session.voiceFileId
       );
 
       this.logger.log(`✅ [DIGITAL_TWIN_CREATE] Process created successfully`, {

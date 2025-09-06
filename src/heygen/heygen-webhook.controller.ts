@@ -182,18 +182,52 @@ export class HeyGenWebhookController {
    */
   private async handleVoiceCloneSuccess(payload: HeyGenWebhookPayload, webhookId: string) {
     const { voice_id, callback_id } = payload.event_data;
-    this.logger.log(`✅ Voice Clone created successfully: ${voice_id} for callback ${callback_id}`);
+    
+    this.logger.log(`✅ [VOICE_CLONE_SUCCESS] Voice Clone created successfully`, {
+      webhookId,
+      callbackId: callback_id,
+      voiceId: voice_id,
+      eventData: payload.event_data,
+      timestamp: new Date().toISOString()
+    });
     
     if (!callback_id) {
-      this.logger.error('No callback_id in Voice Clone success payload');
+      this.logger.error(`❌ [VOICE_CLONE_SUCCESS] No callback_id in Voice Clone success payload`, {
+        webhookId,
+        payload: payload.event_data,
+        timestamp: new Date().toISOString()
+      });
       return;
     }
+    
+    this.logger.log(`📊 [VOICE_CLONE_SUCCESS] Updating process status`, {
+      webhookId,
+      callbackId: callback_id,
+      voiceId: voice_id,
+      newStatus: 'voice_clone_completed',
+      timestamp: new Date().toISOString()
+    });
     
     // Обновляем статус процесса и запускаем следующий шаг (Video Generation)
     await this.processManager.updateProcessStatus(callback_id, 'voice_clone_completed', { 
       voiceCloneId: voice_id 
     });
+    
+    this.logger.log(`🚀 [VOICE_CLONE_SUCCESS] Executing next step`, {
+      webhookId,
+      callbackId: callback_id,
+      voiceId: voice_id,
+      timestamp: new Date().toISOString()
+    });
+    
     await this.processManager.executeNextStep(callback_id);
+    
+    this.logger.log(`✅ [VOICE_CLONE_SUCCESS] Voice Clone success processed completely`, {
+      webhookId,
+      callbackId: callback_id,
+      voiceId: voice_id,
+      timestamp: new Date().toISOString()
+    });
   }
 
   /**
@@ -201,18 +235,65 @@ export class HeyGenWebhookController {
    */
   private async handleVoiceCloneFailed(payload: HeyGenWebhookPayload, webhookId: string) {
     const { error, callback_id } = payload.event_data;
-    this.logger.error(`❌ Voice Clone creation failed for callback ${callback_id}: ${error}`);
+    
+    this.logger.error(`❌ [VOICE_CLONE_FAILED] Voice Clone creation failed`, {
+      webhookId,
+      callbackId: callback_id,
+      error,
+      eventData: payload.event_data,
+      timestamp: new Date().toISOString()
+    });
     
     if (!callback_id) {
-      this.logger.error('No callback_id in Voice Clone failed payload');
+      this.logger.error(`❌ [VOICE_CLONE_FAILED] No callback_id in Voice Clone failed payload`, {
+        webhookId,
+        payload: payload.event_data,
+        timestamp: new Date().toISOString()
+      });
       return;
     }
     
+    this.logger.log(`📊 [VOICE_CLONE_FAILED] Updating process status`, {
+      webhookId,
+      callbackId: callback_id,
+      error,
+      newStatus: 'voice_clone_failed',
+      timestamp: new Date().toISOString()
+    });
+    
     // Обновляем статус процесса и уведомляем пользователя
     await this.processManager.updateProcessStatus(callback_id, 'voice_clone_failed', { error });
+    
+    this.logger.log(`👤 [VOICE_CLONE_FAILED] Getting process for user notification`, {
+      webhookId,
+      callbackId: callback_id,
+      timestamp: new Date().toISOString()
+    });
+    
     const process = await this.processManager.getProcess(callback_id);
     if (process) {
+      this.logger.log(`📤 [VOICE_CLONE_FAILED] Sending error notification to user`, {
+        webhookId,
+        callbackId: callback_id,
+        userId: process.userId,
+        error,
+        timestamp: new Date().toISOString()
+      });
+      
       await this.notifyUserError(process, 'Ошибка клонирования голоса');
+      
+      this.logger.log(`✅ [VOICE_CLONE_FAILED] Error notification sent`, {
+        webhookId,
+        callbackId: callback_id,
+        userId: process.userId,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      this.logger.error(`❌ [VOICE_CLONE_FAILED] Process not found for callback_id`, {
+        webhookId,
+        callbackId: callback_id,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 

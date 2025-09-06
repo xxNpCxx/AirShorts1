@@ -966,60 +966,253 @@ export class HeyGenService {
   }
 
   /**
+   * Валидирует и подготавливает голосовой файл для клонирования
+   * 
+   * @param audioUrl - URL аудио файла
+   * @param fileId - ID файла в Telegram
+   * @returns Promise с валидированным URL
+   * @throws Error если файл не подходит для клонирования
+   */
+  private async validateAndPrepareAudioFile(audioUrl: string, fileId: string): Promise<string> {
+    const requestId = `audio_validate_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    
+    try {
+      this.logger.log(`[${requestId}] 🎵 Validating audio file`, {
+        requestId,
+        audioUrl: audioUrl.substring(0, 100) + '...',
+        fileId,
+        timestamp: new Date().toISOString()
+      });
+
+      // Проверяем доступность файла
+      const headResponse = await fetch(audioUrl, { method: 'HEAD' });
+      
+      if (!headResponse.ok) {
+        throw new Error(`Audio file not accessible: ${headResponse.status} ${headResponse.statusText}`);
+      }
+
+      const contentLength = headResponse.headers.get('content-length');
+      const contentType = headResponse.headers.get('content-type');
+      const fileSize = contentLength ? parseInt(contentLength, 10) : 0;
+
+      this.logger.log(`[${requestId}] 📊 Audio file info`, {
+        requestId,
+        fileSize,
+        contentType,
+        contentLength,
+        timestamp: new Date().toISOString()
+      });
+
+      // Проверяем размер файла (максимум 25MB для HeyGen)
+      const maxSize = 25 * 1024 * 1024; // 25MB
+      if (fileSize > maxSize) {
+        throw new Error(`Audio file too large: ${fileSize} bytes (max: ${maxSize} bytes)`);
+      }
+
+      // Проверяем минимальный размер (минимум 1MB для качественного клонирования)
+      const minSize = 1024 * 1024; // 1MB
+      if (fileSize < minSize) {
+        this.logger.warn(`[${requestId}] ⚠️ Audio file may be too small for quality cloning`, {
+          requestId,
+          fileSize,
+          minSize,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Проверяем поддерживаемые форматы
+      const supportedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/oga'];
+      if (contentType && !supportedTypes.some(type => contentType.includes(type))) {
+        this.logger.warn(`[${requestId}] ⚠️ Unsupported audio format: ${contentType}`, {
+          requestId,
+          contentType,
+          supportedTypes,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      this.logger.log(`[${requestId}] ✅ Audio file validation passed`, {
+        requestId,
+        fileSize,
+        contentType,
+        timestamp: new Date().toISOString()
+      });
+
+      return audioUrl;
+
+    } catch (error) {
+      this.logger.error(`[${requestId}] ❌ Audio file validation failed`, {
+        requestId,
+        audioUrl: audioUrl.substring(0, 100) + '...',
+        fileId,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Создает клон голоса из пользовательского аудио
    * 
    * @see https://docs.heygen.com/reference/create-voice-cloning
-   * @endpoint POST /v1/voice_cloning.create
+   * @endpoint POST /v1/voice_cloning/create
    * @param audioUrl - URL аудио пользователя
    * @param callbackId - ID для webhook callback
    * @returns Promise с voice_id
    * @throws Error если клонирование не удалось
    */
-  async createVoiceClone(audioUrl: string, callbackId: string): Promise<string> {
+  async createVoiceClone(audioUrl: string, callbackId: string, fileId?: string): Promise<string> {
     const requestId = `voice_clone_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
     
     try {
-      this.logger.log(`[${requestId}] 🎵 Creating Voice Clone from: ${audioUrl}`);
+      this.logger.log(`[${requestId}] 🎵 Creating Voice Clone from: ${audioUrl}`, {
+        requestId,
+        audioUrl: audioUrl.substring(0, 100) + '...',
+        callbackId,
+        fileId,
+        timestamp: new Date().toISOString()
+      });
       
+      // Валидация входных данных
+      if (!audioUrl || audioUrl.trim() === '') {
+        throw new Error('Audio URL is required');
+      }
+      
+      if (!callbackId || callbackId.trim() === '') {
+        throw new Error('Callback ID is required');
+      }
+
+      // Валидируем и подготавливаем аудио файл
+      const validatedAudioUrl = await this.validateAndPrepareAudioFile(audioUrl, fileId || 'unknown');
+
       const payload: VoiceCloningRequest = {
         name: `voice_${callbackId}`,
-        audio_url: audioUrl,
+        audio_url: validatedAudioUrl,
         callback_url: `${process.env.WEBHOOK_URL}/heygen/webhook`,
         callback_id: callbackId
       };
 
-      this.logger.debug(`[${requestId}] 📤 Voice Cloning payload:`, payload);
+      this.logger.debug(`[${requestId}] 📤 Voice Cloning payload:`, {
+        requestId,
+        payload: {
+          ...payload,
+          audio_url: payload.audio_url.substring(0, 100) + '...'
+        },
+        timestamp: new Date().toISOString()
+      });
 
-      const response = await fetch(`${this.baseUrl}/v1/voice_cloning.create`, {
+      this.logger.log(`[${requestId}] 📤 Sending request to HeyGen API`, {
+        requestId,
+        endpoint: `${this.baseUrl}/v1/voice_cloning/create`,
+        method: 'POST',
+        timestamp: new Date().toISOString()
+      });
+
+      const response = await fetch(`${this.baseUrl}/v1/voice_cloning/create`, {
         method: 'POST',
         headers: {
           'X-API-KEY': this.apiKey,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
 
-      this.logger.log(`[${requestId}] 📥 Voice Cloning response: ${response.status} ${response.statusText}`);
+      clearTimeout(timeout);
+
+      this.logger.log(`[${requestId}] 📥 Voice Cloning response received`, {
+        requestId,
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        timestamp: new Date().toISOString()
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`[${requestId}] ❌ Voice Cloning failed: ${response.status} - ${errorText}`);
+        this.logger.error(`[${requestId}] ❌ Voice Cloning failed`, {
+          requestId,
+          status: response.status,
+          statusText: response.statusText,
+          errorText,
+          audioUrl: audioUrl.substring(0, 100) + '...',
+          callbackId,
+          timestamp: new Date().toISOString()
+        });
         throw new Error(`Voice Cloning failed: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json() as any;
-      const voiceId = result.data?.voice_id || result.voice_id;
+      
+      this.logger.debug(`[${requestId}] 📋 Voice Cloning response data:`, {
+        requestId,
+        responseData: result,
+        timestamp: new Date().toISOString()
+      });
+
+      // Проверяем различные возможные форматы ответа
+      const voiceId = result.data?.voice_id || 
+                     result.voice_id || 
+                     result.data?.id || 
+                     result.id;
       
       if (!voiceId) {
-        this.logger.error(`[${requestId}] ❌ No voice_id in response:`, result);
+        this.logger.error(`[${requestId}] ❌ No voice_id found in response`, {
+          requestId,
+          responseData: result,
+          possibleFields: ['data.voice_id', 'voice_id', 'data.id', 'id'],
+          timestamp: new Date().toISOString()
+        });
         throw new Error('No voice_id returned from Voice Cloning API');
       }
       
-      this.logger.log(`[${requestId}] ✅ Voice Clone created successfully: ${voiceId}`);
+      this.logger.log(`[${requestId}] ✅ Voice Clone created successfully`, {
+        requestId,
+        voiceId,
+        audioUrl: audioUrl.substring(0, 100) + '...',
+        callbackId,
+        timestamp: new Date().toISOString()
+      });
+      
       return voiceId;
       
     } catch (error) {
-      this.logger.error(`[${requestId}] ❌ Error creating Voice Clone:`, error);
+      clearTimeout(timeout);
+      
+      // Детальная обработка различных типов ошибок
+      if (error.name === 'AbortError') {
+        this.logger.error(`[${requestId}] ⏰ Voice Cloning timeout after 30 seconds`, {
+          requestId,
+          audioUrl: audioUrl.substring(0, 100) + '...',
+          callbackId,
+          timestamp: new Date().toISOString()
+        });
+        throw new Error('Voice Cloning request timed out after 30 seconds');
+      }
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        this.logger.error(`[${requestId}] 🌐 Network error during Voice Cloning`, {
+          requestId,
+          error: error.message,
+          audioUrl: audioUrl.substring(0, 100) + '...',
+          callbackId,
+          timestamp: new Date().toISOString()
+        });
+        throw new Error(`Network error during Voice Cloning: ${error.message}`);
+      }
+      
+      this.logger.error(`[${requestId}] ❌ Error creating Voice Clone`, {
+        requestId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        audioUrl: audioUrl.substring(0, 100) + '...',
+        callbackId,
+        timestamp: new Date().toISOString()
+      });
+      
       throw error;
     }
   }

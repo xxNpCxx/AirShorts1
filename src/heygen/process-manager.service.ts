@@ -29,6 +29,7 @@ export interface DigitalTwinProcess {
   status: ProcessStatus;
   photoUrl: string;
   audioUrl: string;
+  audioFileId?: string; // ID файла в Telegram для валидации
   script: string;
   videoTitle: string;
   platform: "youtube-shorts";
@@ -69,7 +70,8 @@ export class ProcessManagerService {
     audioUrl: string,
     script: string,
     videoTitle: string,
-    quality: "720p" | "1080p" = "720p"
+    quality: "720p" | "1080p" = "720p",
+    audioFileId?: string
   ): Promise<DigitalTwinProcess> {
     const processId = `dt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
@@ -90,6 +92,7 @@ export class ProcessManagerService {
       status: 'photo_avatar_creating',
       photoUrl,
       audioUrl,
+      audioFileId,
       script,
       videoTitle,
       platform: "youtube-shorts",
@@ -126,7 +129,7 @@ export class ProcessManagerService {
   async updateProcessStatus(
     processId: string, 
     status: ProcessStatus, 
-    data?: Partial<Pick<DigitalTwinProcess, 'photoAvatarId' | 'voiceCloneId' | 'videoId' | 'videoUrl' | 'error'>>
+    data?: Partial<Pick<DigitalTwinProcess, 'photoAvatarId' | 'voiceCloneId' | 'videoId' | 'videoUrl' | 'error' | 'retryCount'>>
   ): Promise<void> {
     const process = this.processes.get(processId);
     if (!process) {
@@ -144,6 +147,7 @@ export class ProcessManagerService {
       if (data.videoId) process.videoId = data.videoId;
       if (data.videoUrl) process.videoUrl = data.videoUrl;
       if (data.error) process.error = data.error;
+      if (data.retryCount !== undefined) process.retryCount = data.retryCount;
     }
 
     this.processes.set(processId, process);
@@ -288,48 +292,135 @@ export class ProcessManagerService {
    * Запускает клонирование голоса
    */
   private async startVoiceCloning(process: DigitalTwinProcess): Promise<void> {
+    const requestId = `voice_clone_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    
     try {
       this.logger.log(`🎵 [VOICE_CLONE_START] Starting Voice Cloning`, {
+        requestId,
         processId: process.id,
         userId: process.userId,
         audioUrl: process.audioUrl.substring(0, 100) + '...',
+        audioFileId: process.audioFileId,
+        callbackId: process.id,
+        retryCount: process.retryCount,
+        maxRetries: process.maxRetries,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Проверяем, не превышено ли количество попыток
+      if (process.retryCount >= process.maxRetries) {
+        this.logger.error(`❌ [VOICE_CLONE_START] Max retries exceeded`, {
+          requestId,
+          processId: process.id,
+          userId: process.userId,
+          retryCount: process.retryCount,
+          maxRetries: process.maxRetries,
+          timestamp: new Date().toISOString()
+        });
+        
+        await this.updateProcessStatus(process.id, 'voice_clone_failed', { 
+          error: `Max retries exceeded (${process.maxRetries})` 
+        });
+        await this.notifyUserError(process, 'Превышено максимальное количество попыток клонирования голоса');
+        return;
+      }
+      
+      // Увеличиваем счетчик попыток
+      await this.updateProcessStatus(process.id, 'voice_cloning', { 
+        retryCount: process.retryCount + 1 
+      });
+      
+      this.logger.log(`🎵 [VOICE_CLONE_START] Calling HeyGen Service`, {
+        requestId,
+        processId: process.id,
+        userId: process.userId,
+        audioUrl: process.audioUrl.substring(0, 100) + '...',
+        audioFileId: process.audioFileId,
         callbackId: process.id,
         timestamp: new Date().toISOString()
       });
       
       // Вызываем HeyGen Service для клонирования голоса
-      const voiceId = await this.heygenService.createVoiceClone(process.audioUrl, process.id);
+      const voiceId = await this.heygenService.createVoiceClone(process.audioUrl, process.id, process.audioFileId);
       
       this.logger.log(`🎵 [VOICE_CLONE_START] HeyGen API call successful`, {
+        requestId,
         processId: process.id,
         userId: process.userId,
         voiceId,
+        audioUrl: process.audioUrl.substring(0, 100) + '...',
+        audioFileId: process.audioFileId,
         timestamp: new Date().toISOString()
       });
       
       await this.updateProcessStatus(process.id, 'voice_cloning', { voiceCloneId: voiceId });
       
       this.logger.log(`✅ [VOICE_CLONE_START] Voice Cloning initiated successfully`, {
+        requestId,
         processId: process.id,
         userId: process.userId,
         voiceId,
         status: 'voice_cloning',
+        retryCount: process.retryCount + 1,
         timestamp: new Date().toISOString()
       });
     } catch (error) {
       this.logger.error(`❌ [VOICE_CLONE_START] Error creating Voice Clone`, {
+        requestId,
         processId: process.id,
         userId: process.userId,
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         audioUrl: process.audioUrl.substring(0, 100) + '...',
+        audioFileId: process.audioFileId,
+        retryCount: process.retryCount,
+        maxRetries: process.maxRetries,
         timestamp: new Date().toISOString()
       });
       
-      await this.updateProcessStatus(process.id, 'voice_clone_failed', { 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-      await this.notifyUserError(process, 'Ошибка клонирования голоса');
+      // Определяем, нужно ли повторить попытку
+      const shouldRetry = process.retryCount < process.maxRetries;
+      
+      if (shouldRetry) {
+        this.logger.log(`🔄 [VOICE_CLONE_START] Scheduling retry`, {
+          requestId,
+          processId: process.id,
+          userId: process.userId,
+          retryCount: process.retryCount + 1,
+          maxRetries: process.maxRetries,
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString()
+        });
+        
+        // Планируем повторную попытку через 5 секунд
+        setTimeout(async () => {
+          try {
+            await this.executeNextStep(process.id);
+          } catch (retryError) {
+            this.logger.error(`❌ [VOICE_CLONE_RETRY] Retry failed`, {
+              requestId,
+              processId: process.id,
+              userId: process.userId,
+              retryError: retryError instanceof Error ? retryError.message : String(retryError),
+              timestamp: new Date().toISOString()
+            });
+          }
+        }, 5000);
+      } else {
+        this.logger.error(`❌ [VOICE_CLONE_START] Max retries reached, marking as failed`, {
+          requestId,
+          processId: process.id,
+          userId: process.userId,
+          retryCount: process.retryCount,
+          maxRetries: process.maxRetries,
+          timestamp: new Date().toISOString()
+        });
+        
+        await this.updateProcessStatus(process.id, 'voice_clone_failed', { 
+          error: error instanceof Error ? error.message : String(error) 
+        });
+        await this.notifyUserError(process, 'Ошибка клонирования голоса');
+      }
     }
   }
 
