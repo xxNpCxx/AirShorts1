@@ -34,7 +34,7 @@ exports.AppModule = AppModule = __decorate([
         imports: [
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
-                envFilePath: ".env",
+                envFilePath: process.env.NODE_ENV === 'production' ? undefined : ".env",
             }),
             logger_module_1.LoggerModule,
             database_module_1.DatabaseModule,

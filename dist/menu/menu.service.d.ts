@@ -7,7 +7,6 @@ export declare class MenuService {
     private readonly _logger;
     constructor(_kb: KeyboardsService, _logger: CustomLoggerService);
     sendMainMenu(ctx: TelegramContext): Promise<void>;
-    sendMainMenuBanner(ctx: TelegramContext): Promise<void>;
     private sendReplyKeyboard;
 }
 export {};

@@ -182,7 +182,7 @@ let BotUpdate = class BotUpdate {
             'did': '🤖 ИИ-Аватар',
             'heygen': '👤 Цифровой двойник'
         };
-        await ctx.editMessageText(`⚙️ **Настройки сервиса генерации видео**\n\n` +
+        const newText = `⚙️ **Настройки сервиса генерации видео**\n\n` +
             `Текущий сервис: ${serviceNames[currentService]}\n\n` +
             `🤖 **ИИ-Аватар:**\n` +
             `• Быстрая генерация\n` +
@@ -192,10 +192,19 @@ let BotUpdate = class BotUpdate {
             `• Более реалистичные движения\n` +
             `• Профессиональное качество\n` +
             `• Расширенные возможности персонализации\n\n` +
-            `Выберите предпочтительный сервис:`, {
-            parse_mode: "Markdown",
-            reply_markup: this._kb.serviceSettings().reply_markup,
-        });
+            `Выберите предпочтительный сервис:`;
+        const currentText = ctx.callbackQuery?.message && 'text' in ctx.callbackQuery.message
+            ? ctx.callbackQuery.message.text
+            : '';
+        if (currentText !== newText) {
+            await ctx.editMessageText(newText, {
+                parse_mode: "Markdown",
+                reply_markup: this._kb.serviceSettings().reply_markup,
+            });
+        }
+        else {
+            await ctx.answerCbQuery("✅ Настройки уже актуальны!");
+        }
     }
     async onSetServiceDid(ctx) {
         await ctx.answerCbQuery("🤖 ИИ-Аватар выбран!");
