@@ -331,7 +331,7 @@ export class AkoolService {
       const token = await this.getAccessToken();
       
       const response = await axios.get(
-        `${this.baseUrl}/content/video/status/${videoId}`,
+        `${this.baseUrl}/content/video/result/${videoId}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
