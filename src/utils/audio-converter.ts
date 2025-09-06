@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import * as ffmpeg from 'fluent-ffmpeg';
+import ffmpeg from 'fluent-ffmpeg';
 import { promisify } from 'util';
 import { writeFile, unlink } from 'fs/promises';
 import { join } from 'path';
@@ -45,11 +45,15 @@ export class AudioConverter {
       } finally {
         // Удаляем временные файлы
         try {
-          await unlink(inputFile);
-          await unlink(outputFile);
-          this.logger.debug(`[${requestId}] Временные файлы удалены`);
+          await unlink(inputFile).catch(() => {
+            this.logger.debug(`[${requestId}] Входной файл уже удален: ${inputFile}`);
+          });
+          await unlink(outputFile).catch(() => {
+            this.logger.debug(`[${requestId}] Выходной файл уже удален: ${outputFile}`);
+          });
+          this.logger.debug(`[${requestId}] Очистка временных файлов завершена`);
         } catch (cleanupError) {
-          this.logger.warn(`[${requestId}] ⚠️ Не удалось удалить временные файлы:`, cleanupError);
+          this.logger.warn(`[${requestId}] ⚠️ Ошибка при очистке временных файлов:`, cleanupError);
         }
       }
 
@@ -64,7 +68,7 @@ export class AudioConverter {
    */
   private static async convertWithFfmpeg(inputFile: string, outputFile: string, requestId: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      (ffmpeg as any)(inputFile)
+      ffmpeg(inputFile)
         .toFormat('mp3')
         .audioCodec('libmp3lame')
         .audioBitrate(128)
