@@ -189,9 +189,13 @@ export class AkoolWebhookController {
     try {
       const crypto = require('crypto');
       
-      // Проверяем длину ключа (должен быть 24 символа)
-      if (clientSecret.length !== 24) {
-        throw new Error(`ClientSecret должен быть 24 символа, получено: ${clientSecret.length}`);
+      // Проверяем и обрезаем ключ до 24 символов (требование AKOOL)
+      let processedClientSecret = clientSecret;
+      if (clientSecret.length > 24) {
+        this.logger.warn(`⚠️ ClientSecret слишком длинный (${clientSecret.length} символов), обрезаем до 24`);
+        processedClientSecret = clientSecret.substring(0, 24);
+      } else if (clientSecret.length < 24) {
+        throw new Error(`ClientSecret должен быть минимум 24 символа, получено: ${clientSecret.length}`);
       }
       
       // Проверяем длину IV (должен быть 16 байт)
@@ -200,7 +204,7 @@ export class AkoolWebhookController {
       }
       
       // Создаем ключ и IV
-      const key = Buffer.from(clientSecret, 'utf8');
+      const key = Buffer.from(processedClientSecret, 'utf8');
       const iv = Buffer.from(clientId, 'utf8');
       
       this.logger.log(`🔑 Ключ (${key.length} байт): ${key.toString('hex')}`);
