@@ -200,9 +200,12 @@ export class AkoolWebhookController {
       const crypto = require('crypto');
       
       // Согласно документации AKOOL: clientSecret как ключ, clientId как IV
-      // Преобразуем строки в буферы для правильной работы с байтами
-      const keyBuffer = Buffer.from(clientSecret, 'utf8');
-      const ivBuffer = Buffer.from(clientId, 'utf8');
+      // Client ID и Client Secret приходят в Base64 формате, нужно их декодировать
+      const keyBuffer = Buffer.from(clientSecret, 'base64');
+      const ivBuffer = Buffer.from(clientId, 'base64');
+      
+      this.logger.log(`🔑 Исходный Client ID (${ivBuffer.length} байт): ${ivBuffer.toString('hex')}`);
+      this.logger.log(`🔑 Исходный Client Secret (${keyBuffer.length} байт): ${keyBuffer.toString('hex')}`);
       
       // Для AES-192-CBC нужен ключ 24 байта и IV 16 байт
       // Создаем ключ и IV правильной длины
