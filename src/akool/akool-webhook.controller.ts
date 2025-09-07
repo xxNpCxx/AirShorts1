@@ -189,20 +189,20 @@ export class AkoolWebhookController {
     try {
       const crypto = require('crypto');
       
-      // Используем AKOOL_CLIENT_ID как ключ (24 символа) и AKOOL_CLIENT_SECRET как IV
+      // Согласно документации AKOOL: clientSecret как ключ, clientId как IV
       // Проверяем длину ключа (должен быть 24 символа)
-      if (clientId.length !== 24) {
-        throw new Error(`ClientId должен быть 24 символа для использования как ключ, получено: ${clientId.length}`);
+      if (clientSecret.length !== 24) {
+        throw new Error(`ClientSecret должен быть 24 символа для использования как ключ, получено: ${clientSecret.length}`);
       }
       
       // Проверяем длину IV (должен быть 16 байт)
-      if (clientSecret.length < 16) {
-        throw new Error(`ClientSecret должен быть минимум 16 байт для использования как IV, получено: ${clientSecret.length}`);
+      if (clientId.length !== 16) {
+        throw new Error(`ClientId должен быть 16 байт для использования как IV, получено: ${clientId.length}`);
       }
 
-      // Создаем ключ и IV (меняем местами)
-      const key = Buffer.from(clientId, 'utf8');
-      const iv = Buffer.from(clientSecret.substring(0, 16), 'utf8');
+      // Создаем ключ и IV (правильная логика)
+      const key = Buffer.from(clientSecret, 'utf8');
+      const iv = Buffer.from(clientId, 'utf8');
       
       this.logger.log(`🔑 Ключ (${key.length} байт): ${key.toString('hex')}`);
       this.logger.log(`🔑 IV (${iv.length} байт): ${iv.toString('hex')}`);
