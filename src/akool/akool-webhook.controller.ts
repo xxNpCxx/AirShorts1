@@ -201,8 +201,9 @@ export class AkoolWebhookController {
       
       // Согласно документации AKOOL: clientSecret как ключ, clientId как IV
       // Client ID и Client Secret приходят в Base64 формате, нужно их декодировать
-      const keyBuffer = Buffer.from(clientSecret, 'base64');
-      const ivBuffer = Buffer.from(clientId, 'base64');
+      // НО! Согласно логам: Client ID = 16 байт (IV), Client Secret = 24 байта (ключ)
+      const keyBuffer = Buffer.from(clientSecret, 'base64'); // 24 байта - ключ
+      const ivBuffer = Buffer.from(clientId, 'base64');       // 16 байт - IV
       
       this.logger.log(`🔑 Исходный Client ID (${ivBuffer.length} байт): ${ivBuffer.toString('hex')}`);
       this.logger.log(`🔑 Исходный Client Secret (${keyBuffer.length} байт): ${keyBuffer.toString('hex')}`);
