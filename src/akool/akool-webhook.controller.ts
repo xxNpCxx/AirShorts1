@@ -200,19 +200,28 @@ export class AkoolWebhookController {
       const crypto = require('crypto');
       
       // Согласно документации AKOOL: clientSecret как ключ, clientId как IV
-      // Проверяем длину ключа (должен быть 24 символа)
-      if (clientSecret.length !== 24) {
-        throw new Error(`ClientSecret должен быть 24 символа для использования как ключ, получено: ${clientSecret.length}`);
+      // Преобразуем строки в буферы для правильной работы с байтами
+      const keyBuffer = Buffer.from(clientSecret, 'utf8');
+      const ivBuffer = Buffer.from(clientId, 'utf8');
+      
+      // Для AES-192-CBC нужен ключ 24 байта и IV 16 байт
+      // Обрезаем или дополняем до нужной длины
+      let key = keyBuffer.slice(0, 24); // Берем первые 24 байта
+      let iv = ivBuffer.slice(0, 16);   // Берем первые 16 байт
+      
+      // Дополняем ключ нулями если он короче 24 байт
+      if (key.length < 24) {
+        const paddedKey = Buffer.alloc(24);
+        key.copy(paddedKey);
+        key = paddedKey;
       }
       
-      // Проверяем длину IV (должен быть 16 байт)
-      if (clientId.length !== 16) {
-        throw new Error(`ClientId должен быть 16 байт для использования как IV, получено: ${clientId.length}`);
+      // Дополняем IV нулями если он короче 16 байт
+      if (iv.length < 16) {
+        const paddedIv = Buffer.alloc(16);
+        iv.copy(paddedIv);
+        iv = paddedIv;
       }
-
-      // Создаем ключ и IV (правильная логика)
-      const key = Buffer.from(clientSecret, 'utf8');
-      const iv = Buffer.from(clientId, 'utf8');
       
       this.logger.log(`🔑 Ключ (${key.length} байт): ${key.toString('hex')}`);
       this.logger.log(`🔑 IV (${iv.length} байт): ${iv.toString('hex')}`);
@@ -221,7 +230,7 @@ export class AkoolWebhookController {
       const decipher = crypto.createDecipheriv('aes-192-cbc', key, iv);
       let decrypted = decipher.update(dataEncrypt, 'base64', 'utf8');
       decrypted += decipher.final('utf8');
-      
+
       return decrypted;
     } catch (error) {
       this.logger.error("❌ Ошибка AES расшифровки:", error);
