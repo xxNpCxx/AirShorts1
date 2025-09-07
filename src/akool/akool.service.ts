@@ -6,6 +6,8 @@ import { Telegraf } from 'telegraf';
 import { getBotToken } from 'nestjs-telegraf';
 import { AudioConverter } from '../utils/audio-converter';
 import { AkoolFileUploader } from '../utils/akool-file-uploader';
+import { Pool } from 'pg';
+import { PG_POOL } from '../database/database.module';
 
 /**
  * AKOOL Video Request Interface
@@ -119,6 +121,7 @@ export class AkoolService {
     private configService: ConfigService,
     private elevenlabsService: ElevenLabsService,
     @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
+    @Inject(PG_POOL) private readonly pool: Pool,
   ) {
     this.clientId = this.configService.get<string>('AKOOL_CLIENT_ID');
     this.clientSecret = this.configService.get<string>('AKOOL_CLIENT_SECRET');
@@ -267,6 +270,20 @@ export class AkoolService {
           if (response.data.code === 1000) {
             const taskId = response.data.data?.task_id || 'unknown';
             this.logger.log(`[${requestId}] ✅ Задача создана успешно. Task ID: ${taskId}`);
+            
+            // Сохраняем запрос в БД
+            if (userId) {
+              await this.saveVideoRequest(
+                requestId,
+                userId,
+                'akool',
+                taskId,
+                request.photoUrl,
+                request.audioUrl,
+                request.script || '',
+                request.quality
+              );
+            }
             
             return {
               id: taskId,
@@ -716,5 +733,31 @@ export class AkoolService {
     const webhookUrl = `${this.configService.get('WEBHOOK_URL')}/akool/webhook`;
     this.logger.log(`🔗 Webhook URL для AKOOL: ${webhookUrl}`);
     // AKOOL webhook настраивается через их панель управления
+  }
+
+  /**
+   * Сохранение запроса на создание видео в БД
+   */
+  private async saveVideoRequest(
+    requestId: string,
+    userId: number,
+    service: string,
+    taskId: string,
+    photoUrl: string,
+    audioUrl: string,
+    script: string,
+    quality?: string
+  ): Promise<void> {
+    try {
+      await this.pool.query(
+        `INSERT INTO video_requests 
+         (request_id, user_id, service, task_id, photo_url, audio_url, script, quality, status, created_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'processing', NOW())`,
+        [requestId, userId, service, taskId, photoUrl, audioUrl, script, quality]
+      );
+      this.logger.debug(`💾 Запрос на видео сохранен: ${requestId}`);
+    } catch (error) {
+      this.logger.error(`❌ Ошибка сохранения запроса:`, error);
+    }
   }
 }

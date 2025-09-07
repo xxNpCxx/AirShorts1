@@ -1,6 +1,8 @@
 import { Controller, Post, Body, Logger, Inject } from "@nestjs/common";
 import { Telegraf } from "telegraf";
 import { getBotToken } from "nestjs-telegraf";
+import { Pool } from 'pg';
+import { PG_POOL } from '../database/database.module';
 
 @Controller("akool/webhook")
 export class AkoolWebhookController {
@@ -8,11 +10,15 @@ export class AkoolWebhookController {
 
   constructor(
     @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
+    @Inject(PG_POOL) private readonly pool: Pool,
   ) {}
 
   @Post()
   async handleWebhook(@Body() body: any) {
     this.logger.log("📥 AKOOL webhook received:", body);
+    
+    // Сохраняем webhook в БД
+    await this.saveWebhookLog('akool', 'video_status', body);
     
     try {
       // AKOOL отправляет зашифрованные данные
@@ -35,6 +41,10 @@ export class AkoolWebhookController {
           this.logger.log(`  Type: ${type}`);
           this.logger.log(`  URL: ${url}`);
           
+          // Обновляем статус в БД
+          const dbStatus = status === 3 ? 'completed' : status === 4 ? 'failed' : 'processing';
+          await this.updateVideoStatus(_id, dbStatus, url, status === 4 ? 'Ошибка обработки' : undefined);
+
           if (status === 3) { // 3 = готово
             this.logger.log(`🎉 ${type} готово! ID: ${_id}, URL: ${url}`);
             
@@ -216,6 +226,74 @@ export class AkoolWebhookController {
     } catch (error) {
       this.logger.error("❌ Ошибка AES расшифровки:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Сохранение webhook лога в БД
+   */
+  private async saveWebhookLog(service: string, webhookType: string, payload: any): Promise<void> {
+    try {
+      await this.pool.query(
+        `INSERT INTO webhook_logs (service, webhook_type, payload, created_at) 
+         VALUES ($1, $2, $3, NOW())`,
+        [service, webhookType, JSON.stringify(payload)]
+      );
+      this.logger.debug(`💾 Webhook лог сохранен: ${service}/${webhookType}`);
+    } catch (error) {
+      this.logger.error(`❌ Ошибка сохранения webhook лога:`, error);
+    }
+  }
+
+  /**
+   * Обновление статуса видео в БД
+   */
+  private async updateVideoStatus(taskId: string, status: string, resultUrl?: string, errorMessage?: string): Promise<void> {
+    try {
+      const updateFields = ['status = $2', 'updated_at = NOW()'];
+      const values = [taskId, status];
+      let paramIndex = 3;
+
+      if (resultUrl) {
+        updateFields.push(`result_url = $${paramIndex++}`);
+        values.push(resultUrl);
+      }
+
+      if (errorMessage) {
+        updateFields.push(`error_message = $${paramIndex++}`);
+        values.push(errorMessage);
+      }
+
+      if (status === 'completed' || status === 'failed') {
+        updateFields.push(`completed_at = NOW()`);
+      }
+
+      await this.pool.query(
+        `UPDATE video_requests 
+         SET ${updateFields.join(', ')} 
+         WHERE task_id = $1`,
+        values
+      );
+      
+      this.logger.debug(`💾 Статус видео обновлен: ${taskId} -> ${status}`);
+    } catch (error) {
+      this.logger.error(`❌ Ошибка обновления статуса видео:`, error);
+    }
+  }
+
+  /**
+   * Поиск запроса по task_id
+   */
+  private async findVideoRequestByTaskId(taskId: string): Promise<any> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM video_requests WHERE task_id = $1',
+        [taskId]
+      );
+      return result.rows[0] || null;
+    } catch (error) {
+      this.logger.error(`❌ Ошибка поиска запроса:`, error);
+      return null;
     }
   }
 }
