@@ -45,5 +45,7 @@ COMMENT ON COLUMN video_requests.task_id IS 'ID задачи в внешнем �
 COMMENT ON COLUMN video_requests.video_id IS 'ID видео в внешнем сервисе';
 COMMENT ON COLUMN video_requests.result_url IS 'URL готового видео';
 
--- Записываем миграцию как выполненную
-INSERT INTO migrations (name, executed_at) VALUES ('000_cleanup_video_requests.sql', NOW());
+-- Записываем миграцию как выполненную (только если её еще нет)
+INSERT INTO migrations (name, executed_at) 
+SELECT '000_cleanup_video_requests.sql', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM migrations WHERE name = '000_cleanup_video_requests.sql');
