@@ -1,4 +1,4 @@
--- Создание таблицы для запросов на создание видео
+-- Исправление таблицы video_requests (создание если не существует)
 CREATE TABLE IF NOT EXISTS video_requests (
     id SERIAL PRIMARY KEY,
     request_id VARCHAR(255) UNIQUE NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS video_requests (
     completed_at TIMESTAMP
 );
 
--- Создание индексов для быстрого поиска (после создания таблицы)
+-- Создание индексов для быстрого поиска
 CREATE INDEX IF NOT EXISTS idx_video_requests_user_id ON video_requests(user_id);
 CREATE INDEX IF NOT EXISTS idx_video_requests_status ON video_requests(status);
 CREATE INDEX IF NOT EXISTS idx_video_requests_service ON video_requests(service);
