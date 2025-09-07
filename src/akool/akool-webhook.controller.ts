@@ -25,20 +25,27 @@ export class AkoolWebhookController {
           const decryptedData = await this.decryptWebhookData(body);
           this.logger.log("✅ Данные успешно расшифрованы:", decryptedData);
           
-          // Обрабатываем расшифрованные данные
-          if (decryptedData.video_status === 2) { // 2 = завершено
-            const { video_id, video, task_id } = decryptedData;
-            this.logger.log(`🎉 Видео готово! ID: ${video_id}, URL: ${video}`);
+          // Обрабатываем расшифрованные данные согласно документации
+          // status: 1=очередь, 2=обработка, 3=готово, 4=ошибка
+          const { _id, status, type, url } = decryptedData;
+          
+          this.logger.log(`📊 Расшифрованные данные:`);
+          this.logger.log(`  ID: ${_id}`);
+          this.logger.log(`  Status: ${status}`);
+          this.logger.log(`  Type: ${type}`);
+          this.logger.log(`  URL: ${url}`);
+          
+          if (status === 3) { // 3 = готово
+            this.logger.log(`🎉 ${type} готово! ID: ${_id}, URL: ${url}`);
             
-            if (video) {
-              await this.sendVideoToUser(video, task_id);
+            if (url) {
+              await this.sendVideoToUser(url, _id);
             }
-          } else if (decryptedData.video_status === 3) { // 3 = ошибка
-            const { task_id } = decryptedData;
-            this.logger.error(`❌ Ошибка создания видео для задачи: ${task_id}`);
-            await this.notifyUserError(task_id);
+          } else if (status === 4) { // 4 = ошибка
+            this.logger.error(`❌ Ошибка создания ${type} для задачи: ${_id}`);
+            await this.notifyUserError(_id);
           } else {
-            this.logger.log(`⏳ Статус видео: ${decryptedData.video_status} (обработка)`);
+            this.logger.log(`⏳ Статус ${type}: ${status} (${status === 1 ? 'очередь' : 'обработка'})`);
           }
         } catch (decryptError) {
           this.logger.warn("⚠️ Не удалось расшифровать данные:", decryptError);
@@ -106,125 +113,107 @@ export class AkoolWebhookController {
   }
 
   /**
-   * Попытка расшифровки webhook данных от AKOOL
+   * Расшифровка webhook данных от AKOOL согласно официальной документации
+   * https://docs.akool.com/ai-tools-suite/webhook
    */
   private async decryptWebhookData(body: any): Promise<any> {
     try {
-      // Попробуем разные методы расшифровки
       const { dataEncrypt, signature, timestamp, nonce } = body;
       
-      this.logger.log("🔍 Пытаемся расшифровать данные...");
+      this.logger.log("🔍 Расшифровка webhook данных AKOOL...");
       this.logger.log(`📊 Signature: ${signature}`);
       this.logger.log(`⏰ Timestamp: ${timestamp}`);
       this.logger.log(`🔢 Nonce: ${nonce}`);
       
-      // Получаем ключ расшифровки из переменных окружения
-      const webhookSecret = process.env.AKOOL_WEBHOOK_SECRET;
+      // Получаем ключи из переменных окружения
+      const clientId = process.env.AKOOL_CLIENT_ID;
       const clientSecret = process.env.AKOOL_CLIENT_SECRET;
       
-      // Пробуем разные ключи
-      const keysToTry = [
-        { name: "AKOOL_WEBHOOK_SECRET", key: webhookSecret },
-        { name: "AKOOL_CLIENT_SECRET", key: clientSecret },
-        { name: "Signature as key", key: signature }
-      ];
-      
-      for (const keyInfo of keysToTry) {
-        if (keyInfo.key) {
-          this.logger.log(`🔑 Пробуем ключ: ${keyInfo.name}`);
-        
-          // Метод 1: AES расшифровка
-          try {
-            const crypto = require('crypto');
-            const key = Buffer.from(keyInfo.key, 'hex');
-            const iv = Buffer.from(nonce, 'hex');
-            
-            const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-            let decrypted = decipher.update(dataEncrypt, 'base64', 'utf8');
-            decrypted += decipher.final('utf8');
-            
-            this.logger.log(`✅ AES расшифровка с ${keyInfo.name} успешна:`, decrypted);
-            return JSON.parse(decrypted);
-          } catch (aesError) {
-            this.logger.debug(`❌ AES расшифровка с ${keyInfo.name} не удалась:`, aesError.message);
-          }
-          
-          // Метод 2: XOR расшифровка
-          try {
-            const dataBuffer = Buffer.from(dataEncrypt, 'base64');
-            const keyBuffer = Buffer.from(keyInfo.key, 'hex');
-            const decrypted = Buffer.alloc(dataBuffer.length);
-            
-            for (let i = 0; i < dataBuffer.length; i++) {
-              decrypted[i] = dataBuffer[i] ^ keyBuffer[i % keyBuffer.length];
-            }
-            
-            const result = decrypted.toString('utf8');
-            this.logger.log(`✅ XOR расшифровка с ${keyInfo.name} успешна:`, result);
-            return JSON.parse(result);
-          } catch (xorError) {
-            this.logger.debug(`❌ XOR расшифровка с ${keyInfo.name} не удалась:`, xorError.message);
-          }
-          
-          // Метод 3: Простое XOR с ключом как строкой
-          try {
-            const dataBuffer = Buffer.from(dataEncrypt, 'base64');
-            const keyBuffer = Buffer.from(keyInfo.key, 'utf8');
-            const decrypted = Buffer.alloc(dataBuffer.length);
-            
-            for (let i = 0; i < dataBuffer.length; i++) {
-              decrypted[i] = dataBuffer[i] ^ keyBuffer[i % keyBuffer.length];
-            }
-            
-            const result = decrypted.toString('utf8');
-            this.logger.log(`✅ String XOR расшифровка с ${keyInfo.name} успешна:`, result);
-            return JSON.parse(result);
-          } catch (stringXorError) {
-            this.logger.debug(`❌ String XOR расшифровка с ${keyInfo.name} не удалась:`, stringXorError.message);
-          }
-        }
+      if (!clientId || !clientSecret) {
+        throw new Error("AKOOL_CLIENT_ID и AKOOL_CLIENT_SECRET должны быть установлены в переменных окружения");
       }
       
-      this.logger.warn("⚠️ Ни один ключ не найден в переменных окружения");
-      this.logger.log("💡 Добавьте AKOOL_CLIENT_SECRET в .env файл");
+      this.logger.log(`🔑 Client ID: ${clientId}`);
+      this.logger.log(`🔑 Client Secret: ${clientSecret.substring(0, 8)}...`);
       
-      // Fallback: старые методы без ключа
-      this.logger.log("🔄 Пробуем fallback методы...");
-      
-      // Метод 3: Base64 декодирование
-      try {
-        const base64Decoded = Buffer.from(dataEncrypt, 'base64').toString('utf-8');
-        this.logger.log("🔓 Base64 декодирование:", base64Decoded);
-        
-        // Попробуем парсить как JSON
-        const jsonData = JSON.parse(base64Decoded);
-        this.logger.log("✅ JSON парсинг успешен:", jsonData);
-        return jsonData;
-      } catch (base64Error) {
-        this.logger.debug("❌ Base64 декодирование не удалось:", base64Error.message);
+      // 1. Проверяем подпись
+      const isValidSignature = this.verifySignature(clientId, timestamp, nonce, dataEncrypt, signature);
+      if (!isValidSignature) {
+        throw new Error("❌ Неверная подпись webhook");
       }
       
-      // Метод 4: Простое XOR с nonce
-      try {
-        const dataBuffer = Buffer.from(dataEncrypt, 'base64');
-        const nonceBuffer = Buffer.from(nonce, 'hex');
-        const decrypted = Buffer.alloc(dataBuffer.length);
-        
-        for (let i = 0; i < dataBuffer.length; i++) {
-          decrypted[i] = dataBuffer[i] ^ nonceBuffer[i % nonceBuffer.length];
-        }
-        
-        const result = decrypted.toString('utf8');
-        this.logger.log("✅ XOR расшифровка успешна:", result);
-        return JSON.parse(result);
-      } catch (xorError) {
-        this.logger.debug("❌ XOR расшифровка не удалась:", xorError.message);
-      }
+      this.logger.log("✅ Подпись webhook проверена успешно");
       
-      throw new Error("Все методы расшифровки не удались. Нужен AKOOL_WEBHOOK_SECRET");
+      // 2. Расшифровываем данные
+      const decryptedData = this.decryptAES(dataEncrypt, clientId, clientSecret);
+      this.logger.log("✅ Данные успешно расшифрованы:", decryptedData);
+      
+      return JSON.parse(decryptedData);
       
     } catch (error) {
       this.logger.error("❌ Ошибка расшифровки webhook данных:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Проверка подписи webhook согласно документации AKOOL
+   * signature = sha1(sort(clientId, timestamp, nonce, dataEncrypt))
+   */
+  private verifySignature(clientId: string, timestamp: number, nonce: string, dataEncrypt: string, signature: string): boolean {
+    try {
+      const crypto = require('crypto');
+      
+      // Сортируем параметры и объединяем
+      const sortedParams = [clientId, timestamp.toString(), nonce, dataEncrypt].sort().join('');
+      
+      // Вычисляем SHA1 хеш
+      const calculatedSignature = crypto.createHash('sha1').update(sortedParams).digest('hex');
+      
+      this.logger.log(`🔍 Проверка подписи:`);
+      this.logger.log(`  Ожидаемая: ${signature}`);
+      this.logger.log(`  Вычисленная: ${calculatedSignature}`);
+      
+      return calculatedSignature === signature;
+    } catch (error) {
+      this.logger.error("❌ Ошибка проверки подписи:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Расшифровка AES-192-CBC согласно документации AKOOL
+   * data = AES_Decrypt(dataEncrypt, clientSecret, clientId)
+   */
+  private decryptAES(dataEncrypt: string, clientId: string, clientSecret: string): string {
+    try {
+      const crypto = require('crypto');
+      
+      // Проверяем длину ключа (должен быть 24 символа)
+      if (clientSecret.length !== 24) {
+        throw new Error(`ClientSecret должен быть 24 символа, получено: ${clientSecret.length}`);
+      }
+      
+      // Проверяем длину IV (должен быть 16 байт)
+      if (clientId.length !== 16) {
+        throw new Error(`ClientId должен быть 16 байт, получено: ${clientId.length}`);
+      }
+      
+      // Создаем ключ и IV
+      const key = Buffer.from(clientSecret, 'utf8');
+      const iv = Buffer.from(clientId, 'utf8');
+      
+      this.logger.log(`🔑 Ключ (${key.length} байт): ${key.toString('hex')}`);
+      this.logger.log(`🔑 IV (${iv.length} байт): ${iv.toString('hex')}`);
+      
+      // Расшифровываем AES-192-CBC
+      const decipher = crypto.createDecipheriv('aes-192-cbc', key, iv);
+      let decrypted = decipher.update(dataEncrypt, 'base64', 'utf8');
+      decrypted += decipher.final('utf8');
+      
+      return decrypted;
+    } catch (error) {
+      this.logger.error("❌ Ошибка AES расшифровки:", error);
       throw error;
     }
   }
