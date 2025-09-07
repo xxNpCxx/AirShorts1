@@ -3,6 +3,7 @@ import { Telegraf } from "telegraf";
 import { getBotToken } from "nestjs-telegraf";
 import { Pool } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { ConfigService } from "@nestjs/config";
 
 @Controller("akool/webhook")
 export class AkoolWebhookController {
@@ -11,6 +12,7 @@ export class AkoolWebhookController {
   constructor(
     @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
     @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly configService: ConfigService,
   ) {}
 
   @Post()
@@ -199,14 +201,21 @@ export class AkoolWebhookController {
     try {
       const crypto = require('crypto');
       
-      // Согласно документации AKOOL: clientSecret как ключ, clientId как IV
-      // Client ID и Client Secret приходят в Base64 формате, нужно их декодировать
-      // НО! Согласно логам: Client ID = 16 байт (IV), Client Secret = 24 байта (ключ)
-      const keyBuffer = Buffer.from(clientSecret, 'base64'); // 24 байта - ключ
-      const ivBuffer = Buffer.from(clientId, 'base64');       // 16 байт - IV
+      // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем переменные окружения напрямую!
+      // НЕ декодируем Base64, используем ключи как есть из переменных окружения
+      const actualClientId = this.configService.get<string>('AKOOL_CLIENT_ID');
+      const actualClientSecret = this.configService.get<string>('AKOOL_CLIENT_SECRET');
       
-      this.logger.log(`🔑 Исходный Client ID (${ivBuffer.length} байт): ${ivBuffer.toString('hex')}`);
-      this.logger.log(`🔑 Исходный Client Secret (${keyBuffer.length} байт): ${keyBuffer.toString('hex')}`);
+      this.logger.log(`🔑 Используем переменные окружения:`);
+      this.logger.log(`🔑 AKOOL_CLIENT_ID: ${actualClientId}`);
+      this.logger.log(`🔑 AKOOL_CLIENT_SECRET: ${actualClientSecret?.substring(0, 10)}...`);
+      
+      // Преобразуем в буферы
+      const keyBuffer = Buffer.from(actualClientSecret, 'utf8');
+      const ivBuffer = Buffer.from(actualClientId, 'utf8');
+      
+      this.logger.log(`🔑 Client ID (${ivBuffer.length} байт): ${ivBuffer.toString('hex')}`);
+      this.logger.log(`🔑 Client Secret (${keyBuffer.length} байт): ${keyBuffer.toString('hex')}`);
       
       // Для AES-192-CBC нужен ключ 24 байта и IV 16 байт
       // Создаем ключ и IV правильной длины
@@ -229,8 +238,8 @@ export class AkoolWebhookController {
         ivBuffer.copy(iv);
       }
       
-      this.logger.log(`🔑 Ключ (${key.length} байт): ${key.toString('hex')}`);
-      this.logger.log(`🔑 IV (${iv.length} байт): ${iv.toString('hex')}`);
+      this.logger.log(`🔑 Финальный ключ (${key.length} байт): ${key.toString('hex')}`);
+      this.logger.log(`🔑 Финальный IV (${iv.length} байт): ${iv.toString('hex')}`);
       
       // Расшифровываем AES-192-CBC
       const decipher = crypto.createDecipheriv('aes-192-cbc', key, iv);
