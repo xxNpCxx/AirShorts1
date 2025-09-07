@@ -1,9 +1,14 @@
--- Исправление таблицы video_requests
--- Удаляем запись о неудачной миграции
+-- Миграция 000: Очистка и подготовка таблицы video_requests
+-- Выполняется первой, очищает все проблемы с таблицей
+
+-- Удаляем запись о старой миграции 006 если она существует
 DELETE FROM migrations WHERE name = '006_create_video_requests_table.sql';
 
--- Создаем таблицу video_requests
-CREATE TABLE IF NOT EXISTS video_requests (
+-- Удаляем таблицу video_requests если она существует с неправильной структурой
+DROP TABLE IF EXISTS video_requests CASCADE;
+
+-- Создаем таблицу video_requests с правильной структурой
+CREATE TABLE video_requests (
     id SERIAL PRIMARY KEY,
     request_id VARCHAR(255) UNIQUE NOT NULL,
     user_id BIGINT NOT NULL,
@@ -22,14 +27,15 @@ CREATE TABLE IF NOT EXISTS video_requests (
     completed_at TIMESTAMP
 );
 
--- Создаем индексы
-CREATE INDEX IF NOT EXISTS idx_video_requests_user_id ON video_requests(user_id);
-CREATE INDEX IF NOT EXISTS idx_video_requests_status ON video_requests(status);
-CREATE INDEX IF NOT EXISTS idx_video_requests_service ON video_requests(service);
-CREATE INDEX IF NOT EXISTS idx_video_requests_task_id ON video_requests(task_id);
-CREATE INDEX IF NOT EXISTS idx_video_requests_created_at ON video_requests(created_at);
+-- Создаем индексы для быстрого поиска
+CREATE INDEX idx_video_requests_request_id ON video_requests(request_id);
+CREATE INDEX idx_video_requests_user_id ON video_requests(user_id);
+CREATE INDEX idx_video_requests_status ON video_requests(status);
+CREATE INDEX idx_video_requests_service ON video_requests(service);
+CREATE INDEX idx_video_requests_task_id ON video_requests(task_id);
+CREATE INDEX idx_video_requests_created_at ON video_requests(created_at);
 
--- Добавляем комментарии
+-- Добавляем комментарии к таблице
 COMMENT ON TABLE video_requests IS 'Запросы на создание видео от пользователей';
 COMMENT ON COLUMN video_requests.request_id IS 'Уникальный ID запроса';
 COMMENT ON COLUMN video_requests.user_id IS 'Telegram ID пользователя';
@@ -40,4 +46,4 @@ COMMENT ON COLUMN video_requests.video_id IS 'ID видео в внешнем с
 COMMENT ON COLUMN video_requests.result_url IS 'URL готового видео';
 
 -- Записываем миграцию как выполненную
-INSERT INTO migrations (name, executed_at) VALUES ('006_create_video_requests_table.sql', NOW());
+INSERT INTO migrations (name, executed_at) VALUES ('000_cleanup_video_requests.sql', NOW());
