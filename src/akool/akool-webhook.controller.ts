@@ -189,23 +189,20 @@ export class AkoolWebhookController {
     try {
       const crypto = require('crypto');
       
-      // Проверяем и обрезаем ключ до 24 символов (требование AKOOL)
-      let processedClientSecret = clientSecret;
-      if (clientSecret.length > 24) {
-        this.logger.warn(`⚠️ ClientSecret слишком длинный (${clientSecret.length} символов), обрезаем до 24`);
-        processedClientSecret = clientSecret.substring(0, 24);
-      } else if (clientSecret.length < 24) {
-        throw new Error(`ClientSecret должен быть минимум 24 символа, получено: ${clientSecret.length}`);
+      // Используем AKOOL_CLIENT_ID как ключ (24 символа) и AKOOL_CLIENT_SECRET как IV
+      // Проверяем длину ключа (должен быть 24 символа)
+      if (clientId.length !== 24) {
+        throw new Error(`ClientId должен быть 24 символа для использования как ключ, получено: ${clientId.length}`);
       }
       
       // Проверяем длину IV (должен быть 16 байт)
-      if (clientId.length !== 16) {
-        throw new Error(`ClientId должен быть 16 байт, получено: ${clientId.length}`);
+      if (clientSecret.length < 16) {
+        throw new Error(`ClientSecret должен быть минимум 16 байт для использования как IV, получено: ${clientSecret.length}`);
       }
-      
-      // Создаем ключ и IV
-      const key = Buffer.from(processedClientSecret, 'utf8');
-      const iv = Buffer.from(clientId, 'utf8');
+
+      // Создаем ключ и IV (меняем местами)
+      const key = Buffer.from(clientId, 'utf8');
+      const iv = Buffer.from(clientSecret.substring(0, 16), 'utf8');
       
       this.logger.log(`🔑 Ключ (${key.length} байт): ${key.toString('hex')}`);
       this.logger.log(`🔑 IV (${iv.length} байт): ${iv.toString('hex')}`);
