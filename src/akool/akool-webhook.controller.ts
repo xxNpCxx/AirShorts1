@@ -205,22 +205,24 @@ export class AkoolWebhookController {
       const ivBuffer = Buffer.from(clientId, 'utf8');
       
       // Для AES-192-CBC нужен ключ 24 байта и IV 16 байт
-      // Обрезаем или дополняем до нужной длины
-      let key = keyBuffer.slice(0, 24); // Берем первые 24 байта
-      let iv = ivBuffer.slice(0, 16);   // Берем первые 16 байт
+      // Создаем ключ и IV правильной длины
+      let key: Buffer;
+      let iv: Buffer;
       
-      // Дополняем ключ нулями если он короче 24 байт
-      if (key.length < 24) {
-        const paddedKey = Buffer.alloc(24);
-        key.copy(paddedKey);
-        key = paddedKey;
+      if (keyBuffer.length >= 24) {
+        key = keyBuffer.slice(0, 24);
+      } else {
+        // Дополняем ключ нулями если он короче 24 байт
+        key = Buffer.alloc(24);
+        keyBuffer.copy(key);
       }
       
-      // Дополняем IV нулями если он короче 16 байт
-      if (iv.length < 16) {
-        const paddedIv = Buffer.alloc(16);
-        iv.copy(paddedIv);
-        iv = paddedIv;
+      if (ivBuffer.length >= 16) {
+        iv = ivBuffer.slice(0, 16);
+      } else {
+        // Дополняем IV нулями если он короче 16 байт
+        iv = Buffer.alloc(16);
+        ivBuffer.copy(iv);
       }
       
       this.logger.log(`🔑 Ключ (${key.length} байт): ${key.toString('hex')}`);
