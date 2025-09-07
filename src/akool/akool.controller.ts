@@ -15,10 +15,20 @@ export class AkoolController {
   }
 
   @Get("status/:id")
-  async getVideoStatus(@Param('id') id: string): Promise<{ message: string; status: string }> {
-    return {
-      message: "AKOOL использует webhook для уведомлений о готовности видео. Проверьте логи приложения или дождитесь уведомления в Telegram.",
-      status: "webhook-based"
-    };
+  async getVideoStatus(@Param('id') id: string): Promise<any> {
+    try {
+      const result = await this.akoolService.getVideoStatus(id);
+      return {
+        message: "Статус видео получен успешно",
+        status: "success",
+        data: result
+      };
+    } catch (error) {
+      return {
+        message: `Ошибка получения статуса: ${error.message}`,
+        status: "error",
+        error: error.message
+      };
+    }
   }
 }
