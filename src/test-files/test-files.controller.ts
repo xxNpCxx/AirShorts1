@@ -3,7 +3,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { createReadStream, existsSync } from 'fs';
 import { join } from 'path';
-import { Multer } from 'multer';
 
 @Controller('test-files')
 export class TestFilesController {
@@ -11,7 +10,7 @@ export class TestFilesController {
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+  async uploadFile(@UploadedFile() file: any) {
     if (!file) {
       throw new BadRequestException('Файл не предоставлен');
     }

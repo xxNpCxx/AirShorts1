@@ -5,6 +5,7 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "npx tsc --build",
+    "type-check": "npx tsc --noEmit",
     "start": "npx nest start",
     "start:dev": "npx nest start --watch",
     "start:debug": "npx nest start --debug --watch",
