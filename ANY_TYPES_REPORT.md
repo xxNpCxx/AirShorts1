@@ -1,44 +1,27 @@
-# 📊 Отчет по any типам
+# 📊 Отчет по any типам в бизнес-логике
 
 ## Статистика
-- **Общее количество any типов**:      167
-- **Дата анализа**: Sat Sep 13 18:15:15 MSK 2025
+- **any типов в бизнес-логике**:       24
+- **any типов в валидации**:      141 (игнорируем)
+- **Дата анализа**: Sat Sep 13 18:52:57 MSK 2025
 
-## Файлы с any типами
+## Файлы с any типами в бизнес-логике
 
-  32 src/utils/type-guards.ts
-  23 src/types/akool.types.ts
-  21 src/types/api.types.ts
-  19 src/types/heygen.types.ts
-  17 src/types/database.types.ts
-  13 src/heygen/heygen.service.ts
-   8 src/types/elevenlabs.types.ts
-   7 src/types/d-id.types.ts
-   5 src/heygen/mock-heygen.service.ts
-   4 src/elevenlabs/elevenlabs.service.ts
-   4 src/akool/akool-webhook.controller.ts
-   2 src/users/users.service.ts
-   2 src/scenes/video-generation.scene.ts
-   2 src/heygen/heygen-webhook.controller.ts
-   2 src/d-id/did.service.ts
-   2 src/akool/akool.controller.ts
-   1 src/webhook/webhook.controller.ts
-   1 src/types/index.ts
-   1 src/test-files/test-files.controller.ts
-   1 src/akool/akool.service.ts
+  22 src/scenes/video-generation.scene.ts
+   2 src/webhook/webhook.controller.ts
 
-## Примеры any типов
+## Примеры any типов в бизнес-логике
 
-src/webhook/webhook.controller.ts:  async handleWebhook(@Body() update: any, @Res() res: Response) {
-src/scenes/video-generation.scene.ts:      const session = (ctx as any).session as SessionData;
-src/scenes/video-generation.scene.ts:      const session = (ctx as any).session as SessionData;
-src/types/heygen.types.ts:    typeof (data as any).image_url === 'string' &&
-src/types/heygen.types.ts:    typeof (data as any).audio_url === 'string' &&
-src/types/heygen.types.ts:    typeof (data as any).script === 'string' &&
-src/types/heygen.types.ts:    (data as any).platform === 'youtube-shorts' &&
-src/types/heygen.types.ts:    typeof (data as any).duration === 'number' &&
-src/types/heygen.types.ts:    ['720p', '1080p'].includes((data as any).quality) &&
-src/types/heygen.types.ts:    ((data as any).text_prompt === undefined || typeof (data as any).text_prompt === 'string')
+src/webhook/webhook.controller.ts:      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+src/webhook/webhook.controller.ts:      await this.bot.handleUpdate(update as any);
+src/scenes/video-generation.scene.ts:    const session = (ctx as any).session as SessionData;
+src/scenes/video-generation.scene.ts:      const photo = (ctx.message as any).photo[(ctx.message as any).photo.length - 1];
+src/scenes/video-generation.scene.ts:      (session as any).photoFileId = photo.file_id;
+src/scenes/video-generation.scene.ts:    const session = (ctx as any).session as SessionData;
+src/scenes/video-generation.scene.ts:      (session as any).voiceFileId = (ctx.message as any).voice.file_id;
+src/scenes/video-generation.scene.ts:    const session = (ctx as any).session as SessionData;
+src/scenes/video-generation.scene.ts:    const text = (ctx.message as any).text;
+src/scenes/video-generation.scene.ts:      await (ctx as any).scene.leave();
 
 ## Рекомендации
 

@@ -66,9 +66,10 @@ export class UsersService {
         return 'did'; // По умолчанию D-ID для новых пользователей
       }
       return res.rows[0].preferred_service || 'did';
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Если колонка не существует, возвращаем значение по умолчанию
-      if (error.code === '42703' && error.message.includes('preferred_service')) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === '42703' && 
+          'message' in error && typeof error.message === 'string' && error.message.includes('preferred_service')) {
         this.logger.warn(
           `[users][pg] Колонка preferred_service не существует, используем значение по умолчанию для пользователя ${telegramId}`
         );
@@ -88,9 +89,10 @@ export class UsersService {
         `Установлен предпочтительный сервис ${service} для пользователя ${telegramId}`
       );
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Если колонка не существует, логируем предупреждение
-      if (error.code === '42703' && error.message.includes('preferred_service')) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === '42703' && 
+          'message' in error && typeof error.message === 'string' && error.message.includes('preferred_service')) {
         this.logger.warn(
           `[users][pg] Колонка preferred_service не существует, не можем сохранить предпочтение для пользователя ${telegramId}`
         );

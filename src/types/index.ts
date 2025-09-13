@@ -326,10 +326,14 @@ export const VIDEO_DURATION_LIMITS = {
 
 // API типы
 export * from './api.types';
-export * from './heygen.types';
 export * from './akool.types';
+export * from './akool-webhook.types';
+export * from './akool-controller.types';
 export * from './elevenlabs.types';
-export * from './d-id.types';
+export * from './elevenlabs-detailed.types';
+
+// Telegraf типы
+export * from './telegraf.types';
 
 // База данных
 export * from './database.types';

@@ -30,42 +30,61 @@ info() {
     echo -e "${BLUE}ℹ️  $1${NC}"
 }
 
-# Поиск any типов
-echo "📊 Статистика any типов:"
+# Поиск any типов (исключая валидационные файлы)
+echo "📊 Статистика any типов в бизнес-логике:"
 echo ""
 
-# Подсчет any типов по файлам
-echo "Файлы с any типами:"
-grep -r "any" src/ --include="*.ts" --exclude="*.d.ts" | grep -v "// any" | cut -d: -f1 | sort | uniq -c | sort -nr
+# Исключаем валидационные файлы
+exclude_patterns=(
+  "src/types/"
+  "src/utils/type-guards.ts"
+  "src/utils/validation.ts"
+)
+
+# Создаем команду grep с исключениями
+grep_cmd="grep -r \"any\" src/ --include=\"*.ts\" --exclude=\"*.d.ts\" | grep -v \"// any\""
+for pattern in "${exclude_patterns[@]}"; do
+  grep_cmd="$grep_cmd | grep -v \"$pattern\""
+done
+
+# Подсчет any типов по файлам (только бизнес-логика)
+echo "Файлы с any типами в бизнес-логике:"
+eval "$grep_cmd" | cut -d: -f1 | sort | uniq -c | sort -nr
 
 echo ""
-echo "Общее количество any типов:"
-any_count=$(grep -r "any" src/ --include="*.ts" --exclude="*.d.ts" | grep -v "// any" | wc -l)
+echo "Общее количество any типов в бизнес-логике:"
+any_count=$(eval "$grep_cmd" | wc -l)
 echo "$any_count"
 
 echo ""
-echo "Топ-10 файлов с any типами:"
-grep -r "any" src/ --include="*.ts" --exclude="*.d.ts" | grep -v "// any" | cut -d: -f1 | sort | uniq -c | sort -nr | head -10
+echo "📊 Сравнение с валидационными файлами:"
+validation_count=$(grep -r "any" src/types/ src/utils/type-guards.ts src/utils/validation.ts | wc -l)
+echo "any типов в валидации: $validation_count (игнорируем)"
+echo "any типов в бизнес-логике: $any_count (фокусируемся)"
 
 echo ""
-echo "Примеры any типов:"
-grep -r "any" src/ --include="*.ts" --exclude="*.d.ts" | grep -v "// any" | head -5
+echo "Топ-10 файлов с any типами в бизнес-логике:"
+eval "$grep_cmd" | cut -d: -f1 | sort | uniq -c | sort -nr | head -10
+
+echo ""
+echo "Примеры any типов в бизнес-логике:"
+eval "$grep_cmd" | head -5
 
 echo ""
 echo "🔧 Рекомендации по замене:"
 echo ""
 
-# Анализ типов any
+# Анализ типов any в бизнес-логике
 echo "1. Параметры функций:"
-grep -r "any" src/ --include="*.ts" --exclude="*.d.ts" | grep -v "// any" | grep "function\|=>" | head -3
+eval "$grep_cmd" | grep "function\|=>" | head -3
 
 echo ""
 echo "2. Свойства объектов:"
-grep -r "any" src/ --include="*.ts" --exclude="*.d.ts" | grep -v "// any" | grep ":" | head -3
+eval "$grep_cmd" | grep ":" | head -3
 
 echo ""
 echo "3. Массивы:"
-grep -r "any\[\]" src/ --include="*.ts" --exclude="*.d.ts" | grep -v "// any" | head -3
+eval "$grep_cmd" | grep "any\[\]" | head -3
 
 echo ""
 echo "📋 План замены any типов:"
@@ -74,25 +93,26 @@ echo ""
 # Создание отчета
 report_file="ANY_TYPES_REPORT.md"
 cat > "$report_file" << EOF
-# 📊 Отчет по any типам
+# 📊 Отчет по any типам в бизнес-логике
 
 ## Статистика
-- **Общее количество any типов**: $any_count
+- **any типов в бизнес-логике**: $any_count
+- **any типов в валидации**: $validation_count (игнорируем)
 - **Дата анализа**: $(date)
 
-## Файлы с any типами
+## Файлы с any типами в бизнес-логике
 
 EOF
 
-grep -r "any" src/ --include="*.ts" --exclude="*.d.ts" | grep -v "// any" | cut -d: -f1 | sort | uniq -c | sort -nr >> "$report_file"
+eval "$grep_cmd" | cut -d: -f1 | sort | uniq -c | sort -nr >> "$report_file"
 
 cat >> "$report_file" << EOF
 
-## Примеры any типов
+## Примеры any типов в бизнес-логике
 
 EOF
 
-grep -r "any" src/ --include="*.ts" --exclude="*.d.ts" | grep -v "// any" | head -10 >> "$report_file"
+eval "$grep_cmd" | head -10 >> "$report_file"
 
 cat >> "$report_file" << EOF
 

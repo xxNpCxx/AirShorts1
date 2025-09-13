@@ -13,10 +13,7 @@ import { MenuModule } from './menu/menu.module';
 import { RedisModule } from './redis/redis.module';
 import { MenuUpdate } from './updates/menu.update';
 import { LoggerModule } from './logger/logger.module';
-import { DidModule } from './d-id/did.module';
-import { HeyGenModule } from './heygen/heygen.module';
 import { AkoolModule } from './akool/akool.module';
-// import { MockHeyGenService, MockProcessManagerService } from "./heygen/mock-heygen.service";
 import { ElevenLabsModule } from './elevenlabs/elevenlabs.module';
 import { VideoGenerationScene } from './scenes/video-generation.scene';
 import { WebhookModule } from './webhook/webhook.module';
@@ -35,8 +32,6 @@ import { TestFilesModule } from './test-files/test-files.module';
     KeyboardsModule,
     MenuModule,
     RedisModule,
-    DidModule,
-    HeyGenModule,
     AkoolModule,
     ElevenLabsModule,
     WebhookModule,

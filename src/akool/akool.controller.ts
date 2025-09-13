@@ -3,6 +3,12 @@ import { AkoolService, AkoolVideoRequest, AkoolVideoResponse } from './akool.ser
 import { Inject } from '@nestjs/common';
 import { Pool } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { 
+  AkoolVideoStatusResponse, 
+  AkoolWebhookLogsResponse,
+  AkoolWebhookLog,
+  AKOOL_CONTROLLER_MESSAGES 
+} from '../types';
 
 @Controller('akool')
 export class AkoolController {
@@ -17,17 +23,17 @@ export class AkoolController {
   }
 
   @Get('status/:id')
-  async getVideoStatus(@Param('id') id: string): Promise<any> {
+  async getVideoStatus(@Param('id') id: string): Promise<AkoolVideoStatusResponse> {
     try {
       const result = await this.akoolService.getVideoStatus(id);
       return {
-        message: 'Статус видео получен успешно',
+        message: AKOOL_CONTROLLER_MESSAGES.VIDEO_STATUS_SUCCESS,
         status: 'success',
         data: result,
       };
     } catch (error) {
       return {
-        message: `Ошибка получения статуса: ${error.message}`,
+        message: `${AKOOL_CONTROLLER_MESSAGES.VIDEO_STATUS_ERROR}: ${error.message}`,
         status: 'error',
         error: error.message,
       };
@@ -35,7 +41,7 @@ export class AkoolController {
   }
 
   @Get('webhooks')
-  async getWebhookLogs(): Promise<any> {
+  async getWebhookLogs(): Promise<AkoolWebhookLogsResponse> {
     try {
       const result = await this.pool.query(
         `SELECT * FROM webhook_logs 
@@ -45,14 +51,14 @@ export class AkoolController {
       );
 
       return {
-        message: 'Webhook логи получены успешно',
+        message: AKOOL_CONTROLLER_MESSAGES.WEBHOOK_LOGS_SUCCESS,
         status: 'success',
         count: result.rows.length,
-        data: result.rows,
+        data: result.rows as AkoolWebhookLog[],
       };
     } catch (error) {
       return {
-        message: `Ошибка получения webhook логов: ${error.message}`,
+        message: `${AKOOL_CONTROLLER_MESSAGES.WEBHOOK_LOGS_ERROR}: ${error.message}`,
         status: 'error',
         error: error.message,
       };

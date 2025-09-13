@@ -3,7 +3,6 @@ import { UsersService } from '../users/users.service';
 import { MenuService } from '../menu/menu.service';
 import { KeyboardsService } from '../keyboards/keyboards.service';
 import { CustomLoggerService } from '../logger/logger.service';
-import { ProcessManagerService } from '../heygen/process-manager.service';
 import { Context } from 'telegraf';
 
 @Update()
@@ -12,8 +11,7 @@ export class BotUpdate {
     private readonly _users: UsersService,
     private readonly _menu: MenuService,
     private readonly _kb: KeyboardsService,
-    private readonly _logger: CustomLoggerService,
-    private readonly _processManager: ProcessManagerService
+    private readonly _logger: CustomLoggerService
   ) {
     this._logger.debug('BotUpdate инициализирован', 'BotUpdate');
     this._logger.log('🚀 BotUpdate создан и готов к работе', 'BotUpdate');
@@ -268,120 +266,6 @@ export class BotUpdate {
     return this.onMyId(ctx);
   }
 
-  @Command('status')
-  async onStatus(@Ctx() ctx: Context) {
-    if (!ctx.from?.id) {
-      await ctx.reply('❌ Не удалось получить данные пользователя');
-      return;
-    }
-
-    try {
-      const userId = ctx.from.id;
-      const activeProcesses = this._processManager.getActiveProcesses();
-      const userProcesses = activeProcesses.filter(process => process.userId === userId);
-
-      if (userProcesses.length === 0) {
-        await ctx.reply(
-          '📊 **Статус процессов**\n\n' +
-            '❌ У вас нет активных процессов создания видео.\n\n' +
-            "💡 Для создания видео используйте команду /start или кнопку 'Создать видео'",
-          { parse_mode: 'Markdown' }
-        );
-        return;
-      }
-
-      let message = '📊 **Активные процессы создания видео:**\n\n';
-
-      for (const process of userProcesses) {
-        const statusEmoji = this.getStatusEmoji(process.status);
-        const statusText = this.getStatusText(process.status);
-        const timeAgo = this.getTimeAgo(process.createdAt);
-
-        message += `🎬 **Процесс:** \`${process.id}\`\n`;
-        message += `${statusEmoji} **Статус:** ${statusText}\n`;
-        message += `📝 **Сценарий:** ${process.script.substring(0, 50)}...\n`;
-        message += `🎥 **Качество:** ${process.quality}\n`;
-        message += `⏰ **Создан:** ${timeAgo}\n\n`;
-      }
-
-      message += '💡 **Статусы:**\n';
-      message += '📸 Создание аватара из фото\n';
-      message += '🎵 Клонирование голоса\n';
-      message += '🎬 Генерация видео\n';
-      message += '✅ Готово\n\n';
-      message += '⏳ Обычно процесс занимает 2-5 минут';
-
-      await ctx.reply(message, { parse_mode: 'Markdown' });
-    } catch (error) {
-      this._logger.error(`Ошибка получения статуса процессов: ${error}`, undefined, 'BotUpdate');
-      await ctx.reply('❌ Ошибка получения статуса процессов. Попробуйте позже.');
-    }
-  }
-
-  private getStatusEmoji(status: string): string {
-    switch (status) {
-      case 'photo_avatar_creating':
-        return '📸';
-      case 'photo_avatar_completed':
-        return '✅';
-      case 'photo_avatar_failed':
-        return '❌';
-      case 'voice_cloning':
-        return '🎵';
-      case 'voice_clone_completed':
-        return '✅';
-      case 'voice_clone_failed':
-        return '❌';
-      case 'video_generating':
-        return '🎬';
-      case 'video_completed':
-        return '🎉';
-      case 'video_failed':
-        return '❌';
-      default:
-        return '⏳';
-    }
-  }
-
-  private getStatusText(status: string): string {
-    switch (status) {
-      case 'photo_avatar_creating':
-        return 'Создание аватара из фото';
-      case 'photo_avatar_completed':
-        return 'Аватар создан';
-      case 'photo_avatar_failed':
-        return 'Ошибка создания аватара';
-      case 'voice_cloning':
-        return 'Клонирование голоса';
-      case 'voice_clone_completed':
-        return 'Голос клонирован';
-      case 'voice_clone_failed':
-        return 'Ошибка клонирования голоса';
-      case 'video_generating':
-        return 'Генерация видео';
-      case 'video_completed':
-        return 'Видео готово';
-      case 'video_failed':
-        return 'Ошибка создания видео';
-      default:
-        return 'Неизвестный статус';
-    }
-  }
-
-  private getTimeAgo(date: Date): string {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-
-    if (diffMins < 1) return 'только что';
-    if (diffMins < 60) return `${diffMins} мин назад`;
-
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours} ч назад`;
-
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays} дн назад`;
-  }
 
   @Action('create_video')
   async onCreateVideo(@Ctx() ctx: Context) {
@@ -393,121 +277,4 @@ export class BotUpdate {
     ).scene.enter('video-generation');
   }
 
-  @Action('service_settings')
-  async onServiceSettings(@Ctx() ctx: Context) {
-    await ctx.answerCbQuery();
-
-    if (!ctx.from?.id) {
-      await ctx.reply('❌ Ошибка получения данных пользователя');
-      return;
-    }
-
-    const currentService = await this._users.getUserPreferredService(ctx.from.id);
-    const serviceNames = {
-      did: '🤖 ИИ-Аватар',
-      heygen: '👤 Цифровой двойник',
-    };
-
-    const newText =
-      `⚙️ **Настройки сервиса генерации видео**\n\n` +
-      `Текущий сервис: ${serviceNames[currentService]}\n\n` +
-      `🤖 **ИИ-Аватар:**\n` +
-      `• Быстрая генерация\n` +
-      `• Качественная синхронизация губ\n` +
-      `• Поддержка клонирования голоса\n\n` +
-      `👤 **Цифровой двойник:**\n` +
-      `• Более реалистичные движения\n` +
-      `• Профессиональное качество\n` +
-      `• Расширенные возможности персонализации\n\n` +
-      `Выберите предпочтительный сервис:`;
-
-    // Проверяем, изменилось ли содержимое сообщения
-    const currentText =
-      ctx.callbackQuery?.message && 'text' in ctx.callbackQuery.message
-        ? ctx.callbackQuery.message.text
-        : '';
-
-    if (currentText !== newText) {
-      await ctx.editMessageText(newText, {
-        parse_mode: 'Markdown',
-        reply_markup: this._kb.serviceSettings().reply_markup,
-      });
-    } else {
-      await ctx.answerCbQuery('✅ Настройки уже актуальны!');
-    }
-  }
-
-  @Action('set_service_did')
-  async onSetServiceDid(@Ctx() ctx: Context) {
-    await ctx.answerCbQuery('🤖 ИИ-Аватар выбран!');
-
-    if (!ctx.from?.id) {
-      await ctx.reply('❌ Ошибка получения данных пользователя');
-      return;
-    }
-
-    const success = await this._users.setUserPreferredService(ctx.from.id, 'did');
-
-    if (!success) {
-      await ctx.reply('❌ Не удалось сохранить настройки. Попробуйте позже.');
-      return;
-    }
-
-    await ctx.editMessageText(
-      `✅ **Сервис успешно изменен!**\n\n` +
-        `🤖 Теперь используется: **ИИ-Аватар**\n\n` +
-        `Особенности:\n` +
-        `• Быстрая генерация видео\n` +
-        `• Качественная синхронизация губ\n` +
-        `• Поддержка клонирования голоса\n` +
-        `• Оптимизировано для коротких роликов\n\n` +
-        `🎬 Теперь можете создавать видео!`,
-      {
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '🎬 Создать видео', callback_data: 'create_video' }],
-            [{ text: '🔙 Назад в меню', callback_data: 'main_menu' }],
-          ],
-        },
-      }
-    );
-  }
-
-  @Action('set_service_heygen')
-  async onSetServiceHeyGen(@Ctx() ctx: Context) {
-    await ctx.answerCbQuery('👤 Цифровой двойник выбран!');
-
-    if (!ctx.from?.id) {
-      await ctx.reply('❌ Ошибка получения данных пользователя');
-      return;
-    }
-
-    const success = await this._users.setUserPreferredService(ctx.from.id, 'heygen');
-
-    if (!success) {
-      await ctx.reply('❌ Не удалось сохранить настройки. Попробуйте позже.');
-      return;
-    }
-
-    await ctx.editMessageText(
-      `✅ **Сервис успешно изменен!**\n\n` +
-        `👤 Теперь используется: **Цифровой двойник**\n\n` +
-        `Особенности:\n` +
-        `• Более реалистичные движения\n` +
-        `• Профессиональное качество видео\n` +
-        `• Расширенные возможности персонализации\n` +
-        `• Продвинутая технология создания аватаров\n\n` +
-        `🎬 Теперь можете создавать видео!`,
-      {
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '🎬 Создать видео', callback_data: 'create_video' }],
-            [{ text: '🔙 Назад в меню', callback_data: 'main_menu' }],
-          ],
-        },
-      }
-    );
-  }
 }

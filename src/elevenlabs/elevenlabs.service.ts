@@ -1,5 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { 
+  ElevenLabsVerificationAttempt, 
+  ElevenLabsManualVerification, 
+  ElevenLabsSafetyControl, 
+  ElevenLabsPermission 
+} from '../types';
 
 export interface VoiceCloneRequest {
   name: string;
@@ -42,11 +48,11 @@ export interface ElevenLabsVoiceResponse {
     is_allowed_to_fine_tune: boolean;
     finetuning_requested: boolean;
     finetuning_state: string;
-    verification_attempts: any[];
+    verification_attempts: ElevenLabsVerificationAttempt[];
     verification_failures: string[];
     verification_attempts_count: number;
     slice_ids: string[];
-    manual_verification: any;
+    manual_verification: ElevenLabsManualVerification;
     manual_verification_requested: boolean;
   };
   labels: Record<string, string>;
@@ -72,7 +78,7 @@ export interface ElevenLabsVoiceResponse {
     created_at_unix: number;
   };
   high_quality_base_model_ids: string[];
-  safety_control: any;
+  safety_control: ElevenLabsSafetyControl;
   voice_verification: {
     requires_verification: boolean;
     is_verified: boolean;
@@ -81,7 +87,7 @@ export interface ElevenLabsVoiceResponse {
     language: string;
   };
   owner_id: string;
-  permission_on_resource: any;
+  permission_on_resource: ElevenLabsPermission;
 }
 
 @Injectable()

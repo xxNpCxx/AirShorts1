@@ -161,9 +161,7 @@ export function validateAkoolAuthRequest(data: unknown): data is AkoolAuthReques
   return (
     typeof data === 'object' &&
     data !== null &&
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     typeof (data as any).clientId === 'string' &&
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     typeof (data as any).clientSecret === 'string'
   );
 }

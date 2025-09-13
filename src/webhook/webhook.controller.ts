@@ -36,7 +36,8 @@ export class WebhookController {
       }
 
       // Передаем обновление в Telegraf для обработки
-      // Приводим к типу Update для совместимости с Telegraf
+      // Приводим к типу Update для совместимости с Telegraf API
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await this.bot.handleUpdate(update as any);
 
       this.logger.log(`✅ Webhook обработан успешно`, 'WebhookController');

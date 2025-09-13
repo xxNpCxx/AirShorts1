@@ -8,6 +8,7 @@ import { AudioConverter } from '../utils/audio-converter';
 import { AkoolFileUploader } from '../utils/akool-file-uploader';
 import { Pool } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { AkoolVoice } from '../types';
 
 /**
  * AKOOL Video Request Interface
@@ -713,7 +714,7 @@ export class AkoolService {
   /**
    * Получение списка доступных голосов
    */
-  async getAvailableVoices(): Promise<any[]> {
+  async getAvailableVoices(): Promise<AkoolVoice[]> {
     try {
       this.logger.log('🔍 Получаю список доступных голосов...');
 

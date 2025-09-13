@@ -4,6 +4,14 @@ import { getBotToken } from 'nestjs-telegraf';
 import { Pool } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { ConfigService } from '@nestjs/config';
+import { 
+  AkoolWebhookBody, 
+  AkoolDecryptedData, 
+  AkoolWebhookLog, 
+  AkoolVideoRequestRecord,
+  validateAkoolWebhookBody,
+  validateAkoolDecryptedData 
+} from '../types';
 
 @Controller('akool/webhook')
 export class AkoolWebhookController {
@@ -16,7 +24,12 @@ export class AkoolWebhookController {
   ) {}
 
   @Post()
-  async handleWebhook(@Body() body: any) {
+  async handleWebhook(@Body() body: unknown) {
+    // Валидация входящих данных
+    if (!validateAkoolWebhookBody(body)) {
+      this.logger.error('❌ Invalid AKOOL webhook body received');
+      return { success: false, error: 'Invalid webhook body format' };
+    }
     this.logger.log('📥 AKOOL webhook received:', body);
 
     // Сохраняем webhook в БД
@@ -140,7 +153,7 @@ export class AkoolWebhookController {
    * Расшифровка webhook данных от AKOOL согласно официальной документации
    * https://docs.akool.com/ai-tools-suite/webhook
    */
-  private async decryptWebhookData(body: any): Promise<any> {
+  private async decryptWebhookData(body: AkoolWebhookBody): Promise<AkoolDecryptedData> {
     try {
       const { dataEncrypt, signature, timestamp, nonce } = body;
 
@@ -281,7 +294,7 @@ export class AkoolWebhookController {
   /**
    * Сохранение webhook лога в БД
    */
-  private async saveWebhookLog(service: string, webhookType: string, payload: any): Promise<void> {
+  private async saveWebhookLog(service: string, webhookType: string, payload: AkoolWebhookBody): Promise<void> {
     try {
       await this.pool.query(
         `INSERT INTO webhook_logs (service, webhook_type, payload, created_at) 
@@ -338,7 +351,7 @@ export class AkoolWebhookController {
   /**
    * Поиск запроса по task_id
    */
-  private async findVideoRequestByTaskId(taskId: string): Promise<any> {
+  private async findVideoRequestByTaskId(taskId: string): Promise<AkoolVideoRequestRecord | null> {
     try {
       const result = await this.pool.query('SELECT * FROM video_requests WHERE task_id = $1', [
         taskId,
