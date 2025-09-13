@@ -101,7 +101,7 @@ export class BotUpdate {
         `[@On text] Обнаружено сообщение главного меню: "${messageText}" - ПРИНУДИТЕЛЬНЫЙ выход из сцены и показ главного меню`,
         'BotUpdate'
       );
-      
+
       // ПРИНУДИТЕЛЬНО выходим из сцены (если есть)
       const sceneContext = ctx as unknown as {
         scene: {
@@ -109,7 +109,7 @@ export class BotUpdate {
           leave: () => Promise<void>;
         };
       };
-      
+
       if (sceneContext.scene?.current) {
         this._logger.debug(
           `[@On text] ПРИНУДИТЕЛЬНО выходим из сцены: "${sceneContext.scene.current.id}"`,
@@ -117,7 +117,7 @@ export class BotUpdate {
         );
         await sceneContext.scene.leave();
       }
-      
+
       // Обновляем пользователя и показываем главное меню
       await this._users.upsertFromContext(ctx);
       await MainMenuHandler.handleMainMenuRequest(ctx, 'BotUpdate-OnText-ForceExit');

@@ -17,7 +17,6 @@ import { BaseScene } from './base-scene';
 
 @Scene('video-generation')
 export class VideoGenerationScene extends BaseScene {
-
   constructor(
     private readonly akoolService: AkoolService,
     @Inject(getBotToken('airshorts1_bot')) private readonly bot: Telegraf
@@ -54,13 +53,36 @@ export class VideoGenerationScene extends BaseScene {
       return;
     }
 
+    // Проверяем, есть ли все необходимые данные для генерации
+    const hasPhoto = session.photoFileId;
+    const hasVoiceOrScript = session.voiceFileId || session.script;
+    const canGenerate = hasPhoto && hasVoiceOrScript;
+
+    const keyboard = canGenerate 
+      ? {
+          inline_keyboard: [
+            [{ text: '🎬 Генерировать видео', callback_data: 'generate_video' }],
+            [{ text: '🔙 Назад в меню', callback_data: 'back_to_menu' }]
+          ]
+        }
+      : {
+          inline_keyboard: [
+            [{ text: '🔙 Назад в меню', callback_data: 'back_to_menu' }]
+          ]
+        };
+
     await ctx.reply(
       `🎬 **Генерация видео**\n\n` +
         `📸 Фото: ${session.photoFileId ? '✅ Загружено' : '❌ Не загружено'}\n` +
         `🎤 Голос: ${session.voiceFileId ? '✅ Загружен' : '❌ Не загружен'}\n` +
         `📝 Скрипт: ${session.script ? '✅ Написан' : '❌ Не написан'}\n\n` +
-        `Отправьте фото, голосовое сообщение или текст для продолжения.`,
-      { parse_mode: 'Markdown' }
+        (canGenerate 
+          ? 'Все готово! Можете генерировать видео.' 
+          : 'Отправьте фото, голосовое сообщение или текст для продолжения.'),
+      { 
+        parse_mode: 'Markdown',
+        reply_markup: keyboard
+      }
     );
   }
 
@@ -81,7 +103,14 @@ export class VideoGenerationScene extends BaseScene {
       await ctx.reply(
         '📸 **Фото получено!**\n\n' +
           'Теперь отправьте голосовое сообщение или текст для генерации видео.',
-        { parse_mode: 'Markdown' }
+        { 
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🔙 Назад в меню', callback_data: 'back_to_menu' }]
+            ]
+          }
+        }
       );
     } catch (error) {
       this.logger.error('Ошибка при обработке фото:', error);
@@ -104,7 +133,15 @@ export class VideoGenerationScene extends BaseScene {
       await ctx.reply(
         '🎤 **Голосовое сообщение получено!**\n\n' +
           'Теперь отправьте текст скрипта или нажмите "Генерировать видео" если все готово.',
-        { parse_mode: 'Markdown' }
+        { 
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🎬 Генерировать видео', callback_data: 'generate_video' }],
+              [{ text: '🔙 Назад в меню', callback_data: 'back_to_menu' }]
+            ]
+          }
+        }
       );
     } catch (error) {
       this.logger.error('Ошибка при обработке голоса:', error);
@@ -116,7 +153,7 @@ export class VideoGenerationScene extends BaseScene {
   async onText(@Ctx() ctx: Context) {
     const text = (ctx.message as any).text;
     this.logger.debug(`📝 Получено текстовое сообщение в сцене: "${text}"`, 'VideoGenerationScene');
-    
+
     const session = (ctx as any).session as SessionData;
 
     if (!session) {
@@ -146,7 +183,15 @@ export class VideoGenerationScene extends BaseScene {
         `Текст: "${text}"\n` +
         `Предполагаемая длительность: ${session.duration} секунд\n\n` +
         'Теперь нажмите "Генерировать видео" для создания ролика.',
-      { parse_mode: 'Markdown' }
+      { 
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🎬 Генерировать видео', callback_data: 'generate_video' }],
+            [{ text: '🔙 Назад в меню', callback_data: 'back_to_menu' }]
+          ]
+        }
+      }
     );
   }
 
