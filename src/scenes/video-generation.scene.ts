@@ -97,17 +97,17 @@ export class VideoGenerationScene extends BaseScene {
         // Возвращаемся к шагу загрузки голоса или фото
         if ((session as any).voiceFileId) {
           this.setCurrentStep(session, SCENE_STEPS.VOICE_UPLOADED);
-          await this.showVoiceUploadedState(ctx, session);
+          await this.showVoiceUploadedStateForNavigation(ctx, session);
         } else {
           this.setCurrentStep(session, SCENE_STEPS.PHOTO_UPLOADED);
-          await this.showPhotoUploadedState(ctx, session);
+          await this.showPhotoUploadedStateForNavigation(ctx, session);
         }
         break;
 
       case SCENE_STEPS.VOICE_UPLOADED:
         // Возвращаемся к шагу загрузки фото
         this.setCurrentStep(session, SCENE_STEPS.PHOTO_UPLOADED);
-        await this.showPhotoUploadedState(ctx, session);
+        await this.showPhotoUploadedStateForNavigation(ctx, session);
         break;
 
       case SCENE_STEPS.PHOTO_UPLOADED:
@@ -151,8 +151,22 @@ export class VideoGenerationScene extends BaseScene {
    */
   private async showPhotoUploadedState(ctx: Context, session: any): Promise<void> {
     await ctx.reply(
-      '📸 **Фото получено!**\n\n' +
+      '📸 **Фото загружено!**\n\n' +
         'Теперь отправьте голосовое сообщение или текст для генерации видео.',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: this.createStepKeyboard(SCENE_STEPS.PHOTO_UPLOADED),
+      }
+    );
+  }
+
+  /**
+   * Показывает состояние после загрузки фото (для навигации назад)
+   */
+  private async showPhotoUploadedStateForNavigation(ctx: Context, session: any): Promise<void> {
+    await ctx.reply(
+      '📸 **Шаг: Загрузка фото**\n\n' +
+        'Фото уже загружено. Можете загрузить другое фото или перейти к следующему шагу.',
       {
         parse_mode: 'Markdown',
         reply_markup: this.createStepKeyboard(SCENE_STEPS.PHOTO_UPLOADED),
@@ -169,6 +183,22 @@ export class VideoGenerationScene extends BaseScene {
     await ctx.reply(
       '🎤 **Голосовое сообщение получено!**\n\n' +
         'Теперь отправьте текст скрипта или нажмите "Генерировать видео" если все готово.',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: this.createStepKeyboard(SCENE_STEPS.VOICE_UPLOADED, canGenerate),
+      }
+    );
+  }
+
+  /**
+   * Показывает состояние после загрузки голоса (для навигации назад)
+   */
+  private async showVoiceUploadedStateForNavigation(ctx: Context, session: any): Promise<void> {
+    const canGenerate = (session as any).photoFileId && (session as any).voiceFileId;
+
+    await ctx.reply(
+      '🎤 **Шаг: Загрузка голоса**\n\n' +
+        'Голосовое сообщение уже загружено. Можете загрузить другое голосовое сообщение или перейти к следующему шагу.',
       {
         parse_mode: 'Markdown',
         reply_markup: this.createStepKeyboard(SCENE_STEPS.VOICE_UPLOADED, canGenerate),
