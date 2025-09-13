@@ -1,22 +1,22 @@
-import { Ctx, Scene, SceneEnter, On, Action } from "nestjs-telegraf";
-import { Context } from "telegraf";
-import type { Message } from "telegraf/types";
-import { HeyGenService } from "../heygen/heygen.service";
-import { ProcessManagerService } from "../heygen/process-manager.service";
-import { AkoolService } from "../akool/akool.service";
+import { Ctx, Scene, SceneEnter, On, Action } from 'nestjs-telegraf';
+import { Context } from 'telegraf';
+import type { Message } from 'telegraf/types';
+import { HeyGenService } from '../heygen/heygen.service';
+import { ProcessManagerService } from '../heygen/process-manager.service';
+import { AkoolService } from '../akool/akool.service';
 // import { MockHeyGenService, MockProcessManagerService } from "../heygen/mock-heygen.service";
-import { Logger, Inject } from "@nestjs/common";
-import { Telegraf } from "telegraf";
-import { getBotToken } from "nestjs-telegraf";
-import { AkoolFileUploader } from "../utils/akool-file-uploader";
+import { Logger, Inject } from '@nestjs/common';
+import { Telegraf } from 'telegraf';
+import { getBotToken } from 'nestjs-telegraf';
+import { AkoolFileUploader } from '../utils/akool-file-uploader';
 
 interface SessionData {
   photoFileId?: string;
   voiceFileId?: string;
   script?: string;
-  platform?: "youtube-shorts";
+  platform?: 'youtube-shorts';
   duration?: number;
-  quality?: "720p" | "1080p";
+  quality?: '720p' | '1080p';
 }
 
 // Типы для разных контекстов
@@ -35,7 +35,7 @@ type TextContext = Context & {
   session?: SessionData;
 };
 
-@Scene("video-generation")
+@Scene('video-generation')
 export class VideoGenerationScene {
   private readonly logger = new Logger(VideoGenerationScene.name);
 
@@ -43,7 +43,7 @@ export class VideoGenerationScene {
     private readonly heygenService: HeyGenService,
     private readonly processManager: ProcessManagerService,
     private readonly akoolService: AkoolService,
-    @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
+    @Inject(getBotToken('airshorts1_bot')) private readonly bot: Telegraf
   ) {}
 
   /**
@@ -57,19 +57,19 @@ export class VideoGenerationScene {
 
     // Считаем количество слов (разделенных пробелами)
     const wordCount = text.trim().split(/\s+/).length;
-    
+
     // Средняя скорость речи для русского языка: ~150 слов/мин = 2.5 слов/сек
     const wordsPerSecond = 2.5;
-    
+
     // Рассчитываем базовую длительность
     let duration = Math.ceil(wordCount / wordsPerSecond);
-    
+
     // Добавляем небольшой буфер для пауз и интонации (25% для русского языка)
     duration = Math.ceil(duration * 1.25);
-    
+
     // Минимум 15 секунд, максимум 60 секунд
     duration = Math.max(15, Math.min(60, duration));
-    
+
     return duration;
   }
 
@@ -78,11 +78,11 @@ export class VideoGenerationScene {
    */
   private async createDigitalTwinWithAkool(@Ctx() ctx: Context) {
     const requestId = `akool_digital_twin_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    
+
     try {
       const session = (ctx as any).session as SessionData;
       const userId = ctx.from?.id;
-      
+
       this.logger.log(`🎬 [AKOOL_DIGITAL_TWIN_CREATE] Starting AKOOL Digital Twin creation`, {
         requestId,
         userId,
@@ -91,9 +91,9 @@ export class VideoGenerationScene {
         hasScript: !!session.script,
         scriptLength: session.script?.length || 0,
         quality: session.quality,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
+
       if (!session.photoFileId || !session.voiceFileId || !session.script) {
         this.logger.warn(`⚠️ [AKOOL_DIGITAL_TWIN_CREATE] Missing required data`, {
           requestId,
@@ -101,9 +101,11 @@ export class VideoGenerationScene {
           hasPhoto: !!session.photoFileId,
           hasVoice: !!session.voiceFileId,
           hasScript: !!session.script,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
-        await ctx.reply("❌ Не все данные получены. Пожалуйста, загрузите фото, голосовое сообщение и введите текст.");
+        await ctx.reply(
+          '❌ Не все данные получены. Пожалуйста, загрузите фото, голосовое сообщение и введите текст.'
+        );
         return;
       }
 
@@ -112,38 +114,38 @@ export class VideoGenerationScene {
         userId,
         photoFileId: session.photoFileId,
         voiceFileId: session.voiceFileId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
       // Получаем URL файлов из Telegram
       const photoFile = await ctx.telegram.getFile(session.photoFileId);
       const voiceFile = await ctx.telegram.getFile(session.voiceFileId);
-      
+
       this.logger.log(`📁 [AKOOL_DIGITAL_TWIN_CREATE] Telegram file info received`, {
         requestId,
         userId,
         photoFile: {
           fileId: photoFile.file_id,
           filePath: photoFile.file_path,
-          fileSize: photoFile.file_size
+          fileSize: photoFile.file_size,
         },
         voiceFile: {
           fileId: voiceFile.file_id,
           filePath: voiceFile.file_path,
-          fileSize: voiceFile.file_size
+          fileSize: voiceFile.file_size,
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
+
       if (!photoFile.file_path || !voiceFile.file_path) {
         this.logger.error(`❌ [AKOOL_DIGITAL_TWIN_CREATE] Missing file paths`, {
           requestId,
           userId,
           photoFilePath: photoFile.file_path,
           voiceFilePath: voiceFile.file_path,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
-        await ctx.reply("❌ Ошибка получения файлов. Попробуйте загрузить файлы заново.");
+        await ctx.reply('❌ Ошибка получения файлов. Попробуйте загрузить файлы заново.');
         return;
       }
 
@@ -153,16 +155,16 @@ export class VideoGenerationScene {
       this.logger.log(`🔗 [AKOOL_DIGITAL_TWIN_CREATE] File URLs generated`, {
         requestId,
         userId,
-        photoUrl: photoUrl.substring(0, 100) + '...',
-        audioUrl: audioUrl.substring(0, 100) + '...',
-        timestamp: new Date().toISOString()
+        photoUrl: `${photoUrl.substring(0, 100)}...`,
+        audioUrl: `${audioUrl.substring(0, 100)}...`,
+        timestamp: new Date().toISOString(),
       });
 
       // Создаем цифровой двойник с AKOOL
       this.logger.log(`🎭 [AKOOL_DIGITAL_TWIN_CREATE] Creating digital twin with AKOOL...`, {
         requestId,
         userId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
       const result = await this.akoolService.createDigitalTwinWithVoiceClone(
@@ -180,35 +182,34 @@ export class VideoGenerationScene {
         resultId: result.id,
         status: result.status,
         resultUrl: result.result_url,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
       await ctx.reply(
         `🎬 Создание цифрового двойника запущено!\n\n` +
-        `📋 ID процесса: ${result.id}\n` +
-        `📸 Фото: ✅ Загружено\n` +
-        `🎵 Голос: ✅ Загружен\n` +
-        `📝 Текст: ${session.script.length} символов\n` +
-        `🎥 Качество: ${session.quality || '720p'}\n\n` +
-        `⏳ Обработка займет 2-5 минут. Вы получите уведомление когда видео будет готово!`
+          `📋 ID процесса: ${result.id}\n` +
+          `📸 Фото: ✅ Загружено\n` +
+          `🎵 Голос: ✅ Загружен\n` +
+          `📝 Текст: ${session.script.length} символов\n` +
+          `🎥 Качество: ${session.quality || '720p'}\n\n` +
+          `⏳ Обработка займет 2-5 минут. Вы получите уведомление когда видео будет готово!`
       );
 
       this.logger.log(`📤 [AKOOL_DIGITAL_TWIN_CREATE] User notification sent`, {
         requestId,
         userId,
         resultId: result.id,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-
     } catch (error) {
       this.logger.error(`❌ [AKOOL_DIGITAL_TWIN_CREATE] Error creating Digital Twin`, {
         requestId,
         userId: ctx.from?.id,
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      await ctx.reply("❌ Ошибка при создании цифрового двойника. Попробуйте еще раз.");
+      await ctx.reply('❌ Ошибка при создании цифрового двойника. Попробуйте еще раз.');
     }
   }
 
@@ -217,11 +218,11 @@ export class VideoGenerationScene {
    */
   private async createDigitalTwin(@Ctx() ctx: Context) {
     const requestId = `digital_twin_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    
+
     try {
       const session = (ctx as any).session as SessionData;
       const userId = ctx.from?.id;
-      
+
       this.logger.log(`🎬 [DIGITAL_TWIN_CREATE] Starting Digital Twin creation`, {
         requestId,
         userId,
@@ -230,9 +231,9 @@ export class VideoGenerationScene {
         hasScript: !!session.script,
         scriptLength: session.script?.length || 0,
         quality: session.quality,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
+
       if (!session.photoFileId || !session.voiceFileId || !session.script) {
         this.logger.warn(`⚠️ [DIGITAL_TWIN_CREATE] Missing required data`, {
           requestId,
@@ -240,9 +241,11 @@ export class VideoGenerationScene {
           hasPhoto: !!session.photoFileId,
           hasVoice: !!session.voiceFileId,
           hasScript: !!session.script,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
-        await ctx.reply("❌ Не все данные получены. Пожалуйста, загрузите фото, голосовое сообщение и введите текст.");
+        await ctx.reply(
+          '❌ Не все данные получены. Пожалуйста, загрузите фото, голосовое сообщение и введите текст.'
+        );
         return;
       }
 
@@ -251,38 +254,38 @@ export class VideoGenerationScene {
         userId,
         photoFileId: session.photoFileId,
         voiceFileId: session.voiceFileId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
       // Получаем URL файлов из Telegram
       const photoFile = await ctx.telegram.getFile(session.photoFileId);
       const voiceFile = await ctx.telegram.getFile(session.voiceFileId);
-      
+
       this.logger.log(`📁 [DIGITAL_TWIN_CREATE] Telegram file info received`, {
         requestId,
         userId,
         photoFile: {
           fileId: photoFile.file_id,
           filePath: photoFile.file_path,
-          fileSize: photoFile.file_size
+          fileSize: photoFile.file_size,
         },
         voiceFile: {
           fileId: voiceFile.file_id,
           filePath: voiceFile.file_path,
-          fileSize: voiceFile.file_size
+          fileSize: voiceFile.file_size,
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
+
       if (!photoFile.file_path || !voiceFile.file_path) {
         this.logger.error(`❌ [DIGITAL_TWIN_CREATE] Missing file paths`, {
           requestId,
           userId,
           photoFilePath: photoFile.file_path,
           voiceFilePath: voiceFile.file_path,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
-        await ctx.reply("❌ Ошибка получения файлов. Попробуйте загрузить файлы заново.");
+        await ctx.reply('❌ Ошибка получения файлов. Попробуйте загрузить файлы заново.');
         return;
       }
 
@@ -292,9 +295,9 @@ export class VideoGenerationScene {
       this.logger.log(`🔗 [DIGITAL_TWIN_CREATE] File URLs generated`, {
         requestId,
         userId,
-        photoUrl: photoUrl.substring(0, 100) + '...',
-        audioUrl: audioUrl.substring(0, 100) + '...',
-        timestamp: new Date().toISOString()
+        photoUrl: `${photoUrl.substring(0, 100)}...`,
+        audioUrl: `${audioUrl.substring(0, 100)}...`,
+        timestamp: new Date().toISOString(),
       });
 
       // Создаем процесс создания цифрового двойника
@@ -304,7 +307,7 @@ export class VideoGenerationScene {
         audioUrl,
         session.script,
         `Digital Twin Video ${new Date().toISOString()}`,
-        session.quality || "720p",
+        session.quality || '720p',
         session.voiceFileId
       );
 
@@ -313,7 +316,7 @@ export class VideoGenerationScene {
         userId,
         processId: digitalTwinProcess.id,
         status: digitalTwinProcess.status,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
       // Запускаем первый шаг процесса - создание Photo Avatar
@@ -321,37 +324,36 @@ export class VideoGenerationScene {
         requestId,
         userId,
         processId: digitalTwinProcess.id,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
+
       await this.processManager.executeNextStep(digitalTwinProcess.id);
 
       await ctx.reply(
         `🎬 Создание цифрового двойника запущено!\n\n` +
-        `📋 ID процесса: ${digitalTwinProcess.id}\n` +
-        `📸 Фото: ✅ Загружено\n` +
-        `🎵 Голос: ✅ Загружен\n` +
-        `📝 Текст: ${session.script.length} символов\n` +
-        `🎥 Качество: ${digitalTwinProcess.quality}\n\n` +
-        `⏳ Обработка займет 2-5 минут. Вы получите уведомление когда видео будет готово!`
+          `📋 ID процесса: ${digitalTwinProcess.id}\n` +
+          `📸 Фото: ✅ Загружено\n` +
+          `🎵 Голос: ✅ Загружен\n` +
+          `📝 Текст: ${session.script.length} символов\n` +
+          `🎥 Качество: ${digitalTwinProcess.quality}\n\n` +
+          `⏳ Обработка займет 2-5 минут. Вы получите уведомление когда видео будет готово!`
       );
 
       this.logger.log(`📤 [DIGITAL_TWIN_CREATE] User notification sent`, {
         requestId,
         userId,
         processId: digitalTwinProcess.id,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-
     } catch (error) {
       this.logger.error(`❌ [DIGITAL_TWIN_CREATE] Error creating Digital Twin`, {
         requestId,
         userId: ctx.from?.id,
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      await ctx.reply("❌ Ошибка при создании цифрового двойника. Попробуйте еще раз.");
+      await ctx.reply('❌ Ошибка при создании цифрового двойника. Попробуйте еще раз.');
     }
   }
 
@@ -359,55 +361,58 @@ export class VideoGenerationScene {
   async onSceneEnter(@Ctx() ctx: Context) {
     this.logger.log(`🎬 [@SceneEnter] Пользователь ${ctx.from?.id} вошел в сцену video-generation`);
     await ctx.reply(
-      "🎬 Добро пожаловать в генератор видео!\n\n" +
-        "Для создания цифрового двойника с AKOOL мне понадобится:\n" +
-        "1. 📸 Фото с человеком\n" +
-        "2. 🎵 Голосовое сообщение (ваш голос)\n" +
-        "3. 📝 Сценарий ролика (текст для озвучки)\n\n" +
-        "🎵 **Голос:** Будет использован ваш голос из голосового сообщения!\n" +
-        "🤖 **Технология:** AKOOL для создания реалистичного цифрового двойника\n\n" +
-        "📸 **Требования к фото:**\n" +
-        "• Один человек в кадре (лицо хорошо видно)\n" +
-        "• Размер: до 10 МБ\n" +
-        "• Формат: JPG, PNG, WebP\n" +
-        "• Разрешение: минимум 512x512 пикселей\n" +
-        "• Хорошее освещение, четкость\n" +
-        "• Лицо смотрит прямо в камеру\n" +
-        "• ⚠️ ВАЖНО: отправьте как ФОТО, а не как файл!\n\n" +
-        "💡 **Рекомендации:**\n" +
-        "• Портретная ориентация (9:16)\n" +
-        "• Лицо занимает 30-50% кадра\n" +
-        "• Нейтральное выражение лица\n" +
-        "• Минимум фона и отвлекающих элементов\n\n" +
-        "Отправьте фото:",
+      '🎬 Добро пожаловать в генератор видео!\n\n' +
+        'Для создания цифрового двойника с AKOOL мне понадобится:\n' +
+        '1. 📸 Фото с человеком\n' +
+        '2. 🎵 Голосовое сообщение (ваш голос)\n' +
+        '3. 📝 Сценарий ролика (текст для озвучки)\n\n' +
+        '🎵 **Голос:** Будет использован ваш голос из голосового сообщения!\n' +
+        '🤖 **Технология:** AKOOL для создания реалистичного цифрового двойника\n\n' +
+        '📸 **Требования к фото:**\n' +
+        '• Один человек в кадре (лицо хорошо видно)\n' +
+        '• Размер: до 10 МБ\n' +
+        '• Формат: JPG, PNG, WebP\n' +
+        '• Разрешение: минимум 512x512 пикселей\n' +
+        '• Хорошее освещение, четкость\n' +
+        '• Лицо смотрит прямо в камеру\n' +
+        '• ⚠️ ВАЖНО: отправьте как ФОТО, а не как файл!\n\n' +
+        '💡 **Рекомендации:**\n' +
+        '• Портретная ориентация (9:16)\n' +
+        '• Лицо занимает 30-50% кадра\n' +
+        '• Нейтральное выражение лица\n' +
+        '• Минимум фона и отвлекающих элементов\n\n' +
+        'Отправьте фото:'
     );
   }
 
-  @On("photo")
+  @On('photo')
   async onPhoto(@Ctx() ctx: PhotoContext) {
     try {
-      this.logger.log("📸 Обработчик фото вызван");
+      this.logger.log('📸 Обработчик фото вызван');
       const photo = ctx.message?.photo;
       if (!photo || photo.length === 0) {
-        this.logger.warn("❌ Фото не найдено в ctx.message");
-        await ctx.reply("❌ Не удалось получить фото. Попробуйте еще раз.");
+        this.logger.warn('❌ Фото не найдено в ctx.message');
+        await ctx.reply('❌ Не удалось получить фото. Попробуйте еще раз.');
         return;
       }
-      
-      this.logger.log(`📸 Получено фото: количество=${photo.length}, file_id=${photo[photo.length - 1].file_id}`);
+
+      this.logger.log(
+        `📸 Получено фото: количество=${photo.length}, file_id=${photo[photo.length - 1].file_id}`
+      );
 
       // Берем фото наилучшего качества (последнее в массиве)
       const bestPhoto = photo[photo.length - 1];
       const photoFileId = bestPhoto.file_id;
 
       // Валидация размера фото
-      if (bestPhoto.file_size && bestPhoto.file_size > 10 * 1024 * 1024) { // 10 МБ
+      if (bestPhoto.file_size && bestPhoto.file_size > 10 * 1024 * 1024) {
+        // 10 МБ
         await ctx.reply(
-          "❌ Фото слишком большое! Максимальный размер: 10 МБ\n\n" +
-          "💡 Попробуйте:\n" +
-          "• Сжать фото в настройках камеры\n" +
-          "• Использовать другое фото\n" +
-          "• Отправить как файл и выбрать сжатие"
+          '❌ Фото слишком большое! Максимальный размер: 10 МБ\n\n' +
+            '💡 Попробуйте:\n' +
+            '• Сжать фото в настройках камеры\n' +
+            '• Использовать другое фото\n' +
+            '• Отправить как файл и выбрать сжатие'
         );
         return;
       }
@@ -416,10 +421,10 @@ export class VideoGenerationScene {
       if (bestPhoto.width && bestPhoto.height) {
         if (bestPhoto.width < 512 || bestPhoto.height < 512) {
           await ctx.reply(
-            "❌ Разрешение фото слишком низкое!\n" +
-            `Текущее: ${bestPhoto.width}x${bestPhoto.height}\n` +
-            "Минимум: 512x512 пикселей\n\n" +
-            "Отправьте фото лучшего качества."
+            '❌ Разрешение фото слишком низкое!\n' +
+              `Текущее: ${bestPhoto.width}x${bestPhoto.height}\n` +
+              'Минимум: 512x512 пикселей\n\n' +
+              'Отправьте фото лучшего качества.'
           );
           return;
         }
@@ -428,10 +433,10 @@ export class VideoGenerationScene {
         const aspectRatio = bestPhoto.height / bestPhoto.width;
         if (aspectRatio < 1.5) {
           await ctx.reply(
-            "⚠️ Фото принято, но рекомендуется портретная ориентация!\n\n" +
-            `Текущее соотношение: ${bestPhoto.width}x${bestPhoto.height}\n` +
-            "Рекомендуется: 9:16 (например, 1080x1920)\n\n" +
-            "Для лучшего результата используйте вертикальное фото."
+            '⚠️ Фото принято, но рекомендуется портретная ориентация!\n\n' +
+              `Текущее соотношение: ${bestPhoto.width}x${bestPhoto.height}\n` +
+              'Рекомендуется: 9:16 (например, 1080x1920)\n\n' +
+              'Для лучшего результата используйте вертикальное фото.'
           );
         }
       }
@@ -442,31 +447,31 @@ export class VideoGenerationScene {
         if (file.file_path) {
           const fileExtension = file.file_path.split('.').pop()?.toLowerCase();
           const fileName = file.file_path.split('/').pop() || '';
-          
+
           // Проверяем поддержку формата AKOOL
           if (!AkoolFileUploader.isSupportedImageFormat(fileName, 'image/jpeg')) {
             await ctx.reply(
-              "❌ Неподдерживаемый формат файла для AKOOL!\n\n" +
-              `Обнаружен: ${fileExtension || 'неизвестный'}\n` +
-              "Поддерживаются AKOOL: JPG, PNG, WebP\n\n" +
-              "Отправьте фото в поддерживаемом формате."
+              '❌ Неподдерживаемый формат файла для AKOOL!\n\n' +
+                `Обнаружен: ${fileExtension || 'неизвестный'}\n` +
+                'Поддерживаются AKOOL: JPG, PNG, WebP\n\n' +
+                'Отправьте фото в поддерживаемом формате.'
             );
             return;
           }
-          
+
           // Дополнительная валидация размера
           if (file.file_size && file.file_size > 10 * 1024 * 1024) {
             await ctx.reply(
-              "❌ Файл слишком большой для AKOOL!\n\n" +
-              `Размер: ${Math.round(file.file_size / (1024 * 1024) * 100) / 100} МБ\n` +
-              "Максимум: 10 МБ\n\n" +
-              "Сожмите фото и попробуйте снова."
+              '❌ Файл слишком большой для AKOOL!\n\n' +
+                `Размер: ${Math.round((file.file_size / (1024 * 1024)) * 100) / 100} МБ\n` +
+                'Максимум: 10 МБ\n\n' +
+                'Сожмите фото и попробуйте снова.'
             );
             return;
           }
         }
       } catch (fileError) {
-        this.logger.warn("Could not validate file format:", fileError);
+        this.logger.warn('Could not validate file format:', fileError);
         // Продолжаем, так как это не критичная ошибка
       }
 
@@ -474,105 +479,106 @@ export class VideoGenerationScene {
       (ctx.session as SessionData).photoFileId = photoFileId;
 
       await ctx.reply(
-        "✅ Фото принято и прошло валидацию!\n\n" +
-        `📊 Информация:\n` +
-        `• Разрешение: ${bestPhoto.width || '?'}x${bestPhoto.height || '?'}\n` +
-        `• Размер: ${bestPhoto.file_size ? Math.round(bestPhoto.file_size / 1024) + ' КБ' : 'неизвестен'}\n\n` +
-        "🎵 Теперь отправьте голосовое сообщение:\n\n" +
-        "📋 **Требования к голосовому сообщению:**\n" +
-        "• Длительность: 10-60 секунд\n" +
-        "• Четкая речь на русском языке\n" +
-        "• Минимум фонового шума\n" +
-        "• Естественная интонация\n\n" +
-        "💡 **Ваш голос будет использован для озвучки видео**\n" +
-        "💡 **Советы для лучшего результата:**\n" +
-        "• Говорите медленно и четко\n" +
-        "• Используйте выразительную интонацию\n" +
-        "• Запишите в тихом помещении\n" +
-        "• Держите телефон близко к лицу\n\n" +
-        "🎤 Нажмите и удерживайте кнопку записи голосового сообщения:"
+        '✅ Фото принято и прошло валидацию!\n\n' +
+          `📊 Информация:\n` +
+          `• Разрешение: ${bestPhoto.width || '?'}x${bestPhoto.height || '?'}\n` +
+          `• Размер: ${bestPhoto.file_size ? `${Math.round(bestPhoto.file_size / 1024)} КБ` : 'неизвестен'}\n\n` +
+          '🎵 Теперь отправьте голосовое сообщение:\n\n' +
+          '📋 **Требования к голосовому сообщению:**\n' +
+          '• Длительность: 10-60 секунд\n' +
+          '• Четкая речь на русском языке\n' +
+          '• Минимум фонового шума\n' +
+          '• Естественная интонация\n\n' +
+          '💡 **Ваш голос будет использован для озвучки видео**\n' +
+          '💡 **Советы для лучшего результата:**\n' +
+          '• Говорите медленно и четко\n' +
+          '• Используйте выразительную интонацию\n' +
+          '• Запишите в тихом помещении\n' +
+          '• Держите телефон близко к лицу\n\n' +
+          '🎤 Нажмите и удерживайте кнопку записи голосового сообщения:'
       );
     } catch (error) {
-      this.logger.error("Error processing photo:", error);
-      await ctx.reply("❌ Ошибка при обработке фото. Попробуйте еще раз.");
+      this.logger.error('Error processing photo:', error);
+      await ctx.reply('❌ Ошибка при обработке фото. Попробуйте еще раз.');
     }
   }
 
-  @On("document")
+  @On('document')
   async onDocument(@Ctx() ctx: Context) {
     try {
       const message = ctx.message;
-      if (message && "document" in message && message.document) {
+      if (message && 'document' in message && message.document) {
         const document = message.document;
-        
+
         // Проверяем, является ли документ изображением
-        const isImage = document.mime_type && (
-          document.mime_type.startsWith("image/") ||
-          ["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(document.mime_type)
-        );
-        
+        const isImage =
+          document.mime_type &&
+          (document.mime_type.startsWith('image/') ||
+            ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(document.mime_type));
+
         if (isImage) {
           await ctx.reply(
-            "📸 Обнаружено изображение, отправленное как файл!\n\n" +
-            "❌ Пожалуйста, отправьте фото как изображение, а не как документ.\n\n" +
-            "💡 Как правильно отправить:\n" +
-            "• Нажмите на значок 📎 (скрепка)\n" +
-            "• Выберите 'Фото или видео'\n" +
-            "• Выберите фото из галереи\n" +
-            "• НЕ нажимайте 'Отправить как файл'\n\n" +
-            "🔄 Попробуйте отправить фото заново:"
+            '📸 Обнаружено изображение, отправленное как файл!\n\n' +
+              '❌ Пожалуйста, отправьте фото как изображение, а не как документ.\n\n' +
+              '💡 Как правильно отправить:\n' +
+              '• Нажмите на значок 📎 (скрепка)\n' +
+              "• Выберите 'Фото или видео'\n" +
+              '• Выберите фото из галереи\n' +
+              "• НЕ нажимайте 'Отправить как файл'\n\n" +
+              '🔄 Попробуйте отправить фото заново:'
           );
         } else {
           await ctx.reply(
-            "❌ Документы не поддерживаются.\n\n" +
-            "📸 Пожалуйста, отправьте фото с человеком."
+            '❌ Документы не поддерживаются.\n\n' + '📸 Пожалуйста, отправьте фото с человеком.'
           );
         }
       }
     } catch (error) {
-      this.logger.error("Error processing document:", error);
-      await ctx.reply("❌ Ошибка при обработке файла. Отправьте фото как изображение.");
+      this.logger.error('Error processing document:', error);
+      await ctx.reply('❌ Ошибка при обработке файла. Отправьте фото как изображение.');
     }
   }
 
-  @On("video")
+  @On('video')
   async onVideo(@Ctx() ctx: Context) {
     await ctx.reply(
-      "🎥 Видео не поддерживается.\n\n" +
-      "📸 Пожалуйста, отправьте фото с человеком (как изображение)."
+      '🎥 Видео не поддерживается.\n\n' +
+        '📸 Пожалуйста, отправьте фото с человеком (как изображение).'
     );
   }
 
-  @On("audio")
+  @On('audio')
   async onAudio(@Ctx() ctx: Context) {
     await ctx.reply(
-      "🎵 Аудиофайлы не поддерживаются.\n\n" +
-      "🎤 Пожалуйста, отправьте голосовое сообщение вместо аудиофайла.\n\n" +
-      "💡 Как записать голосовое сообщение:\n" +
-      "• Нажмите и удерживайте кнопку микрофона\n" +
-      "• Говорите четко на русском языке\n" +
-      "• Длительность: 10-60 секунд"
+      '🎵 Аудиофайлы не поддерживаются.\n\n' +
+        '🎤 Пожалуйста, отправьте голосовое сообщение вместо аудиофайла.\n\n' +
+        '💡 Как записать голосовое сообщение:\n' +
+        '• Нажмите и удерживайте кнопку микрофона\n' +
+        '• Говорите четко на русском языке\n' +
+        '• Длительность: 10-60 секунд'
     );
   }
 
-  @On("voice")
+  @On('voice')
   async onVoice(@Ctx() ctx: VoiceContext) {
     try {
-      this.logger.log("🎤 Обработчик голосового сообщения вызван");
+      this.logger.log('🎤 Обработчик голосового сообщения вызван');
       const voice = ctx.message?.voice;
       if (!voice) {
-        this.logger.warn("❌ Голосовое сообщение не найдено в ctx.message");
-        await ctx.reply("❌ Не удалось получить голосовое сообщение. Попробуйте еще раз.");
+        this.logger.warn('❌ Голосовое сообщение не найдено в ctx.message');
+        await ctx.reply('❌ Не удалось получить голосовое сообщение. Попробуйте еще раз.');
         return;
       }
-      
-      this.logger.log(`🎤 Получено голосовое сообщение: file_id=${voice.file_id}, duration=${voice.duration}`);
+
+      this.logger.log(
+        `🎤 Получено голосовое сообщение: file_id=${voice.file_id}, duration=${voice.duration}`
+      );
 
       const session = ctx.session as SessionData;
 
       // Проверяем, что фото уже загружено
       if (!session.photoFileId) {
-        await ctx.reply("❌ Сначала отправьте фото с человеком!");
+        await ctx.reply('❌ Сначала отправьте фото с человеком!');
         return;
       }
 
@@ -580,8 +586,8 @@ export class VideoGenerationScene {
       if (voice.duration && (voice.duration < 10 || voice.duration > 60)) {
         await ctx.reply(
           `❌ Длительность голосового сообщения должна быть от 10 до 60 секунд!\n\n` +
-          `Текущая длительность: ${voice.duration} сек.\n\n` +
-          `💡 Запишите голосовое сообщение подходящей длительности.`
+            `Текущая длительность: ${voice.duration} сек.\n\n` +
+            `💡 Запишите голосовое сообщение подходящей длительности.`
         );
         return;
       }
@@ -591,30 +597,30 @@ export class VideoGenerationScene {
         const file = await ctx.telegram.getFile(voice.file_id);
         if (file.file_path) {
           const fileName = file.file_path.split('/').pop() || '';
-          
+
           // Проверяем размер файла
           if (file.file_size && file.file_size > 10 * 1024 * 1024) {
             await ctx.reply(
-              "❌ Голосовое сообщение слишком большое!\n\n" +
-              `Размер: ${Math.round(file.file_size / (1024 * 1024) * 100) / 100} МБ\n` +
-              "Максимум: 10 МБ\n\n" +
-              "Запишите более короткое сообщение."
+              '❌ Голосовое сообщение слишком большое!\n\n' +
+                `Размер: ${Math.round((file.file_size / (1024 * 1024)) * 100) / 100} МБ\n` +
+                'Максимум: 10 МБ\n\n' +
+                'Запишите более короткое сообщение.'
             );
             return;
           }
-          
+
           // Информируем о конвертации OGA
           if (fileName.includes('.oga') || fileName.includes('.ogg')) {
             await ctx.reply(
-              "⚠️ Обнаружен формат OGA/OGG\n\n" +
-              "💡 Файл будет автоматически конвертирован в MP3 для AKOOL.\n" +
-              "Это может занять немного больше времени.\n\n" +
-              "✅ Голосовое сообщение принято!"
+              '⚠️ Обнаружен формат OGA/OGG\n\n' +
+                '💡 Файл будет автоматически конвертирован в MP3 для AKOOL.\n' +
+                'Это может занять немного больше времени.\n\n' +
+                '✅ Голосовое сообщение принято!'
             );
           }
         }
       } catch (fileError) {
-        this.logger.warn("Could not validate voice file:", fileError);
+        this.logger.warn('Could not validate voice file:', fileError);
         // Продолжаем, так как это не критичная ошибка
       }
 
@@ -622,39 +628,38 @@ export class VideoGenerationScene {
       session.voiceFileId = voice.file_id;
 
       await ctx.reply(
-        "✅ Голосовое сообщение принято!\n\n" +
-        `📊 Информация:\n` +
-        `• Длительность: ${voice.duration || '?'} сек.\n` +
-        `• Размер: ${voice.file_size ? Math.round(voice.file_size / 1024) + ' КБ' : 'неизвестен'}\n\n` +
-        "🎤 Ваш голос будет использован для создания цифрового двойника!\n\n" +
-        "📝 Теперь введите текст сценария для озвучки:\n\n" +
-        "💡 **Советы:**\n" +
-        "• Используйте понятный и интересный текст\n" +
-        "• Длина текста должна соответствовать длительности видео\n" +
-        "• Избегайте сложных слов и терминов\n" +
-        "• Пишите так, как говорите\n\n" +
-        "✍️ Введите текст сценария:"
+        '✅ Голосовое сообщение принято!\n\n' +
+          `📊 Информация:\n` +
+          `• Длительность: ${voice.duration || '?'} сек.\n` +
+          `• Размер: ${voice.file_size ? `${Math.round(voice.file_size / 1024)} КБ` : 'неизвестен'}\n\n` +
+          '🎤 Ваш голос будет использован для создания цифрового двойника!\n\n' +
+          '📝 Теперь введите текст сценария для озвучки:\n\n' +
+          '💡 **Советы:**\n' +
+          '• Используйте понятный и интересный текст\n' +
+          '• Длина текста должна соответствовать длительности видео\n' +
+          '• Избегайте сложных слов и терминов\n' +
+          '• Пишите так, как говорите\n\n' +
+          '✍️ Введите текст сценария:'
       );
-
     } catch (error) {
-      this.logger.error("Error processing voice:", error);
-      await ctx.reply("❌ Ошибка при обработке голосового сообщения. Попробуйте еще раз.");
+      this.logger.error('Error processing voice:', error);
+      await ctx.reply('❌ Ошибка при обработке голосового сообщения. Попробуйте еще раз.');
     }
   }
 
-  @On("text")
+  @On('text')
   async onText(@Ctx() ctx: TextContext) {
     try {
       const text = ctx.message?.text;
       if (!text) {
-        await ctx.reply("❌ Не удалось получить текст. Попробуйте еще раз.");
+        await ctx.reply('❌ Не удалось получить текст. Попробуйте еще раз.');
         return;
       }
 
       // ПРИОРИТЕТ: Проверяем сообщения главного меню ПЕРЕД обработкой текста
-      const { MainMenuHandler } = await import("../utils/main-menu-handler");
+      const { MainMenuHandler } = await import('../utils/main-menu-handler');
       if (MainMenuHandler.isMainMenuMessage(text)) {
-        await MainMenuHandler.handleMainMenuRequest(ctx, "VideoGenerationScene");
+        await MainMenuHandler.handleMainMenuRequest(ctx, 'VideoGenerationScene');
         return;
       }
 
@@ -662,129 +667,120 @@ export class VideoGenerationScene {
 
       // Проверяем, что фото и голос уже загружены
       if (!session.photoFileId) {
-        await ctx.reply("❌ Сначала отправьте фото с человеком!");
+        await ctx.reply('❌ Сначала отправьте фото с человеком!');
         return;
       }
 
       if (!session.voiceFileId) {
-        await ctx.reply("❌ Сначала отправьте голосовое сообщение!");
+        await ctx.reply('❌ Сначала отправьте голосовое сообщение!');
         return;
       }
 
       if (!session.script) {
         // Первый текстовый ввод - это сценарий
         session.script = text;
-        
+
         // Автоматически рассчитываем длительность на основе текста
         const calculatedDuration = this.calculateVideoDuration(text);
         session.duration = calculatedDuration;
-        
+
         this.logger.log(`📝 [TEXT_INPUT] Script received`, {
           userId: ctx.from?.id,
           scriptLength: text.length,
           wordCount: text.trim().split(/\s+/).length,
           calculatedDuration,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
-        
+
         await ctx.reply(
           `✅ Сценарий принят!\n\n` +
-          `📊 Анализ текста:\n` +
-          `• Количество слов: ${text.trim().split(/\s+/).length}\n` +
-          `• Рассчитанная длительность: ${calculatedDuration} сек.\n\n` +
-          `💡 Длительность рассчитана автоматически на основе количества слов и средней скорости речи для русского языка.\n\n`
+            `📊 Анализ текста:\n` +
+            `• Количество слов: ${text.trim().split(/\s+/).length}\n` +
+            `• Рассчитанная длительность: ${calculatedDuration} сек.\n\n` +
+            `💡 Длительность рассчитана автоматически на основе количества слов и средней скорости речи для русского языка.\n\n`
         );
-        
+
         await this.showQualitySelection(ctx);
       } else {
         // Все данные уже получены, но пользователь отправил еще текст
         await ctx.reply(
-          "❌ Все необходимые данные уже получены!\n\n" +
-          "📋 Текущий статус:\n" +
-          `• Фото: ✅ Загружено\n` +
-          `• Голос: ✅ Загружен\n` +
-          `• Сценарий: ✅ "${session.script}"\n\n` +
-          "🎬 Используйте кнопки ниже для выбора качества."
+          '❌ Все необходимые данные уже получены!\n\n' +
+            '📋 Текущий статус:\n' +
+            `• Фото: ✅ Загружено\n` +
+            `• Голос: ✅ Загружен\n` +
+            `• Сценарий: ✅ "${session.script}"\n\n` +
+            '🎬 Используйте кнопки ниже для выбора качества.'
         );
       }
     } catch (error) {
-      this.logger.error("Error processing text:", error);
-      await ctx.reply("❌ Ошибка при обработке текста. Попробуйте еще раз.");
+      this.logger.error('Error processing text:', error);
+      await ctx.reply('❌ Ошибка при обработке текста. Попробуйте еще раз.');
     }
   }
 
   private async showQualitySelection(@Ctx() ctx: Context) {
-    await ctx.reply(
-      "🎥 Выберите качество видео:",
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: "🎥 720p (быстрее)", callback_data: "quality_720p" },
-              { text: "🏆 1080p (лучше)", callback_data: "quality_1080p" }
-            ],
-            [
-              { text: "❌ Отмена", callback_data: "cancel_video_generation" }
-            ]
-          ]
-        }
-      }
-    );
+    await ctx.reply('🎥 Выберите качество видео:', {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '🎥 720p (быстрее)', callback_data: 'quality_720p' },
+            { text: '🏆 1080p (лучше)', callback_data: 'quality_1080p' },
+          ],
+          [{ text: '❌ Отмена', callback_data: 'cancel_video_generation' }],
+        ],
+      },
+    });
   }
 
-  @Action("quality_720p")
+  @Action('quality_720p')
   async onQuality720Selected(@Ctx() ctx: Context) {
     try {
       await ctx.answerCbQuery();
       const session = (ctx as unknown as { session: SessionData }).session;
-      session.quality = "720p";
+      session.quality = '720p';
 
-      await ctx.editMessageText(
-        "✅ Качество выбрано: 720p (быстрее генерация, меньше места)"
-      );
+      await ctx.editMessageText('✅ Качество выбрано: 720p (быстрее генерация, меньше места)');
 
       // Проверяем, все ли данные собраны, и запускаем процесс
       await this.checkDataCompletenessAndStart(ctx);
     } catch (error) {
-      this.logger.error("Error selecting 720p quality:", error);
-      await ctx.answerCbQuery("❌ Ошибка выбора качества");
+      this.logger.error('Error selecting 720p quality:', error);
+      await ctx.answerCbQuery('❌ Ошибка выбора качества');
     }
   }
 
-  @Action("quality_1080p")
+  @Action('quality_1080p')
   async onQuality1080Selected(@Ctx() ctx: Context) {
     try {
       await ctx.answerCbQuery();
       const session = (ctx as unknown as { session: SessionData }).session;
-      session.quality = "1080p";
+      session.quality = '1080p';
 
-      await ctx.editMessageText(
-        "✅ Качество выбрано: 1080p (лучшее качество, больше места)"
-      );
+      await ctx.editMessageText('✅ Качество выбрано: 1080p (лучшее качество, больше места)');
 
       // Проверяем, все ли данные собраны, и запускаем процесс
       await this.checkDataCompletenessAndStart(ctx);
     } catch (error) {
-      this.logger.error("Error selecting 1080p quality:", error);
-      await ctx.answerCbQuery("❌ Ошибка выбора качества");
+      this.logger.error('Error selecting 1080p quality:', error);
+      await ctx.answerCbQuery('❌ Ошибка выбора качества');
     }
   }
 
-  @Action("cancel_video_generation")
+  @Action('cancel_video_generation')
   async onCancelVideoGeneration(@Ctx() ctx: Context) {
     try {
       await ctx.answerCbQuery();
-      await ctx.editMessageText("❌ Создание видео отменено.");
+      await ctx.editMessageText('❌ Создание видео отменено.');
       await (ctx as { scene?: { leave: () => Promise<void> } }).scene?.leave();
     } catch (error) {
-      this.logger.error("Error canceling video generation:", error);
-      await ctx.answerCbQuery("❌ Ошибка отмены");
+      this.logger.error('Error canceling video generation:', error);
+      await ctx.answerCbQuery('❌ Ошибка отмены');
     }
   }
 
-  @Action("cancel")
+  @Action('cancel')
   async onCancel(@Ctx() ctx: Context) {
-    await ctx.reply("❌ Создание видео отменено.");
+    await ctx.reply('❌ Создание видео отменено.');
     await (ctx as { scene?: { leave: () => Promise<void> } }).scene?.leave();
   }
 
@@ -793,7 +789,7 @@ export class VideoGenerationScene {
    */
   private async checkDataCompletenessAndStart(@Ctx() ctx: Context) {
     const session = (ctx as unknown as { session: SessionData }).session;
-    
+
     // Проверяем, все ли данные собраны
     const hasPhoto = !!session.photoFileId;
     const hasVoice = !!session.voiceFileId;
@@ -806,20 +802,20 @@ export class VideoGenerationScene {
       hasVoice,
       hasScript,
       hasQuality,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     if (!hasPhoto || !hasVoice || !hasScript || !hasQuality) {
       const missingData = [];
-      if (!hasPhoto) missingData.push("📸 Фото");
-      if (!hasVoice) missingData.push("🎵 Голосовое сообщение");
-      if (!hasScript) missingData.push("📝 Текст сценария");
-      if (!hasQuality) missingData.push("🎥 Качество видео");
+      if (!hasPhoto) missingData.push('📸 Фото');
+      if (!hasVoice) missingData.push('🎵 Голосовое сообщение');
+      if (!hasScript) missingData.push('📝 Текст сценария');
+      if (!hasQuality) missingData.push('🎥 Качество видео');
 
       await ctx.reply(
         `❌ Не все данные собраны!\n\n` +
-        `📋 Отсутствует:\n${missingData.map(item => `• ${item}`).join('\n')}\n\n` +
-        `Пожалуйста, загрузите все необходимые данные.`
+          `📋 Отсутствует:\n${missingData.map(item => `• ${item}`).join('\n')}\n\n` +
+          `Пожалуйста, загрузите все необходимые данные.`
       );
       return;
     }
@@ -831,10 +827,10 @@ export class VideoGenerationScene {
       voiceFileId: session.voiceFileId,
       scriptLength: session.script?.length,
       quality: session.quality,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
-    await ctx.reply("🎬 Запускаю создание цифрового двойника...");
+    await ctx.reply('🎬 Запускаю создание цифрового двойника...');
     await this.createDigitalTwinWithAkool(ctx);
   }
 }

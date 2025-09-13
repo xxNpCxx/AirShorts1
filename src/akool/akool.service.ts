@@ -17,9 +17,9 @@ export interface AkoolVideoRequest {
   photoUrl: string;
   audioUrl: string;
   script: string;
-  platform: "youtube-shorts";
+  platform: 'youtube-shorts';
   duration: number;
-  quality: "720p" | "1080p";
+  quality: '720p' | '1080p';
   textPrompt?: string;
   imageUrl?: string; // URL загруженного изображения
 }
@@ -118,25 +118,25 @@ export class AkoolService {
   private accessToken: string | null = null;
 
   constructor(
-    private configService: ConfigService,
-    private elevenlabsService: ElevenLabsService,
-    @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
-    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly configService: ConfigService,
+    private readonly elevenlabsService: ElevenLabsService,
+    @Inject(getBotToken('airshorts1_bot')) private readonly bot: Telegraf,
+    @Inject(PG_POOL) private readonly pool: Pool
   ) {
     this.clientId = this.configService.get<string>('AKOOL_CLIENT_ID');
     this.clientSecret = this.configService.get<string>('AKOOL_CLIENT_SECRET');
-    
+
     this.logger.log(`🔧 AKOOL Configuration check:`);
     this.logger.log(`   Client ID: ${this.clientId ? '✅ Set' : '❌ Missing'}`);
     this.logger.log(`   Client Secret: ${this.clientSecret ? '✅ Set' : '❌ Missing'}`);
-    
+
     if (!this.clientId || !this.clientSecret) {
       this.logger.error('❌ AKOOL credentials not configured properly');
       this.logger.error(`   AKOOL_CLIENT_ID: ${this.clientId || 'undefined'}`);
       this.logger.error(`   AKOOL_CLIENT_SECRET: ${this.clientSecret ? '***' : 'undefined'}`);
       throw new Error('AKOOL credentials not configured');
     }
-    
+
     this.logger.log('✅ AKOOL credentials configured successfully');
   }
 
@@ -150,7 +150,7 @@ export class AkoolService {
 
     try {
       this.logger.log('🔑 Получаю API токен AKOOL...');
-      
+
       const response = await axios.post<AkoolTokenResponse>(`${this.baseUrl}/getToken`, {
         clientId: this.clientId,
         clientSecret: this.clientSecret,
@@ -172,13 +172,19 @@ export class AkoolService {
   /**
    * Уведомление пользователя о повторной попытке
    */
-  private async notifyUserRetry(userId: number, attempt: number, maxRetries: number, delay: number): Promise<void> {
+  private async notifyUserRetry(
+    userId: number,
+    attempt: number,
+    maxRetries: number,
+    delay: number
+  ): Promise<void> {
     try {
-      const message = `🔄 Повторная попытка ${attempt}/${maxRetries}\n\n` +
+      const message =
+        `🔄 Повторная попытка ${attempt}/${maxRetries}\n\n` +
         `⚠️ Временная ошибка сервера AKOOL\n` +
         `⏳ Повтор через ${Math.ceil(delay / 1000)} сек...\n\n` +
         `💡 Это нормально, сервис иногда перегружен`;
-      
+
       await this.bot.telegram.sendMessage(userId, message);
       this.logger.log(`📱 [${userId}] Уведомление о повторной попытке отправлено`);
     } catch (error) {
@@ -195,57 +201,63 @@ export class AkoolService {
     baseDelay: number = 1000,
     maxDelay: number = 5000,
     requestId: string,
-    userId?: number,
+    userId?: number
   ): Promise<T> {
     let lastError: Error;
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         return await operation();
       } catch (error) {
         lastError = error as Error;
-        
+
         // Проверяем, является ли это ошибкой 1015 (временная ошибка)
-        const isRetryableError = error.message?.includes('create video error, please try again later') ||
-                                error.message?.includes('1015') ||
-                                error.message?.includes('AKOOL API error');
-        
+        const isRetryableError =
+          error.message?.includes('create video error, please try again later') ||
+          error.message?.includes('1015') ||
+          error.message?.includes('AKOOL API error');
+
         if (!isRetryableError || attempt === maxRetries) {
           throw error;
         }
-        
+
         // Вычисляем задержку с экспоненциальным backoff
         const delay = Math.min(baseDelay * Math.pow(2, attempt - 1), maxDelay);
-        
-        this.logger.warn(`[${requestId}] ⚠️ Попытка ${attempt}/${maxRetries} неудачна. Повтор через ${delay}мс...`);
+
+        this.logger.warn(
+          `[${requestId}] ⚠️ Попытка ${attempt}/${maxRetries} неудачна. Повтор через ${delay}мс...`
+        );
         this.logger.warn(`[${requestId}] Ошибка: ${error.message}`);
-        
+
         // Уведомляем пользователя о повторной попытке
         if (userId) {
           await this.notifyUserRetry(userId, attempt, maxRetries, delay);
         }
-        
+
         // Ждем перед следующей попыткой
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
-    
+
     throw lastError!;
   }
 
   /**
    * Создание цифрового двойника с Talking Photo с retry логикой
    */
-  async createDigitalTwin(request: AkoolVideoRequest, userId?: number): Promise<AkoolVideoResponse> {
+  async createDigitalTwin(
+    request: AkoolVideoRequest,
+    userId?: number
+  ): Promise<AkoolVideoResponse> {
     const requestId = `akool_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     try {
       this.logger.log(`[${requestId}] 🎭 Создаю цифровой двойник с AKOOL...`);
-      
+
       return await this.retryWithBackoff(
         async () => {
           const token = await this.getAccessToken();
-          
+
           const talkingPhotoRequest: AkoolTalkingPhotoRequest = {
             talking_photo_url: request.photoUrl,
             audio_url: request.audioUrl,
@@ -253,13 +265,13 @@ export class AkoolService {
           };
 
           this.logger.log(`[${requestId}] 📤 Отправляю запрос на создание Talking Photo...`);
-          
+
           const response = await axios.post<AkoolTalkingPhotoResponse>(
             `${this.baseUrl}/content/video/createbytalkingphoto`,
             talkingPhotoRequest,
             {
               headers: {
-                'Authorization': `Bearer ${token}`,
+                Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json',
               },
             }
@@ -270,7 +282,7 @@ export class AkoolService {
           if (response.data.code === 1000) {
             const taskId = response.data.data?.task_id || 'unknown';
             this.logger.log(`[${requestId}] ✅ Задача создана успешно. Task ID: ${taskId}`);
-            
+
             // Сохраняем запрос в БД
             if (userId) {
               await this.saveVideoRequest(
@@ -284,7 +296,7 @@ export class AkoolService {
                 request.quality
               );
             }
-            
+
             return {
               id: taskId,
               status: 'processing',
@@ -298,42 +310,50 @@ export class AkoolService {
         1000, // baseDelay (1 секунда)
         5000, // maxDelay (5 секунд)
         requestId,
-        userId,
+        userId
       );
     } catch (error) {
-      this.logger.error(`[${requestId}] ❌ Ошибка создания цифрового двойника после всех попыток:`, {
-        requestId,
-        userId,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        timestamp: new Date().toISOString()
-      });
-      
+      this.logger.error(
+        `[${requestId}] ❌ Ошибка создания цифрового двойника после всех попыток:`,
+        {
+          requestId,
+          userId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          timestamp: new Date().toISOString(),
+        }
+      );
+
       // Уведомляем пользователя о финальной ошибке
       if (userId) {
         try {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          let userMessage = "❌ Не удалось создать цифровой двойник после всех попыток.\n\n";
-          
+          let userMessage = '❌ Не удалось создать цифровой двойник после всех попыток.\n\n';
+
           if (errorMessage.includes('create video error, please try again later')) {
-            userMessage += "⚠️ Сервер AKOOL временно недоступен.\n";
-            userMessage += "💡 Попробуйте создать видео через несколько минут.\n\n";
-            userMessage += "🔄 Или попробуйте еще раз сейчас.";
+            userMessage += '⚠️ Сервер AKOOL временно недоступен.\n';
+            userMessage += '💡 Попробуйте создать видео через несколько минут.\n\n';
+            userMessage += '🔄 Или попробуйте еще раз сейчас.';
           } else if (errorMessage.includes('1015')) {
-            userMessage += "⚠️ Ошибка обработки видео на сервере AKOOL.\n";
-            userMessage += "💡 Возможно, проблема с входными данными.\n\n";
-            userMessage += "🔄 Попробуйте загрузить другие файлы.";
+            userMessage += '⚠️ Ошибка обработки видео на сервере AKOOL.\n';
+            userMessage += '💡 Возможно, проблема с входными данными.\n\n';
+            userMessage += '🔄 Попробуйте загрузить другие файлы.';
           } else {
-            userMessage += "💡 Попробуйте еще раз или обратитесь в поддержку.";
+            userMessage += '💡 Попробуйте еще раз или обратитесь в поддержку.';
           }
-          
+
           await this.bot.telegram.sendMessage(userId, userMessage);
-          this.logger.log(`📱 [${requestId}] Уведомление об ошибке отправлено пользователю ${userId}`);
+          this.logger.log(
+            `📱 [${requestId}] Уведомление об ошибке отправлено пользователю ${userId}`
+          );
         } catch (notifyError) {
-          this.logger.warn(`⚠️ [${requestId}] Не удалось уведомить пользователя об ошибке:`, notifyError);
+          this.logger.warn(
+            `⚠️ [${requestId}] Не удалось уведомить пользователя об ошибке:`,
+            notifyError
+          );
         }
       }
-      
+
       throw error;
     }
   }
@@ -344,34 +364,31 @@ export class AkoolService {
   async getVideoStatus(videoId: string): Promise<AkoolVideoResponse> {
     try {
       this.logger.debug(`🔍 Проверяю статус видео AKOOL: ${videoId}`);
-      
+
       const token = await this.getAccessToken();
-      
-      const response = await axios.get(
-        `${this.baseUrl}/content/video/status/${videoId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
-      );
+
+      const response = await axios.get(`${this.baseUrl}/content/video/status/${videoId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       this.logger.debug(`📊 Статус видео:`, response.data);
 
       if (response.data.code === 1000) {
         const data = response.data.data;
         let status = 'processing';
-        
+
         // Статусы AKOOL: 1 = processing, 2 = completed, 3 = error
         if (data.video_status === 2) {
           status = 'completed';
         } else if (data.video_status === 3) {
           status = 'error';
         }
-        
+
         return {
           id: videoId,
-          status: status,
+          status,
           result_url: data.video,
         };
       } else {
@@ -384,7 +401,7 @@ export class AkoolService {
         status: error.response?.status,
         statusText: error.response?.statusText,
         data: error.response?.data,
-        stack: error.stack
+        stack: error.stack,
       });
       throw error;
     }
@@ -395,14 +412,14 @@ export class AkoolService {
    */
   async uploadImage(imageBuffer: Buffer): Promise<string> {
     const uploadId = `akool_image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    
+
     try {
       this.logger.log(`[${uploadId}] 🖼️ Загружаю изображение в AKOOL...`);
-      
+
       // AKOOL может требовать загрузку через их API или принимать прямые URL
       // Пока возвращаем URL для тестирования
       const imageUrl = `https://example.com/uploaded_image_${uploadId}.jpg`;
-      
+
       this.logger.log(`[${uploadId}] ✅ Изображение загружено: ${imageUrl}`);
       return imageUrl;
     } catch (error) {
@@ -416,14 +433,14 @@ export class AkoolService {
    */
   async uploadAudio(audioBuffer: Buffer): Promise<string> {
     const uploadId = `akool_audio_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    
+
     try {
       this.logger.log(`[${uploadId}] 🎵 Загружаю аудио в AKOOL...`);
-      
+
       // AKOOL может требовать загрузку через их API или принимать прямые URL
       // Пока возвращаем URL для тестирования
       const audioUrl = `https://example.com/uploaded_audio_${uploadId}.mp3`;
-      
+
       this.logger.log(`[${uploadId}] ✅ Аудио загружено: ${audioUrl}`);
       return audioUrl;
     } catch (error) {
@@ -435,32 +452,29 @@ export class AkoolService {
   /**
    * Клонирование голоса из аудиозаписи
    */
-  async cloneVoice(
-    voiceName: string,
-    audioUrl: string,
-    webhookUrl?: string,
-  ): Promise<string> {
+  async cloneVoice(voiceName: string, audioUrl: string, webhookUrl?: string): Promise<string> {
     const requestId = `akool_clone_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    
+
     try {
       this.logger.log(`[${requestId}] 🎤 Клонирую голос с AKOOL...`);
-      
+
       const token = await this.getAccessToken();
-      
+
       const cloneRequest: AkoolVoiceCloneRequest = {
         voice_name: voiceName,
         audio_url: audioUrl,
-        webhookUrl: webhookUrl || `${this.configService.get('WEBHOOK_URL')}/akool/voice-clone-webhook`,
+        webhookUrl:
+          webhookUrl || `${this.configService.get('WEBHOOK_URL')}/akool/voice-clone-webhook`,
       };
 
       this.logger.log(`[${requestId}] 📤 Отправляю запрос на клонирование голоса...`);
-      
+
       const response = await axios.post<AkoolVoiceCloneResponse>(
         `${this.baseUrl}/audio/voice-clone`,
         cloneRequest,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         }
@@ -469,7 +483,9 @@ export class AkoolService {
       this.logger.log(`[${requestId}] 📥 Ответ AKOOL Voice Clone:`, response.data);
 
       if (response.data.code === 1000 && response.data.data) {
-        this.logger.log(`[${requestId}] ✅ Голос клонирован успешно. Voice ID: ${response.data.data.voice_id}`);
+        this.logger.log(
+          `[${requestId}] ✅ Голос клонирован успешно. Voice ID: ${response.data.data.voice_id}`
+        );
         return response.data.data.voice_id;
       } else {
         throw new Error(`AKOOL Voice Clone API error: ${response.data.msg}`);
@@ -487,30 +503,30 @@ export class AkoolService {
     inputText: string,
     voiceId: string = 'en-US-1',
     rate: string = '100%',
-    webhookUrl?: string,
+    webhookUrl?: string
   ): Promise<string> {
     const requestId = `akool_tts_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    
+
     try {
       this.logger.log(`[${requestId}] 🎵 Создаю аудио с AKOOL TTS...`);
-      
+
       const token = await this.getAccessToken();
-      
+
       const ttsRequest: AkoolTTSRequest = {
         input_text: inputText,
         voice_id: voiceId,
-        rate: rate,
+        rate,
         webhookUrl: webhookUrl || `${this.configService.get('WEBHOOK_URL')}/akool/tts-webhook`,
       };
 
       this.logger.log(`[${requestId}] 📤 Отправляю запрос на создание аудио...`);
-      
+
       const response = await axios.post<AkoolTTSResponse>(
         `${this.baseUrl}/audio/create`,
         ttsRequest,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         }
@@ -533,24 +549,21 @@ export class AkoolService {
   /**
    * Создание аудио с помощью ElevenLabs TTS
    */
-  async createAudioWithElevenLabs(
-    text: string,
-    voiceId?: string,
-  ): Promise<string> {
+  async createAudioWithElevenLabs(text: string, voiceId?: string): Promise<string> {
     const requestId = `akool_elevenlabs_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    
+
     try {
       this.logger.log(`[${requestId}] 🎵 Создаю аудио с ElevenLabs TTS...`);
-      
+
       // Используем ElevenLabs для создания аудио
       const audioBuffer = await this.elevenlabsService.textToSpeech({
         text,
         voice_id: voiceId || 'default',
       });
-      
+
       // Загружаем аудио в AKOOL (пока возвращаем URL для тестирования)
       const audioUrl = await this.uploadAudio(audioBuffer);
-      
+
       this.logger.log(`[${requestId}] ✅ Аудио создано с ElevenLabs: ${audioUrl}`);
       return audioUrl;
     } catch (error) {
@@ -568,84 +581,92 @@ export class AkoolService {
     voiceAudioUrl: string,
     voiceName: string,
     webhookUrl?: string,
-    userId?: number,
+    userId?: number
   ): Promise<AkoolVideoResponse> {
     const requestId = `akool_voice_clone_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    
+
     try {
       this.logger.log(`[${requestId}] 🎭 Создаю цифровой двойник с клонированием голоса...`);
-      
+
       // Получаем токен для загрузки файлов
       const token = await this.getAccessToken();
-      
+
       // Используем оригинальные Telegram URL для AKOOL
       this.logger.log(`[${requestId}] 📸 Использую оригинальный URL фото для AKOOL...`);
       const uploadedPhotoUrl = photoUrl; // Используем оригинальный URL
-      
+
       // Загружаем аудио для конвертации и клонирования голоса
       this.logger.log(`[${requestId}] 🎵 Загружаю аудио для обработки...`);
       const audioResponse = await axios.get(voiceAudioUrl, { responseType: 'arraybuffer' });
       let audioBuffer = Buffer.from(audioResponse.data);
-      
+
       this.logger.log(`[${requestId}] ✅ Аудиофайл загружен, размер: ${audioBuffer.length} байт`);
-      
+
       // Конвертируем OGA в MP3 если нужно
       if (AudioConverter.needsConversion(voiceAudioUrl)) {
         this.logger.log(`[${requestId}] 🔄 Конвертирую OGA в MP3 для AKOOL...`);
         audioBuffer = await AudioConverter.convertOgaToMp3(audioBuffer, voiceAudioUrl);
-        this.logger.log(`[${requestId}] ✅ Конвертация завершена, новый размер: ${audioBuffer.length} байт`);
+        this.logger.log(
+          `[${requestId}] ✅ Конвертация завершена, новый размер: ${audioBuffer.length} байт`
+        );
       }
-      
+
       // Валидируем аудио
       if (!AkoolFileUploader.validateFileSize(audioBuffer, 10)) {
         throw new Error('Audio file too large (max 10MB)');
       }
-      
+
       // Используем оригинальный URL аудио для AKOOL
       this.logger.log(`[${requestId}] 🎵 Использую оригинальный URL аудио для AKOOL...`);
       const uploadedAudioUrl = voiceAudioUrl; // Используем оригинальный URL
-      
+
       // Клонируем голос через ElevenLabs (используем оригинальный буфер)
       this.logger.log(`[${requestId}] 🎤 Клонирую голос пользователя через ElevenLabs...`);
-      
+
       let voiceId: string;
-      
+
       try {
         const cloneResponse = await this.elevenlabsService.cloneVoice({
           name: voiceName,
-          audioBuffer: audioBuffer,
+          audioBuffer,
           description: `Voice clone for user ${voiceName}`,
         });
         voiceId = cloneResponse.voice_id;
         this.logger.log(`[${requestId}] ✅ Голос успешно клонирован: ${voiceId}`);
       } catch (cloneError) {
-        this.logger.warn(`[${requestId}] ⚠️ Ошибка клонирования голоса, используем дефолтный голос:`, cloneError);
+        this.logger.warn(
+          `[${requestId}] ⚠️ Ошибка клонирования голоса, используем дефолтный голос:`,
+          cloneError
+        );
         // Используем дефолтный голос ElevenLabs
         voiceId = 'pNInz6obpgDQGcFmaJgB'; // Adam - популярный голос ElevenLabs
         this.logger.log(`[${requestId}] 🔄 Используем дефолтный голос: ${voiceId}`);
       }
-      
+
       // Создаем аудио с голосом через ElevenLabs
       this.logger.log(`[${requestId}] 🎵 Создаю аудио с голосом...`);
       const audioUrl = await this.createAudioWithElevenLabs(text, voiceId);
-      
+
       // Создаем говорящее фото с загруженными файлами
       this.logger.log(`[${requestId}] 🖼️ Создаю говорящее фото...`);
       const videoRequest: AkoolVideoRequest = {
         photoUrl: uploadedPhotoUrl,
         audioUrl: uploadedAudioUrl,
         script: text,
-        platform: "youtube-shorts",
+        platform: 'youtube-shorts',
         duration: 30,
-        quality: "720p",
+        quality: '720p',
       };
-      
+
       const result = await this.createDigitalTwin(videoRequest, userId);
-      
+
       this.logger.log(`[${requestId}] ✅ Цифровой двойник с клонированным голосом создан успешно!`);
       return result;
     } catch (error) {
-      this.logger.error(`[${requestId}] ❌ Ошибка создания цифрового двойника с клонированием голоса:`, error);
+      this.logger.error(
+        `[${requestId}] ❌ Ошибка создания цифрового двойника с клонированием голоса:`,
+        error
+      );
       throw error;
     }
   }
@@ -657,30 +678,30 @@ export class AkoolService {
     photoUrl: string,
     text: string,
     voiceId: string = 'en-US-1',
-    webhookUrl?: string,
+    webhookUrl?: string
   ): Promise<AkoolVideoResponse> {
     const requestId = `akool_full_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    
+
     try {
       this.logger.log(`[${requestId}] 🎭 Создаю цифровой двойник с TTS...`);
-      
+
       // Сначала создаем аудио
       this.logger.log(`[${requestId}] 🎵 Создаю аудио с TTS...`);
       const audioUrl = await this.createAudio(text, voiceId, '100%', webhookUrl);
-      
+
       // Теперь создаем говорящее фото
       this.logger.log(`[${requestId}] 🖼️ Создаю говорящее фото...`);
       const videoRequest: AkoolVideoRequest = {
-        photoUrl: photoUrl,
-        audioUrl: audioUrl,
+        photoUrl,
+        audioUrl,
         script: text,
-        platform: "youtube-shorts",
+        platform: 'youtube-shorts',
         duration: 30,
-        quality: "720p",
+        quality: '720p',
       };
-      
+
       const result = await this.createDigitalTwin(videoRequest);
-      
+
       this.logger.log(`[${requestId}] ✅ Цифровой двойник создан успешно!`);
       return result;
     } catch (error) {
@@ -695,17 +716,14 @@ export class AkoolService {
   async getAvailableVoices(): Promise<any[]> {
     try {
       this.logger.log('🔍 Получаю список доступных голосов...');
-      
+
       const token = await this.getAccessToken();
-      
-      const response = await axios.get(
-        `${this.baseUrl}/audio/voices`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
-      );
+
+      const response = await axios.get(`${this.baseUrl}/audio/voices`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       this.logger.log('📊 Список голосов получен:', response.data);
 

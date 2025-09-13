@@ -10,18 +10,22 @@ export class MockHeyGenService {
   private readonly logger = new Logger(MockHeyGenService.name);
 
   async generateVideo(request: any): Promise<any> {
-    this.logger.warn('MockHeyGenService.generateVideo called - heygen module is temporarily disabled');
+    this.logger.warn(
+      'MockHeyGenService.generateVideo called - heygen module is temporarily disabled'
+    );
     return {
       success: false,
-      error: 'HeyGen service is temporarily unavailable due to compilation issues'
+      error: 'HeyGen service is temporarily unavailable due to compilation issues',
     };
   }
 
   async getVideoStatus(id: string): Promise<any> {
-    this.logger.warn('MockHeyGenService.getVideoStatus called - heygen module is temporarily disabled');
+    this.logger.warn(
+      'MockHeyGenService.getVideoStatus called - heygen module is temporarily disabled'
+    );
     return {
       success: false,
-      error: 'HeyGen service is temporarily unavailable due to compilation issues'
+      error: 'HeyGen service is temporarily unavailable due to compilation issues',
     };
   }
 }
@@ -43,7 +47,9 @@ export class MockProcessManagerService {
     title: string,
     quality: string
   ): Promise<any> {
-    this.logger.warn('MockProcessManagerService.createDigitalTwinProcess called - heygen module is temporarily disabled');
+    this.logger.warn(
+      'MockProcessManagerService.createDigitalTwinProcess called - heygen module is temporarily disabled'
+    );
     return {
       id: `mock_process_${Date.now()}`,
       userId,
@@ -52,20 +58,26 @@ export class MockProcessManagerService {
       script,
       title,
       quality,
-      status: 'mock_created'
+      status: 'mock_created',
     };
   }
 
   async updateProcessStatus(processId: string, status: string, data?: any): Promise<void> {
-    this.logger.warn('MockProcessManagerService.updateProcessStatus called - heygen module is temporarily disabled');
+    this.logger.warn(
+      'MockProcessManagerService.updateProcessStatus called - heygen module is temporarily disabled'
+    );
   }
 
   async executeNextStep(processId: string): Promise<void> {
-    this.logger.warn('MockProcessManagerService.executeNextStep called - heygen module is temporarily disabled');
+    this.logger.warn(
+      'MockProcessManagerService.executeNextStep called - heygen module is temporarily disabled'
+    );
   }
 
   async getProcess(processId: string): Promise<any> {
-    this.logger.warn('MockProcessManagerService.getProcess called - heygen module is temporarily disabled');
+    this.logger.warn(
+      'MockProcessManagerService.getProcess called - heygen module is temporarily disabled'
+    );
     return null;
   }
 }

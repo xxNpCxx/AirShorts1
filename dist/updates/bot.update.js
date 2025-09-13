@@ -50,156 +50,156 @@ let BotUpdate = class BotUpdate {
         this._kb = _kb;
         this._logger = _logger;
         this._processManager = _processManager;
-        this._logger.debug("BotUpdate инициализирован", "BotUpdate");
-        this._logger.log("🚀 BotUpdate создан и готов к работе", "BotUpdate");
+        this._logger.debug('BotUpdate инициализирован', 'BotUpdate');
+        this._logger.log('🚀 BotUpdate создан и готов к работе', 'BotUpdate');
     }
     async onStart(ctx) {
-        this._logger.log(`🚀 [@Start] Команда /start получена от пользователя ${ctx.from?.id}`, "BotUpdate");
+        this._logger.log(`🚀 [@Start] Команда /start получена от пользователя ${ctx.from?.id}`, 'BotUpdate');
         // Отправляем простое сообщение для тестирования
         try {
-            await ctx.reply("🎉 Бот работает! Команда /start обработана!");
-            this._logger.log("✅ Тестовое сообщение отправлено", "BotUpdate");
+            await ctx.reply('🎉 Бот работает! Команда /start обработана!');
+            this._logger.log('✅ Тестовое сообщение отправлено', 'BotUpdate');
         }
         catch (error) {
-            this._logger.error(`❌ Ошибка отправки тестового сообщения: ${error}`, undefined, "BotUpdate");
+            this._logger.error(`❌ Ошибка отправки тестового сообщения: ${error}`, undefined, 'BotUpdate');
         }
         try {
             await this._users.upsertFromContext(ctx);
-            this._logger.debug("Пользователь обновлен в базе данных", "BotUpdate");
+            this._logger.debug('Пользователь обновлен в базе данных', 'BotUpdate');
             await this._menu.sendMainMenu(ctx);
-            this._logger.debug("Главное меню отправлено", "BotUpdate");
+            this._logger.debug('Главное меню отправлено', 'BotUpdate');
         }
         catch (error) {
-            this._logger.error(`Ошибка при обработке команды /start: ${error}`, undefined, "BotUpdate");
-            await ctx.reply("❌ Произошла ошибка при запуске бота. Попробуйте еще раз.");
+            this._logger.error(`Ошибка при обработке команды /start: ${error}`, undefined, 'BotUpdate');
+            await ctx.reply('❌ Произошла ошибка при запуске бота. Попробуйте еще раз.');
         }
     }
     // Обработчик для всех текстовых сообщений (кроме команд)
     async onText(ctx) {
-        const messageText = ctx.message && "text" in ctx.message ? ctx.message.text : "";
+        const messageText = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
         // Проверяем, является ли сообщение командой /start
-        if (messageText === "/start") {
-            this._logger.log(`🚀 [@On text] Команда /start получена от пользователя ${ctx.from?.id}`, "BotUpdate");
-            this._logger.log(`📝 [@On text] Текст сообщения: "${messageText}"`, "BotUpdate");
+        if (messageText === '/start') {
+            this._logger.log(`🚀 [@On text] Команда /start получена от пользователя ${ctx.from?.id}`, 'BotUpdate');
+            this._logger.log(`📝 [@On text] Текст сообщения: "${messageText}"`, 'BotUpdate');
             // Отправляем простое сообщение для тестирования
             try {
-                await ctx.reply("🎉 Бот работает! Команда /start обработана через @On text!");
-                this._logger.log("✅ Тестовое сообщение отправлено через @On text", "BotUpdate");
+                await ctx.reply('🎉 Бот работает! Команда /start обработана через @On text!');
+                this._logger.log('✅ Тестовое сообщение отправлено через @On text', 'BotUpdate');
             }
             catch (error) {
-                this._logger.error(`❌ Ошибка отправки тестового сообщения через @On text: ${error}`, undefined, "BotUpdate");
+                this._logger.error(`❌ Ошибка отправки тестового сообщения через @On text: ${error}`, undefined, 'BotUpdate');
             }
             try {
                 await this._users.upsertFromContext(ctx);
-                this._logger.debug("Пользователь обновлен в базе данных", "BotUpdate");
+                this._logger.debug('Пользователь обновлен в базе данных', 'BotUpdate');
                 await this._menu.sendMainMenu(ctx);
-                this._logger.debug("Главное меню отправлено", "BotUpdate");
+                this._logger.debug('Главное меню отправлено', 'BotUpdate');
             }
             catch (error) {
-                this._logger.error(`Ошибка при обработке команды /start через @On text: ${error}`, undefined, "BotUpdate");
-                await ctx.reply("❌ Произошла ошибка при запуске бота. Попробуйте еще раз.");
+                this._logger.error(`Ошибка при обработке команды /start через @On text: ${error}`, undefined, 'BotUpdate');
+                await ctx.reply('❌ Произошла ошибка при запуске бота. Попробуйте еще раз.');
             }
             return;
         }
         // Пропускаем команды - они обрабатываются отдельными декораторами
-        if (messageText?.startsWith("/")) {
-            this._logger.debug(`[@On text] Пропускаем команду: "${messageText}"`, "BotUpdate");
+        if (messageText?.startsWith('/')) {
+            this._logger.debug(`[@On text] Пропускаем команду: "${messageText}"`, 'BotUpdate');
             return;
         }
         // Обрабатываем сообщения главного меню напрямую
-        const { MainMenuHandler } = await Promise.resolve().then(() => __importStar(require("../utils/main-menu-handler")));
+        const { MainMenuHandler } = await Promise.resolve().then(() => __importStar(require('../utils/main-menu-handler')));
         if (MainMenuHandler.isMainMenuMessage(messageText)) {
-            this._logger.debug(`[@On text] Обнаружено сообщение главного меню: "${messageText}" - выход из сцены и показ главного меню`, "BotUpdate");
+            this._logger.debug(`[@On text] Обнаружено сообщение главного меню: "${messageText}" - выход из сцены и показ главного меню`, 'BotUpdate');
             await this._users.upsertFromContext(ctx);
-            await MainMenuHandler.handleMainMenuRequest(ctx, "BotUpdate-OnText");
+            await MainMenuHandler.handleMainMenuRequest(ctx, 'BotUpdate-OnText');
             return;
         }
         // Проверяем, находится ли пользователь в сцене
         const sceneContext = ctx;
         if (sceneContext.scene?.current) {
-            this._logger.debug(`[@On text] Пользователь ${ctx.from?.id} находится в сцене "${sceneContext.scene.current.id}", пропускаем обработку в BotUpdate`, "BotUpdate");
+            this._logger.debug(`[@On text] Пользователь ${ctx.from?.id} находится в сцене "${sceneContext.scene.current.id}", пропускаем обработку в BotUpdate`, 'BotUpdate');
             // Не обрабатываем сообщение здесь, позволяем сцене его обработать
             return;
         }
-        this._logger.debug(`[@On text] Текстовое сообщение получено: "${messageText}" от пользователя ${ctx.from?.id} (вне сцены)`, "BotUpdate");
+        this._logger.debug(`[@On text] Текстовое сообщение получено: "${messageText}" от пользователя ${ctx.from?.id} (вне сцены)`, 'BotUpdate');
         // Для других сообщений просто логируем
-        this._logger.debug(`[@On text] Неизвестное сообщение: "${messageText}"`, "BotUpdate");
+        this._logger.debug(`[@On text] Неизвестное сообщение: "${messageText}"`, 'BotUpdate');
     }
     // Обработчик для фото
     async onPhoto(ctx) {
-        this._logger.log(`📸 [@On photo] Фото получено от пользователя ${ctx.from?.id}`, "BotUpdate");
+        this._logger.log(`📸 [@On photo] Фото получено от пользователя ${ctx.from?.id}`, 'BotUpdate');
         // Проверяем, находится ли пользователь в сцене
         const sceneContext = ctx;
         if (sceneContext.scene?.current) {
-            this._logger.debug(`[@On photo] Пользователь ${ctx.from?.id} находится в сцене "${sceneContext.scene.current.id}", пропускаем обработку в BotUpdate`, "BotUpdate");
+            this._logger.debug(`[@On photo] Пользователь ${ctx.from?.id} находится в сцене "${sceneContext.scene.current.id}", пропускаем обработку в BotUpdate`, 'BotUpdate');
             // Не обрабатываем сообщение здесь, позволяем сцене его обработать
             return;
         }
         // Если пользователь не в сцене, отправляем сообщение о том, что нужно начать создание видео
-        await ctx.reply("📸 Фото получено!\n\n" +
+        await ctx.reply('📸 Фото получено!\n\n' +
             "🎬 Для создания видео с этим фото нажмите кнопку 'Создать видео' в главном меню.");
     }
     // Обработчик для голосовых сообщений
     async onVoice(ctx) {
-        this._logger.log(`🎤 [@On voice] Голосовое сообщение получено от пользователя ${ctx.from?.id}`, "BotUpdate");
+        this._logger.log(`🎤 [@On voice] Голосовое сообщение получено от пользователя ${ctx.from?.id}`, 'BotUpdate');
         // Проверяем, находится ли пользователь в сцене
         const sceneContext = ctx;
         if (sceneContext.scene?.current) {
-            this._logger.debug(`[@On voice] Пользователь ${ctx.from?.id} находится в сцене "${sceneContext.scene.current.id}", пропускаем обработку в BotUpdate`, "BotUpdate");
+            this._logger.debug(`[@On voice] Пользователь ${ctx.from?.id} находится в сцене "${sceneContext.scene.current.id}", пропускаем обработку в BotUpdate`, 'BotUpdate');
             // Не обрабатываем сообщение здесь, позволяем сцене его обработать
             return;
         }
         // Если пользователь не в сцене, отправляем сообщение о том, что нужно начать создание видео
-        await ctx.reply("🎤 Голосовое сообщение получено!\n\n" +
-            "📸 Для создания видео с вашим голосом сначала отправьте фото с человеком.\n\n" +
+        await ctx.reply('🎤 Голосовое сообщение получено!\n\n' +
+            '📸 Для создания видео с вашим голосом сначала отправьте фото с человеком.\n\n' +
             "🎬 Нажмите кнопку 'Создать видео' в главном меню.");
     }
     async onMainMenu(ctx) {
-        const messageText = ctx.message && "text" in ctx.message ? ctx.message.text : "";
-        this._logger.log(`🏠 [@Hears] Главное меню запрошено пользователем ${ctx.from?.id}, текст: "${messageText}"`, "BotUpdate");
+        const messageText = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
+        this._logger.log(`🏠 [@Hears] Главное меню запрошено пользователем ${ctx.from?.id}, текст: "${messageText}"`, 'BotUpdate');
         try {
             await this._users.upsertFromContext(ctx);
             // Используем централизованный обработчик главного меню
-            const { MainMenuHandler } = await Promise.resolve().then(() => __importStar(require("../utils/main-menu-handler")));
-            await MainMenuHandler.handleMainMenuRequest(ctx, "BotUpdate");
-            this._logger.debug("Главное меню отправлено через @Hears", "BotUpdate");
+            const { MainMenuHandler } = await Promise.resolve().then(() => __importStar(require('../utils/main-menu-handler')));
+            await MainMenuHandler.handleMainMenuRequest(ctx, 'BotUpdate');
+            this._logger.debug('Главное меню отправлено через @Hears', 'BotUpdate');
         }
         catch (error) {
-            this._logger.error(`❌ Ошибка при обработке главного меню: ${error}`, undefined, "BotUpdate");
-            await ctx.reply("❌ Произошла ошибка при загрузке главного меню");
+            this._logger.error(`❌ Ошибка при обработке главного меню: ${error}`, undefined, 'BotUpdate');
+            await ctx.reply('❌ Произошла ошибка при загрузке главного меню');
         }
     }
     async onMainMenuAction(ctx) {
-        this._logger.log(`🏠 [@Action] Главное меню запрошено через inline кнопку пользователем ${ctx.from?.id}`, "BotUpdate");
+        this._logger.log(`🏠 [@Action] Главное меню запрошено через inline кнопку пользователем ${ctx.from?.id}`, 'BotUpdate');
         try {
             await ctx.answerCbQuery();
             // Используем централизованный обработчик главного меню
-            const { MainMenuHandler } = await Promise.resolve().then(() => __importStar(require("../utils/main-menu-handler")));
-            await MainMenuHandler.handleMainMenuRequest(ctx, "BotUpdate-Action");
-            this._logger.debug("Главное меню отправлено через @Action", "BotUpdate");
+            const { MainMenuHandler } = await Promise.resolve().then(() => __importStar(require('../utils/main-menu-handler')));
+            await MainMenuHandler.handleMainMenuRequest(ctx, 'BotUpdate-Action');
+            this._logger.debug('Главное меню отправлено через @Action', 'BotUpdate');
         }
         catch (error) {
-            this._logger.error(`❌ Ошибка при обработке главного меню через @Action: ${error}`, undefined, "BotUpdate");
-            await ctx.answerCbQuery("❌ Произошла ошибка");
+            this._logger.error(`❌ Ошибка при обработке главного меню через @Action: ${error}`, undefined, 'BotUpdate');
+            await ctx.answerCbQuery('❌ Произошла ошибка');
         }
     }
     // Удаляем дублирующую команду operator - она уже есть в OperatorModule
     // @Command('operator') - УДАЛЕНО для предотвращения конфликтов
     async onMyId(ctx) {
         if (!ctx.from) {
-            await ctx.reply("❌ Не удалось получить данные пользователя");
+            await ctx.reply('❌ Не удалось получить данные пользователя');
             return;
         }
         const userId = ctx.from.id;
-        const username = ctx.from.username || "не задан";
-        const firstName = ctx.from.first_name || "";
-        const lastName = ctx.from.last_name || "";
+        const username = ctx.from.username || 'не задан';
+        const firstName = ctx.from.first_name || '';
+        const lastName = ctx.from.last_name || '';
         const message = `🆔 Ваши данные:\n\n` +
             `📱 Chat ID: \`${userId}\`\n` +
             `👤 Username: @${username}\n` +
             `📝 Имя: ${firstName} ${lastName}\n\n` +
             `💡 Для копирования Chat ID выделите число выше`;
-        await ctx.reply(message, { parse_mode: "Markdown" });
+        await ctx.reply(message, { parse_mode: 'Markdown' });
     }
     // Вариант без слеша, чтобы не дублировать с @Command('myid')
     async onMyIdHears(ctx) {
@@ -207,7 +207,7 @@ let BotUpdate = class BotUpdate {
     }
     async onStatus(ctx) {
         if (!ctx.from?.id) {
-            await ctx.reply("❌ Не удалось получить данные пользователя");
+            await ctx.reply('❌ Не удалось получить данные пользователя');
             return;
         }
         try {
@@ -215,12 +215,12 @@ let BotUpdate = class BotUpdate {
             const activeProcesses = this._processManager.getActiveProcesses();
             const userProcesses = activeProcesses.filter(process => process.userId === userId);
             if (userProcesses.length === 0) {
-                await ctx.reply("📊 **Статус процессов**\n\n" +
-                    "❌ У вас нет активных процессов создания видео.\n\n" +
-                    "💡 Для создания видео используйте команду /start или кнопку 'Создать видео'", { parse_mode: "Markdown" });
+                await ctx.reply('📊 **Статус процессов**\n\n' +
+                    '❌ У вас нет активных процессов создания видео.\n\n' +
+                    "💡 Для создания видео используйте команду /start или кнопку 'Создать видео'", { parse_mode: 'Markdown' });
                 return;
             }
-            let message = "📊 **Активные процессы создания видео:**\n\n";
+            let message = '📊 **Активные процессы создания видео:**\n\n';
             for (const process of userProcesses) {
                 const statusEmoji = this.getStatusEmoji(process.status);
                 const statusText = this.getStatusText(process.status);
@@ -231,45 +231,65 @@ let BotUpdate = class BotUpdate {
                 message += `🎥 **Качество:** ${process.quality}\n`;
                 message += `⏰ **Создан:** ${timeAgo}\n\n`;
             }
-            message += "💡 **Статусы:**\n";
-            message += "📸 Создание аватара из фото\n";
-            message += "🎵 Клонирование голоса\n";
-            message += "🎬 Генерация видео\n";
-            message += "✅ Готово\n\n";
-            message += "⏳ Обычно процесс занимает 2-5 минут";
-            await ctx.reply(message, { parse_mode: "Markdown" });
+            message += '💡 **Статусы:**\n';
+            message += '📸 Создание аватара из фото\n';
+            message += '🎵 Клонирование голоса\n';
+            message += '🎬 Генерация видео\n';
+            message += '✅ Готово\n\n';
+            message += '⏳ Обычно процесс занимает 2-5 минут';
+            await ctx.reply(message, { parse_mode: 'Markdown' });
         }
         catch (error) {
-            this._logger.error(`Ошибка получения статуса процессов: ${error}`, undefined, "BotUpdate");
-            await ctx.reply("❌ Ошибка получения статуса процессов. Попробуйте позже.");
+            this._logger.error(`Ошибка получения статуса процессов: ${error}`, undefined, 'BotUpdate');
+            await ctx.reply('❌ Ошибка получения статуса процессов. Попробуйте позже.');
         }
     }
     getStatusEmoji(status) {
         switch (status) {
-            case 'photo_avatar_creating': return '📸';
-            case 'photo_avatar_completed': return '✅';
-            case 'photo_avatar_failed': return '❌';
-            case 'voice_cloning': return '🎵';
-            case 'voice_clone_completed': return '✅';
-            case 'voice_clone_failed': return '❌';
-            case 'video_generating': return '🎬';
-            case 'video_completed': return '🎉';
-            case 'video_failed': return '❌';
-            default: return '⏳';
+            case 'photo_avatar_creating':
+                return '📸';
+            case 'photo_avatar_completed':
+                return '✅';
+            case 'photo_avatar_failed':
+                return '❌';
+            case 'voice_cloning':
+                return '🎵';
+            case 'voice_clone_completed':
+                return '✅';
+            case 'voice_clone_failed':
+                return '❌';
+            case 'video_generating':
+                return '🎬';
+            case 'video_completed':
+                return '🎉';
+            case 'video_failed':
+                return '❌';
+            default:
+                return '⏳';
         }
     }
     getStatusText(status) {
         switch (status) {
-            case 'photo_avatar_creating': return 'Создание аватара из фото';
-            case 'photo_avatar_completed': return 'Аватар создан';
-            case 'photo_avatar_failed': return 'Ошибка создания аватара';
-            case 'voice_cloning': return 'Клонирование голоса';
-            case 'voice_clone_completed': return 'Голос клонирован';
-            case 'voice_clone_failed': return 'Ошибка клонирования голоса';
-            case 'video_generating': return 'Генерация видео';
-            case 'video_completed': return 'Видео готово';
-            case 'video_failed': return 'Ошибка создания видео';
-            default: return 'Неизвестный статус';
+            case 'photo_avatar_creating':
+                return 'Создание аватара из фото';
+            case 'photo_avatar_completed':
+                return 'Аватар создан';
+            case 'photo_avatar_failed':
+                return 'Ошибка создания аватара';
+            case 'voice_cloning':
+                return 'Клонирование голоса';
+            case 'voice_clone_completed':
+                return 'Голос клонирован';
+            case 'voice_clone_failed':
+                return 'Ошибка клонирования голоса';
+            case 'video_generating':
+                return 'Генерация видео';
+            case 'video_completed':
+                return 'Видео готово';
+            case 'video_failed':
+                return 'Ошибка создания видео';
+            default:
+                return 'Неизвестный статус';
         }
     }
     getTimeAgo(date) {
@@ -288,18 +308,18 @@ let BotUpdate = class BotUpdate {
     }
     async onCreateVideo(ctx) {
         await ctx.answerCbQuery();
-        await ctx.scene.enter("video-generation");
+        await ctx.scene.enter('video-generation');
     }
     async onServiceSettings(ctx) {
         await ctx.answerCbQuery();
         if (!ctx.from?.id) {
-            await ctx.reply("❌ Ошибка получения данных пользователя");
+            await ctx.reply('❌ Ошибка получения данных пользователя');
             return;
         }
         const currentService = await this._users.getUserPreferredService(ctx.from.id);
         const serviceNames = {
-            'did': '🤖 ИИ-Аватар',
-            'heygen': '👤 Цифровой двойник'
+            did: '🤖 ИИ-Аватар',
+            heygen: '👤 Цифровой двойник',
         };
         const newText = `⚙️ **Настройки сервиса генерации видео**\n\n` +
             `Текущий сервис: ${serviceNames[currentService]}\n\n` +
@@ -318,23 +338,23 @@ let BotUpdate = class BotUpdate {
             : '';
         if (currentText !== newText) {
             await ctx.editMessageText(newText, {
-                parse_mode: "Markdown",
+                parse_mode: 'Markdown',
                 reply_markup: this._kb.serviceSettings().reply_markup,
             });
         }
         else {
-            await ctx.answerCbQuery("✅ Настройки уже актуальны!");
+            await ctx.answerCbQuery('✅ Настройки уже актуальны!');
         }
     }
     async onSetServiceDid(ctx) {
-        await ctx.answerCbQuery("🤖 ИИ-Аватар выбран!");
+        await ctx.answerCbQuery('🤖 ИИ-Аватар выбран!');
         if (!ctx.from?.id) {
-            await ctx.reply("❌ Ошибка получения данных пользователя");
+            await ctx.reply('❌ Ошибка получения данных пользователя');
             return;
         }
         const success = await this._users.setUserPreferredService(ctx.from.id, 'did');
         if (!success) {
-            await ctx.reply("❌ Не удалось сохранить настройки. Попробуйте позже.");
+            await ctx.reply('❌ Не удалось сохранить настройки. Попробуйте позже.');
             return;
         }
         await ctx.editMessageText(`✅ **Сервис успешно изменен!**\n\n` +
@@ -345,24 +365,24 @@ let BotUpdate = class BotUpdate {
             `• Поддержка клонирования голоса\n` +
             `• Оптимизировано для коротких роликов\n\n` +
             `🎬 Теперь можете создавать видео!`, {
-            parse_mode: "Markdown",
+            parse_mode: 'Markdown',
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: "🎬 Создать видео", callback_data: "create_video" }],
-                    [{ text: "🔙 Назад в меню", callback_data: "main_menu" }],
-                ]
-            }
+                    [{ text: '🎬 Создать видео', callback_data: 'create_video' }],
+                    [{ text: '🔙 Назад в меню', callback_data: 'main_menu' }],
+                ],
+            },
         });
     }
     async onSetServiceHeyGen(ctx) {
-        await ctx.answerCbQuery("👤 Цифровой двойник выбран!");
+        await ctx.answerCbQuery('👤 Цифровой двойник выбран!');
         if (!ctx.from?.id) {
-            await ctx.reply("❌ Ошибка получения данных пользователя");
+            await ctx.reply('❌ Ошибка получения данных пользователя');
             return;
         }
         const success = await this._users.setUserPreferredService(ctx.from.id, 'heygen');
         if (!success) {
-            await ctx.reply("❌ Не удалось сохранить настройки. Попробуйте позже.");
+            await ctx.reply('❌ Не удалось сохранить настройки. Попробуйте позже.');
             return;
         }
         await ctx.editMessageText(`✅ **Сервис успешно изменен!**\n\n` +
@@ -373,13 +393,13 @@ let BotUpdate = class BotUpdate {
             `• Расширенные возможности персонализации\n` +
             `• Продвинутая технология создания аватаров\n\n` +
             `🎬 Теперь можете создавать видео!`, {
-            parse_mode: "Markdown",
+            parse_mode: 'Markdown',
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: "🎬 Создать видео", callback_data: "create_video" }],
-                    [{ text: "🔙 Назад в меню", callback_data: "main_menu" }],
-                ]
-            }
+                    [{ text: '🎬 Создать видео', callback_data: 'create_video' }],
+                    [{ text: '🔙 Назад в меню', callback_data: 'main_menu' }],
+                ],
+            },
         });
     }
 };
@@ -392,42 +412,42 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onStart", null);
 __decorate([
-    (0, nestjs_telegraf_1.On)("text"),
+    (0, nestjs_telegraf_1.On)('text'),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onText", null);
 __decorate([
-    (0, nestjs_telegraf_1.On)("photo"),
+    (0, nestjs_telegraf_1.On)('photo'),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onPhoto", null);
 __decorate([
-    (0, nestjs_telegraf_1.On)("voice"),
+    (0, nestjs_telegraf_1.On)('voice'),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onVoice", null);
 __decorate([
-    (0, nestjs_telegraf_1.Hears)(["🏠 Главное меню", "Главное меню"]),
+    (0, nestjs_telegraf_1.Hears)(['🏠 Главное меню', 'Главное меню']),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onMainMenu", null);
 __decorate([
-    (0, nestjs_telegraf_1.Action)("main_menu"),
+    (0, nestjs_telegraf_1.Action)('main_menu'),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onMainMenuAction", null);
 __decorate([
-    (0, nestjs_telegraf_1.Command)("myid"),
+    (0, nestjs_telegraf_1.Command)('myid'),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [telegraf_1.Context]),
@@ -441,35 +461,35 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onMyIdHears", null);
 __decorate([
-    (0, nestjs_telegraf_1.Command)("status"),
+    (0, nestjs_telegraf_1.Command)('status'),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onStatus", null);
 __decorate([
-    (0, nestjs_telegraf_1.Action)("create_video"),
+    (0, nestjs_telegraf_1.Action)('create_video'),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onCreateVideo", null);
 __decorate([
-    (0, nestjs_telegraf_1.Action)("service_settings"),
+    (0, nestjs_telegraf_1.Action)('service_settings'),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onServiceSettings", null);
 __decorate([
-    (0, nestjs_telegraf_1.Action)("set_service_did"),
+    (0, nestjs_telegraf_1.Action)('set_service_did'),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [telegraf_1.Context]),
     __metadata("design:returntype", Promise)
 ], BotUpdate.prototype, "onSetServiceDid", null);
 __decorate([
-    (0, nestjs_telegraf_1.Action)("set_service_heygen"),
+    (0, nestjs_telegraf_1.Action)('set_service_heygen'),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [telegraf_1.Context]),

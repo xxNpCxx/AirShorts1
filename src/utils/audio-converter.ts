@@ -16,7 +16,7 @@ export class AudioConverter {
    */
   static async convertOgaToMp3(audioBuffer: Buffer, originalFileName?: string): Promise<Buffer> {
     const requestId = `audio_convert_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    
+
     try {
       this.logger.log(`[${requestId}] 🔄 Начинаю конвертацию OGA в MP3...`);
       this.logger.debug(`[${requestId}] Размер входного файла: ${audioBuffer.length} байт`);
@@ -36,12 +36,11 @@ export class AudioConverter {
 
         // Читаем результат
         const resultBuffer = await import('fs').then(fs => fs.promises.readFile(outputFile));
-        
+
         this.logger.log(`[${requestId}] ✅ Конвертация завершена успешно`);
         this.logger.debug(`[${requestId}] Размер выходного файла: ${resultBuffer.length} байт`);
 
         return resultBuffer;
-
       } finally {
         // Удаляем временные файлы
         try {
@@ -56,17 +55,22 @@ export class AudioConverter {
           this.logger.warn(`[${requestId}] ⚠️ Ошибка при очистке временных файлов:`, cleanupError);
         }
       }
-
     } catch (error) {
       this.logger.error(`[${requestId}] ❌ Ошибка конвертации аудио:`, error);
-      throw new Error(`Failed to convert audio: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to convert audio: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
   /**
    * Конвертирует аудио с помощью ffmpeg
    */
-  private static async convertWithFfmpeg(inputFile: string, outputFile: string, requestId: string): Promise<void> {
+  private static async convertWithFfmpeg(
+    inputFile: string,
+    outputFile: string,
+    requestId: string
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       ffmpeg(inputFile)
         .toFormat('mp3')
@@ -74,17 +78,17 @@ export class AudioConverter {
         .audioBitrate(128)
         .audioChannels(1)
         .audioFrequency(22050)
-        .on('start', (commandLine) => {
+        .on('start', commandLine => {
           this.logger.debug(`[${requestId}] FFmpeg команда: ${commandLine}`);
         })
-        .on('progress', (progress) => {
+        .on('progress', progress => {
           this.logger.debug(`[${requestId}] Прогресс: ${progress.percent}%`);
         })
         .on('end', () => {
           this.logger.debug(`[${requestId}] FFmpeg завершен успешно`);
           resolve();
         })
-        .on('error', (error) => {
+        .on('error', error => {
           this.logger.error(`[${requestId}] FFmpeg ошибка:`, error);
           reject(error);
         })
@@ -98,13 +102,11 @@ export class AudioConverter {
   static needsConversion(fileName: string, mimeType?: string): boolean {
     const ogaExtensions = ['.oga', '.ogg'];
     const ogaMimeTypes = ['audio/ogg', 'audio/oga'];
-    
-    const hasOgaExtension = ogaExtensions.some(ext => 
-      fileName.toLowerCase().endsWith(ext)
-    );
-    
+
+    const hasOgaExtension = ogaExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
+
     const hasOgaMimeType = mimeType && ogaMimeTypes.includes(mimeType);
-    
+
     return hasOgaExtension || hasOgaMimeType;
   }
 

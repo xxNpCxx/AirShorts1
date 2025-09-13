@@ -8,7 +8,7 @@ import { ElevenLabsService } from '../elevenlabs/elevenlabs.service';
 /**
  * Статусы процесса создания цифрового двойника
  */
-export type ProcessStatus = 
+export type ProcessStatus =
   | 'photo_avatar_creating'
   | 'photo_avatar_completed'
   | 'photo_avatar_failed'
@@ -33,8 +33,8 @@ export interface DigitalTwinProcess {
   audioFileId?: string; // ID файла в Telegram для валидации
   script: string;
   videoTitle: string;
-  platform: "youtube-shorts";
-  quality: "720p" | "1080p";
+  platform: 'youtube-shorts';
+  quality: '720p' | '1080p';
   photoAvatarId?: string;
   voiceCloneId?: string;
   videoId?: string;
@@ -58,9 +58,9 @@ export class ProcessManagerService {
 
   constructor(
     private readonly heygenService: HeyGenService,
-    private readonly elevenlabsService: ElevenLabsService,
+    private readonly elevenlabsService: ElevenLabsService
   ) {
-    this.bot = new Telegraf(process.env.BOT_TOKEN || "");
+    this.bot = new Telegraf(process.env.BOT_TOKEN || '');
   }
 
   /**
@@ -72,22 +72,22 @@ export class ProcessManagerService {
     audioUrl: string,
     script: string,
     videoTitle: string,
-    quality: "720p" | "1080p" = "720p",
+    quality: '720p' | '1080p' = '720p',
     audioFileId?: string
   ): Promise<DigitalTwinProcess> {
     const processId = `dt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     this.logger.log(`🎬 [DIGITAL_TWIN_CREATE] Starting new process creation`, {
       processId,
       userId,
-      photoUrl: photoUrl.substring(0, 100) + '...',
-      audioUrl: audioUrl.substring(0, 100) + '...',
+      photoUrl: `${photoUrl.substring(0, 100)}...`,
+      audioUrl: `${audioUrl.substring(0, 100)}...`,
       scriptLength: script.length,
       videoTitle,
       quality,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
+
     const process: DigitalTwinProcess = {
       id: processId,
       userId,
@@ -97,24 +97,24 @@ export class ProcessManagerService {
       audioFileId,
       script,
       videoTitle,
-      platform: "youtube-shorts",
+      platform: 'youtube-shorts',
       quality,
       createdAt: new Date(),
       updatedAt: new Date(),
       retryCount: 0,
-      maxRetries: 3
+      maxRetries: 3,
     };
-    
+
     this.processes.set(processId, process);
-    
+
     this.logger.log(`✅ [DIGITAL_TWIN_CREATE] Process created successfully`, {
       processId,
       userId,
       status: process.status,
       totalProcesses: this.processes.size,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
+
     return process;
   }
 
@@ -129,9 +129,14 @@ export class ProcessManagerService {
    * Обновляет статус процесса
    */
   async updateProcessStatus(
-    processId: string, 
-    status: ProcessStatus, 
-    data?: Partial<Pick<DigitalTwinProcess, 'photoAvatarId' | 'voiceCloneId' | 'videoId' | 'videoUrl' | 'error' | 'retryCount'>>
+    processId: string,
+    status: ProcessStatus,
+    data?: Partial<
+      Pick<
+        DigitalTwinProcess,
+        'photoAvatarId' | 'voiceCloneId' | 'videoId' | 'videoUrl' | 'error' | 'retryCount'
+      >
+    >
   ): Promise<void> {
     const process = this.processes.get(processId);
     if (!process) {
@@ -142,7 +147,7 @@ export class ProcessManagerService {
     const oldStatus = process.status;
     process.status = status;
     process.updatedAt = new Date();
-    
+
     if (data) {
       if (data.photoAvatarId) process.photoAvatarId = data.photoAvatarId;
       if (data.voiceCloneId) process.voiceCloneId = data.voiceCloneId;
@@ -153,7 +158,7 @@ export class ProcessManagerService {
     }
 
     this.processes.set(processId, process);
-    
+
     this.logger.log(`📊 [PROCESS_UPDATE] Status changed`, {
       processId,
       userId: process.userId,
@@ -164,14 +169,16 @@ export class ProcessManagerService {
       voiceCloneId: process.voiceCloneId,
       videoId: process.videoId,
       error: process.error,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 
   /**
    * Получает следующий шаг для выполнения
    */
-  getNextStep(process: DigitalTwinProcess): 'photo_avatar' | 'voice_clone' | 'video' | 'completed' | null {
+  getNextStep(
+    process: DigitalTwinProcess
+  ): 'photo_avatar' | 'voice_clone' | 'video' | 'completed' | null {
     switch (process.status) {
       case 'photo_avatar_creating':
         return 'photo_avatar';
@@ -207,7 +214,7 @@ export class ProcessManagerService {
       userId: process.userId,
       currentStatus: process.status,
       nextStep,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     try {
@@ -231,7 +238,7 @@ export class ProcessManagerService {
         userId: process.userId,
         step: nextStep,
         error: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       throw error;
     }
@@ -245,32 +252,34 @@ export class ProcessManagerService {
       this.logger.log(`📸 [PHOTO_AVATAR_START] Starting Photo Avatar creation`, {
         processId: process.id,
         userId: process.userId,
-        photoUrl: process.photoUrl.substring(0, 100) + '...',
+        photoUrl: `${process.photoUrl.substring(0, 100)}...`,
         callbackId: process.id,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
+
       // Вызываем HeyGen Service для создания Photo Avatar
       const avatarId = await this.heygenService.createPhotoAvatar(process.photoUrl, process.id);
-      
+
       this.logger.log(`📸 [PHOTO_AVATAR_START] HeyGen API call successful`, {
         processId: process.id,
         userId: process.userId,
         avatarId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
+
       // Обновляем статус на completed, так как аватар уже готов (это asset)
-      await this.updateProcessStatus(process.id, 'photo_avatar_completed', { photoAvatarId: avatarId });
-      
+      await this.updateProcessStatus(process.id, 'photo_avatar_completed', {
+        photoAvatarId: avatarId,
+      });
+
       this.logger.log(`✅ [PHOTO_AVATAR_START] Photo Avatar ready, proceeding to next step`, {
         processId: process.id,
         userId: process.userId,
         avatarId,
         status: 'photo_avatar_completed',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
+
       // Запускаем следующий шаг (Voice Cloning)
       await this.executeNextStep(process.id);
     } catch (error) {
@@ -279,15 +288,15 @@ export class ProcessManagerService {
         userId: process.userId,
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
-        photoUrl: process.photoUrl.substring(0, 100) + '...',
-        timestamp: new Date().toISOString()
+        photoUrl: `${process.photoUrl.substring(0, 100)}...`,
+        timestamp: new Date().toISOString(),
       });
-      
-      await this.updateProcessStatus(process.id, 'photo_avatar_failed', { 
-        error: error instanceof Error ? error.message : String(error) 
+
+      await this.updateProcessStatus(process.id, 'photo_avatar_failed', {
+        error: error instanceof Error ? error.message : String(error),
       });
       await this.notifyUserError(process, 'Ошибка создания аватара из фото');
-      
+
       // Останавливаем процесс после ошибки
       return;
     }
@@ -298,35 +307,37 @@ export class ProcessManagerService {
    */
   private async startVoiceCloning(process: DigitalTwinProcess): Promise<void> {
     const requestId = `voice_clone_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    
+
     this.logger.log(`🎵 [VOICE_CLONE_START] Starting Voice Cloning via ElevenLabs`, {
       requestId,
       processId: process.id,
       userId: process.userId,
-      audioUrl: process.audioUrl.substring(0, 100) + '...',
+      audioUrl: `${process.audioUrl.substring(0, 100)}...`,
       audioFileId: process.audioFileId,
       callbackId: process.id,
       retryCount: process.retryCount,
       maxRetries: process.maxRetries,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     // Проверяем лимит повторных попыток
     if (process.retryCount >= process.maxRetries) {
       this.logger.error(`[${requestId}] ❌ [VOICE_CLONE_START] Max retries exceeded`);
-      this.updateProcessStatus(process.id, 'voice_clone_failed', { 
-        error: `Превышено максимальное количество попыток (${process.maxRetries})`
+      this.updateProcessStatus(process.id, 'voice_clone_failed', {
+        error: `Превышено максимальное количество попыток (${process.maxRetries})`,
       });
-      
+
       // Уведомляем пользователя
-      await this.notifyUser(process.userId, 
-        `❌ Не удалось клонировать голос после ${process.maxRetries} попыток. Попробуйте позже.`);
+      await this.notifyUser(
+        process.userId,
+        `❌ Не удалось клонировать голос после ${process.maxRetries} попыток. Попробуйте позже.`
+      );
       return;
     }
 
     // Увеличиваем счетчик попыток
-    this.updateProcessStatus(process.id, 'voice_cloning', { 
-      retryCount: process.retryCount + 1
+    this.updateProcessStatus(process.id, 'voice_cloning', {
+      retryCount: process.retryCount + 1,
     });
 
     try {
@@ -334,10 +345,10 @@ export class ProcessManagerService {
         requestId,
         processId: process.id,
         userId: process.userId,
-        audioUrl: process.audioUrl.substring(0, 100) + '...',
+        audioUrl: `${process.audioUrl.substring(0, 100)}...`,
         audioFileId: process.audioFileId,
         callbackId: process.id,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
       // Скачиваем аудио файл
@@ -345,23 +356,26 @@ export class ProcessManagerService {
       if (!audioResponse.ok) {
         throw new Error(`Failed to download audio: ${audioResponse.status}`);
       }
-      
+
       const audioBuffer = Buffer.from(await audioResponse.arrayBuffer());
       const contentType = audioResponse.headers.get('content-type') || 'application/octet-stream';
-      
-      this.logger.log(`[${requestId}] 📥 [VOICE_CLONE_START] Audio downloaded: ${audioBuffer.length} bytes`, {
-        requestId,
-        audioSize: audioBuffer.length,
-        contentType,
-        timestamp: new Date().toISOString()
-      });
+
+      this.logger.log(
+        `[${requestId}] 📥 [VOICE_CLONE_START] Audio downloaded: ${audioBuffer.length} bytes`,
+        {
+          requestId,
+          audioSize: audioBuffer.length,
+          contentType,
+          timestamp: new Date().toISOString(),
+        }
+      );
 
       // Клонируем голос через ElevenLabs
       const voiceResult = await this.elevenlabsService.cloneVoiceAsync({
         name: `voice_${process.id}`,
-        audioBuffer: audioBuffer,
+        audioBuffer,
         description: `Клонированный голос для процесса ${process.id}`,
-        contentType: contentType
+        contentType,
       });
 
       this.logger.log(`[${requestId}] ✅ [VOICE_CLONE_START] Voice cloned successfully`, {
@@ -371,18 +385,17 @@ export class ProcessManagerService {
         voiceId: voiceResult.voice_id,
         voiceName: voiceResult.name,
         status: voiceResult.status,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
       // Обновляем статус процесса
-      this.updateProcessStatus(process.id, 'voice_clone_completed', { 
-        voiceCloneId: voiceResult.voice_id
+      this.updateProcessStatus(process.id, 'voice_clone_completed', {
+        voiceCloneId: voiceResult.voice_id,
       });
 
       // Переходим к следующему шагу
       this.logger.log(`[${requestId}] 🚀 [VOICE_CLONE_START] Proceeding to next step`);
       await this.executeNextStep(process.id);
-
     } catch (error) {
       this.logger.error(`[${requestId}] ❌ [VOICE_CLONE_START] Error creating Voice Clone`, {
         requestId,
@@ -390,11 +403,11 @@ export class ProcessManagerService {
         userId: process.userId,
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
-        audioUrl: process.audioUrl.substring(0, 100) + '...',
+        audioUrl: `${process.audioUrl.substring(0, 100)}...`,
         audioFileId: process.audioFileId,
         retryCount: process.retryCount,
         maxRetries: process.maxRetries,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
       // Если еще есть попытки, планируем повтор
@@ -407,7 +420,7 @@ export class ProcessManagerService {
           retryCount: process.retryCount + 1,
           maxRetries: process.maxRetries,
           error: error instanceof Error ? error.message : String(error),
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
 
         // Планируем повтор через 5 секунд
@@ -416,13 +429,15 @@ export class ProcessManagerService {
         }, 5000);
       } else {
         // Превышено максимальное количество попыток
-        this.updateProcessStatus(process.id, 'voice_clone_failed', { 
-          error: error instanceof Error ? error.message : String(error)
+        this.updateProcessStatus(process.id, 'voice_clone_failed', {
+          error: error instanceof Error ? error.message : String(error),
         });
-        
+
         // Уведомляем пользователя
-        await this.notifyUser(process.userId, 
-          `❌ Не удалось клонировать голос: ${error instanceof Error ? error.message : String(error)}`);
+        await this.notifyUser(
+          process.userId,
+          `❌ Не удалось клонировать голос: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
   }
@@ -441,9 +456,9 @@ export class ProcessManagerService {
         videoTitle: process.videoTitle,
         quality: process.quality,
         callbackId: process.id,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
+
       // Вызываем HeyGen Service для генерации видео с ElevenLabs сервисом
       const videoId = await this.heygenService.generateDigitalTwinVideo(
         process.photoAvatarId!,
@@ -453,22 +468,22 @@ export class ProcessManagerService {
         process.id,
         this.elevenlabsService // Передаем ElevenLabs сервис
       );
-      
+
       this.logger.log(`🎬 [VIDEO_GENERATION_START] HeyGen API call successful`, {
         processId: process.id,
         userId: process.userId,
         videoId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
+
       await this.updateProcessStatus(process.id, 'video_generating', { videoId });
-      
+
       this.logger.log(`✅ [VIDEO_GENERATION_START] Video Generation initiated successfully`, {
         processId: process.id,
         userId: process.userId,
         videoId,
         status: 'video_generating',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       this.logger.error(`❌ [VIDEO_GENERATION_START] Error generating video`, {
@@ -479,14 +494,14 @@ export class ProcessManagerService {
         photoAvatarId: process.photoAvatarId,
         voiceCloneId: process.voiceCloneId,
         scriptLength: process.script.length,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
-      await this.updateProcessStatus(process.id, 'video_failed', { 
-        error: error instanceof Error ? error.message : String(error) 
+
+      await this.updateProcessStatus(process.id, 'video_failed', {
+        error: error instanceof Error ? error.message : String(error),
       });
       await this.notifyUserError(process, 'Ошибка создания видео');
-      
+
       // Останавливаем процесс после ошибки
       return;
     }
@@ -511,12 +526,13 @@ export class ProcessManagerService {
       }
 
       await this.bot.telegram.sendVideo(process.userId, process.videoUrl, {
-        caption: `🎬 Ваше видео с цифровым двойником готово!\n\n` +
-                `📝 Сценарий: ${process.script.substring(0, 100)}...\n` +
-                `🎥 Качество: ${process.quality}\n` +
-                `⏱️ Длительность: ~${this.calculateVideoDuration(process.script)} сек`
+        caption:
+          `🎬 Ваше видео с цифровым двойником готово!\n\n` +
+          `📝 Сценарий: ${process.script.substring(0, 100)}...\n` +
+          `🎥 Качество: ${process.quality}\n` +
+          `⏱️ Длительность: ~${this.calculateVideoDuration(process.script)} сек`,
       });
-      
+
       this.logger.log(`📤 Video sent to user ${process.userId} for process ${process.id}`);
     } catch (error) {
       this.logger.error(`Error sending video to user ${process.userId}:`, error);
@@ -530,12 +546,12 @@ export class ProcessManagerService {
   private async notifyUserError(process: DigitalTwinProcess, errorMessage: string): Promise<void> {
     try {
       await this.bot.telegram.sendMessage(
-        process.userId, 
+        process.userId,
         `❌ ${errorMessage}\n\n` +
-        `🔄 Попробуйте еще раз или обратитесь в поддержку.\n` +
-        `📋 ID процесса: ${process.id}`
+          `🔄 Попробуйте еще раз или обратитесь в поддержку.\n` +
+          `📋 ID процесса: ${process.id}`
       );
-      
+
       this.logger.log(`📤 Error notification sent to user ${process.userId}: ${errorMessage}`);
     } catch (error) {
       this.logger.error(`Error notifying user ${process.userId}:`, error);
@@ -567,7 +583,7 @@ export class ProcessManagerService {
     let duration = Math.ceil(wordCount / wordsPerSecond);
     duration = Math.ceil(duration * 1.25); // Буфер для пауз и интонации
     duration = Math.max(15, Math.min(60, duration));
-    
+
     return duration;
   }
 

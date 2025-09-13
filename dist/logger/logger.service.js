@@ -21,14 +21,12 @@ var LogLevel;
 })(LogLevel || (exports.LogLevel = LogLevel = {}));
 let CustomLoggerService = class CustomLoggerService {
     constructor() {
-        this.isDebugMode =
-            process.env.DEBUG === "true" || process.env.DEBUG === "1";
-        this.isVerboseMode =
-            process.env.DEBUG === "verbose" || process.env.DEBUG === "2";
+        this.isDebugMode = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
+        this.isVerboseMode = process.env.DEBUG === 'verbose' || process.env.DEBUG === '2';
     }
     formatMessage(level, message, context) {
         const timestamp = new Date().toISOString();
-        const contextStr = context ? `[${context}]` : "";
+        const contextStr = context ? `[${context}]` : '';
         const levelStr = `[${level.toUpperCase()}]`;
         return `${timestamp} ${levelStr} ${contextStr} ${message}`;
     }
@@ -37,8 +35,7 @@ let CustomLoggerService = class CustomLoggerService {
             return true;
         if (this.isDebugMode && level !== LogLevel.VERBOSE)
             return true;
-        if (!this.isDebugMode &&
-            [LogLevel.LOG, LogLevel.WARN, LogLevel.ERROR].includes(level))
+        if (!this.isDebugMode && [LogLevel.LOG, LogLevel.WARN, LogLevel.ERROR].includes(level))
             return true;
         return false;
     }
@@ -88,34 +85,34 @@ let CustomLoggerService = class CustomLoggerService {
     }
     getUpdateType(update) {
         if (update.message)
-            return "message";
+            return 'message';
         if (update.callback_query)
-            return "callback_query";
+            return 'callback_query';
         if (update.inline_query)
-            return "inline_query";
+            return 'inline_query';
         if (update.chosen_inline_result)
-            return "chosen_inline_result";
+            return 'chosen_inline_result';
         if (update.channel_post)
-            return "channel_post";
+            return 'channel_post';
         if (update.edited_message)
-            return "edited_message";
+            return 'edited_message';
         if (update.edited_channel_post)
-            return "edited_channel_post";
+            return 'edited_channel_post';
         if (update.shipping_query)
-            return "shipping_query";
+            return 'shipping_query';
         if (update.pre_checkout_query)
-            return "pre_checkout_query";
+            return 'pre_checkout_query';
         if (update.poll)
-            return "poll";
+            return 'poll';
         if (update.poll_answer)
-            return "poll_answer";
+            return 'poll_answer';
         if (update.my_chat_member)
-            return "my_chat_member";
+            return 'my_chat_member';
         if (update.chat_member)
-            return "chat_member";
+            return 'chat_member';
         if (update.chat_join_request)
-            return "chat_join_request";
-        return "unknown";
+            return 'chat_join_request';
+        return 'unknown';
     }
     getUserId(update) {
         return (update.message?.from?.id ||
@@ -130,7 +127,7 @@ let CustomLoggerService = class CustomLoggerService {
             update.my_chat_member?.from?.id ||
             update.chat_member?.from?.id ||
             update.chat_join_request?.from?.id ||
-            "unknown");
+            'unknown');
     }
     getUsername(update) {
         return (update.message?.from?.username ||
@@ -145,17 +142,17 @@ let CustomLoggerService = class CustomLoggerService {
             update.my_chat_member?.from?.username ||
             update.chat_member?.from?.username ||
             update.chat_join_request?.from?.username ||
-            "unknown");
+            'unknown');
     }
     getText(update) {
         return (update.message?.text ||
             update.edited_message?.text ||
             update.channel_post?.text ||
             update.edited_channel_post?.text ||
-            "");
+            '');
     }
     getCallbackData(update) {
-        return update.callback_query?.data || "";
+        return update.callback_query?.data || '';
     }
 };
 exports.CustomLoggerService = CustomLoggerService;

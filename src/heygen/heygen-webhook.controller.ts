@@ -24,7 +24,7 @@ interface HeyGenWebhookPayload {
 /**
  * HeyGen Webhook Controller
  * Обрабатывает webhook события от HeyGen API
- * 
+ *
  * @see https://docs.heygen.com/reference/webhook-events
  * @endpoint POST /heygen/webhook
  */
@@ -33,17 +33,15 @@ export class HeyGenWebhookController {
   private readonly logger = new Logger(HeyGenWebhookController.name);
   private readonly bot: Telegraf;
 
-  constructor(
-    private readonly processManager: ProcessManagerService,
-  ) {
-    this.bot = new Telegraf(process.env.BOT_TOKEN || "");
+  constructor(private readonly processManager: ProcessManagerService) {
+    this.bot = new Telegraf(process.env.BOT_TOKEN || '');
   }
 
   @Post()
   @HttpCode(HttpStatus.OK)
   async handleWebhook(payload: HeyGenWebhookPayload) {
     const webhookId = `webhook_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    
+
     try {
       this.logger.log(`📨 [WEBHOOK_RECEIVED] HeyGen webhook received`, {
         webhookId,
@@ -51,7 +49,7 @@ export class HeyGenWebhookController {
         callbackId: payload.event_data.callback_id,
         timestamp: payload.timestamp,
         fullPayload: payload,
-        receivedAt: new Date().toISOString()
+        receivedAt: new Date().toISOString(),
       });
 
       // Обрабатываем разные типы событий
@@ -79,7 +77,7 @@ export class HeyGenWebhookController {
             webhookId,
             eventType: payload.event_type,
             callbackId: payload.event_data.callback_id,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
           });
       }
 
@@ -87,7 +85,7 @@ export class HeyGenWebhookController {
         webhookId,
         eventType: payload.event_type,
         callbackId: payload.event_data.callback_id,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
       return { success: true };
@@ -98,7 +96,7 @@ export class HeyGenWebhookController {
         callbackId: payload.event_data.callback_id,
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
@@ -109,51 +107,54 @@ export class HeyGenWebhookController {
    */
   private async handlePhotoAvatarSuccess(payload: HeyGenWebhookPayload, webhookId: string) {
     const { avatar_id, callback_id } = payload.event_data;
-    
+
     this.logger.log(`✅ [PHOTO_AVATAR_SUCCESS] Photo Avatar created successfully`, {
       webhookId,
       callbackId: callback_id,
       avatarId: avatar_id,
       eventData: payload.event_data,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
+
     if (!callback_id) {
-      this.logger.error(`❌ [PHOTO_AVATAR_SUCCESS] No callback_id in Photo Avatar success payload`, {
-        webhookId,
-        payload: payload.event_data,
-        timestamp: new Date().toISOString()
-      });
+      this.logger.error(
+        `❌ [PHOTO_AVATAR_SUCCESS] No callback_id in Photo Avatar success payload`,
+        {
+          webhookId,
+          payload: payload.event_data,
+          timestamp: new Date().toISOString(),
+        }
+      );
       return;
     }
-    
+
     // Обновляем статус процесса и запускаем следующий шаг (Voice Cloning)
     this.logger.log(`📊 [PHOTO_AVATAR_SUCCESS] Updating process status`, {
       webhookId,
       callbackId: callback_id,
       avatarId: avatar_id,
       newStatus: 'photo_avatar_completed',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
-    await this.processManager.updateProcessStatus(callback_id, 'photo_avatar_completed', { 
-      photoAvatarId: avatar_id 
+
+    await this.processManager.updateProcessStatus(callback_id, 'photo_avatar_completed', {
+      photoAvatarId: avatar_id,
     });
-    
+
     this.logger.log(`🚀 [PHOTO_AVATAR_SUCCESS] Executing next step`, {
       webhookId,
       callbackId: callback_id,
       avatarId: avatar_id,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
+
     await this.processManager.executeNextStep(callback_id);
-    
+
     this.logger.log(`✅ [PHOTO_AVATAR_SUCCESS] Photo Avatar success processed completely`, {
       webhookId,
       callbackId: callback_id,
       avatarId: avatar_id,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 
@@ -163,12 +164,12 @@ export class HeyGenWebhookController {
   private async handlePhotoAvatarFailed(payload: HeyGenWebhookPayload, webhookId: string) {
     const { error, callback_id } = payload.event_data;
     this.logger.error(`❌ Photo Avatar creation failed for callback ${callback_id}: ${error}`);
-    
+
     if (!callback_id) {
       this.logger.error('No callback_id in Photo Avatar failed payload');
       return;
     }
-    
+
     // Обновляем статус процесса и уведомляем пользователя
     await this.processManager.updateProcessStatus(callback_id, 'photo_avatar_failed', { error });
     const process = await this.processManager.getProcess(callback_id);
@@ -182,51 +183,51 @@ export class HeyGenWebhookController {
    */
   private async handleVoiceCloneSuccess(payload: HeyGenWebhookPayload, webhookId: string) {
     const { voice_id, callback_id } = payload.event_data;
-    
+
     this.logger.log(`✅ [VOICE_CLONE_SUCCESS] Voice Clone created successfully`, {
       webhookId,
       callbackId: callback_id,
       voiceId: voice_id,
       eventData: payload.event_data,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
+
     if (!callback_id) {
       this.logger.error(`❌ [VOICE_CLONE_SUCCESS] No callback_id in Voice Clone success payload`, {
         webhookId,
         payload: payload.event_data,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       return;
     }
-    
+
     this.logger.log(`📊 [VOICE_CLONE_SUCCESS] Updating process status`, {
       webhookId,
       callbackId: callback_id,
       voiceId: voice_id,
       newStatus: 'voice_clone_completed',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
+
     // Обновляем статус процесса и запускаем следующий шаг (Video Generation)
-    await this.processManager.updateProcessStatus(callback_id, 'voice_clone_completed', { 
-      voiceCloneId: voice_id 
+    await this.processManager.updateProcessStatus(callback_id, 'voice_clone_completed', {
+      voiceCloneId: voice_id,
     });
-    
+
     this.logger.log(`🚀 [VOICE_CLONE_SUCCESS] Executing next step`, {
       webhookId,
       callbackId: callback_id,
       voiceId: voice_id,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
+
     await this.processManager.executeNextStep(callback_id);
-    
+
     this.logger.log(`✅ [VOICE_CLONE_SUCCESS] Voice Clone success processed completely`, {
       webhookId,
       callbackId: callback_id,
       voiceId: voice_id,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 
@@ -235,41 +236,41 @@ export class HeyGenWebhookController {
    */
   private async handleVoiceCloneFailed(payload: HeyGenWebhookPayload, webhookId: string) {
     const { error, callback_id } = payload.event_data;
-    
+
     this.logger.error(`❌ [VOICE_CLONE_FAILED] Voice Clone creation failed`, {
       webhookId,
       callbackId: callback_id,
       error,
       eventData: payload.event_data,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
+
     if (!callback_id) {
       this.logger.error(`❌ [VOICE_CLONE_FAILED] No callback_id in Voice Clone failed payload`, {
         webhookId,
         payload: payload.event_data,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       return;
     }
-    
+
     this.logger.log(`📊 [VOICE_CLONE_FAILED] Updating process status`, {
       webhookId,
       callbackId: callback_id,
       error,
       newStatus: 'voice_clone_failed',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
+
     // Обновляем статус процесса и уведомляем пользователя
     await this.processManager.updateProcessStatus(callback_id, 'voice_clone_failed', { error });
-    
+
     this.logger.log(`👤 [VOICE_CLONE_FAILED] Getting process for user notification`, {
       webhookId,
       callbackId: callback_id,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
+
     const process = await this.processManager.getProcess(callback_id);
     if (process) {
       this.logger.log(`📤 [VOICE_CLONE_FAILED] Sending error notification to user`, {
@@ -277,22 +278,22 @@ export class HeyGenWebhookController {
         callbackId: callback_id,
         userId: process.userId,
         error,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
+
       await this.notifyUserError(process, 'Ошибка клонирования голоса');
-      
+
       this.logger.log(`✅ [VOICE_CLONE_FAILED] Error notification sent`, {
         webhookId,
         callbackId: callback_id,
         userId: process.userId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } else {
       this.logger.error(`❌ [VOICE_CLONE_FAILED] Process not found for callback_id`, {
         webhookId,
         callbackId: callback_id,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   }
@@ -304,16 +305,16 @@ export class HeyGenWebhookController {
     const { video_id, video_url, callback_id } = payload.event_data;
     this.logger.log(`✅ Video created successfully: ${video_id} for callback ${callback_id}`);
     this.logger.log(`🎬 Video URL: ${video_url}`);
-    
+
     if (!callback_id) {
       this.logger.error('No callback_id in Video success payload');
       return;
     }
-    
+
     // Обновляем статус процесса и отправляем видео пользователю
-    await this.processManager.updateProcessStatus(callback_id, 'video_completed', { 
-      videoId: video_id, 
-      videoUrl: video_url 
+    await this.processManager.updateProcessStatus(callback_id, 'video_completed', {
+      videoId: video_id,
+      videoUrl: video_url,
     });
     const process = await this.processManager.getProcess(callback_id);
     if (process && video_url) {
@@ -327,12 +328,12 @@ export class HeyGenWebhookController {
   private async handleVideoFailed(payload: HeyGenWebhookPayload, webhookId: string) {
     const { error, callback_id } = payload.event_data;
     this.logger.error(`❌ Video creation failed for callback ${callback_id}: ${error}`);
-    
+
     if (!callback_id) {
       this.logger.error('No callback_id in Video failed payload');
       return;
     }
-    
+
     // Обновляем статус процесса и уведомляем пользователя
     await this.processManager.updateProcessStatus(callback_id, 'video_failed', { error });
     const process = await this.processManager.getProcess(callback_id);
@@ -347,10 +348,11 @@ export class HeyGenWebhookController {
   private async sendVideoToUser(process: any, videoUrl: string) {
     try {
       await this.bot.telegram.sendVideo(process.userId, videoUrl, {
-        caption: `🎬 Ваше видео с цифровым двойником готово!\n\n` +
-                `📝 Сценарий: ${process.script.substring(0, 100)}...\n` +
-                `🎥 Качество: ${process.quality}\n` +
-                `⏱️ Длительность: рассчитана автоматически`
+        caption:
+          `🎬 Ваше видео с цифровым двойником готово!\n\n` +
+          `📝 Сценарий: ${process.script.substring(0, 100)}...\n` +
+          `🎥 Качество: ${process.quality}\n` +
+          `⏱️ Длительность: рассчитана автоматически`,
       });
       this.logger.log(`📤 Video sent to user ${process.userId} for process ${process.id}`);
     } catch (error) {
@@ -364,15 +366,14 @@ export class HeyGenWebhookController {
   private async notifyUserError(process: any, errorMessage: string) {
     try {
       await this.bot.telegram.sendMessage(
-        process.userId, 
+        process.userId,
         `❌ ${errorMessage}\n\n` +
-        `🔄 Попробуйте еще раз или обратитесь в поддержку.\n` +
-        `📋 ID процесса: ${process.id}`
+          `🔄 Попробуйте еще раз или обратитесь в поддержку.\n` +
+          `📋 ID процесса: ${process.id}`
       );
       this.logger.log(`📤 Error notification sent to user ${process.userId}: ${errorMessage}`);
     } catch (error) {
       this.logger.error(`Error notifying user ${process.userId}:`, error);
     }
   }
-
 }

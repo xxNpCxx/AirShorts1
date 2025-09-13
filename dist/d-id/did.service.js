@@ -17,10 +17,10 @@ let DidService = DidService_1 = class DidService {
     constructor(configService) {
         this.configService = configService;
         this.logger = new common_1.Logger(DidService_1.name);
-        this.baseUrl = "https://api.d-id.com";
+        this.baseUrl = 'https://api.d-id.com';
         this.apiKey =
-            this.configService.get("DID_API_KEY") ||
-                "eHhucGN4eEBnbWFpbC5jb20:coOsJoP3VqEWDKyQ7FobG";
+            this.configService.get('DID_API_KEY') ||
+                'eHhucGN4eEBnbWFpbC5jb20:coOsJoP3VqEWDKyQ7FobG';
     }
     async generateVideo(request) {
         const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -30,10 +30,10 @@ let DidService = DidService_1 = class DidService {
             this.logger.debug(`[${requestId}] Audio provided: ${!!request.audioUrl}, Script length: ${request.script?.length || 0} chars`);
             // Определяем, использовать ли пользовательское аудио или TTS
             const useCustomAudio = request.audioUrl &&
-                request.audioUrl.trim() !== "" &&
-                request.audioUrl !== "undefined" &&
-                request.audioUrl !== "null";
-            let payload = {
+                request.audioUrl.trim() !== '' &&
+                request.audioUrl !== 'undefined' &&
+                request.audioUrl !== 'null';
+            const payload = {
                 source_url: request.photoUrl,
                 config: {
                     fluent: true,
@@ -44,21 +44,21 @@ let DidService = DidService_1 = class DidService {
                     auto_match: true,
                     normalization_factor: 1,
                     motion_factor: 1,
-                    result_format: "mp4",
-                    quality: request.quality === "1080p" ? "full" : "medium",
-                    output_resolution: request.quality === "1080p" ? 1080 : 720,
+                    result_format: 'mp4',
+                    quality: request.quality === '1080p' ? 'full' : 'medium',
+                    output_resolution: request.quality === '1080p' ? 1080 : 720,
                 },
-                presenter_id: "d-u-01H7YFp1q8uYbH9sgX2J9Z4",
-                driver_id: "d-u-01H7YFp1q8uYbH9sgX2J9Z4",
+                presenter_id: 'd-u-01H7YFp1q8uYbH9sgX2J9Z4',
+                driver_id: 'd-u-01H7YFp1q8uYbH9sgX2J9Z4',
                 background: {
-                    type: "color",
-                    value: "#000000",
+                    type: 'color',
+                    value: '#000000',
                 },
             };
             if (useCustomAudio) {
                 // Используем пользовательское аудио
                 payload.script = {
-                    type: "audio",
+                    type: 'audio',
                     audio_url: request.audioUrl,
                 };
                 this.logger.log(`[${requestId}] 🎵 Using custom user audio from: ${request.audioUrl}`);
@@ -66,11 +66,11 @@ let DidService = DidService_1 = class DidService {
             else {
                 // Используем TTS
                 payload.script = {
-                    type: "text",
+                    type: 'text',
                     input: request.script,
                     provider: {
-                        type: "microsoft",
-                        voice_id: "ru-RU-SvetlanaNeural", // Русский женский голос
+                        type: 'microsoft',
+                        voice_id: 'ru-RU-SvetlanaNeural', // Русский женский голос
                     },
                 };
                 this.logger.log(`[${requestId}] 🎵 Using TTS with script: ${request.script?.substring(0, 50)}...`);
@@ -79,10 +79,10 @@ let DidService = DidService_1 = class DidService {
             this.logger.debug(`[${requestId}] Payload config: quality=${payload.config.quality}, resolution=${payload.config.output_resolution}`);
             this.logger.log(`[${requestId}] 🎵 Script type: ${payload.script.type}${payload.script.provider ? ` (TTS: ${payload.script.provider.voice_id})` : ' (Custom Audio)'}`);
             const response = await fetch(`${this.baseUrl}/talks`, {
-                method: "POST",
+                method: 'POST',
                 headers: {
                     Authorization: `Basic ${this.apiKey}`,
-                    "Content-Type": "application/json",
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(payload),
             });
@@ -93,14 +93,14 @@ let DidService = DidService_1 = class DidService {
                     status: response.status,
                     statusText: response.statusText,
                     url: `${this.baseUrl}/talks`,
-                    method: "POST",
+                    method: 'POST',
                     errorBody: errorText,
                     requestPayload: {
                         source_url: request.photoUrl ? '[URL_PROVIDED]' : '[NO_URL]',
                         script_length: request.script?.length || 0,
                         quality: payload.config.quality,
-                        resolution: payload.config.output_resolution
-                    }
+                        resolution: payload.config.output_resolution,
+                    },
                 });
                 // Пытаемся распарсить JSON ошибку
                 try {
@@ -117,7 +117,7 @@ let DidService = DidService_1 = class DidService {
             this.logger.debug(`[${requestId}] Full D-ID response:`, result);
             return {
                 id: result.id,
-                status: "created",
+                status: 'created',
             };
         }
         catch (error) {
@@ -130,8 +130,8 @@ let DidService = DidService_1 = class DidService {
                     duration: request.duration,
                     hasPhoto: !!request.photoUrl,
                     hasAudio: !!request.audioUrl,
-                    scriptLength: request.script?.length || 0
-                }
+                    scriptLength: request.script?.length || 0,
+                },
             });
             throw error;
         }
@@ -151,7 +151,7 @@ let DidService = DidService_1 = class DidService {
                     status: response.status,
                     statusText: response.statusText,
                     url: `${this.baseUrl}/talks/${videoId}`,
-                    errorBody: errorText
+                    errorBody: errorText,
                 });
                 throw new Error(`Failed to get video status: ${response.status} - ${errorText}`);
             }
@@ -159,7 +159,7 @@ let DidService = DidService_1 = class DidService {
             this.logger.debug(`📊 Video ${videoId} status: ${result.status}`, {
                 hasResultUrl: !!result.result_url,
                 hasError: !!result.error,
-                errorMessage: result.error?.message
+                errorMessage: result.error?.message,
             });
             // Логируем особые статусы
             if (result.status === 'done' && result.result_url) {
@@ -169,12 +169,12 @@ let DidService = DidService_1 = class DidService {
                 this.logger.error(`❌ Video ${videoId} failed:`, {
                     status: result.status,
                     error: result.error,
-                    fullResponse: result
+                    fullResponse: result,
                 });
             }
             return {
                 id: result.id,
-                status: result.status || "unknown",
+                status: result.status || 'unknown',
                 result_url: result.result_url,
                 error: result.error?.message,
             };
@@ -182,7 +182,7 @@ let DidService = DidService_1 = class DidService {
         catch (error) {
             this.logger.error(`💥 Critical error getting video status for ${videoId}:`, {
                 error: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : undefined
+                stack: error instanceof Error ? error.stack : undefined,
             });
             throw error;
         }
@@ -192,9 +192,9 @@ let DidService = DidService_1 = class DidService {
         try {
             this.logger.log(`[${uploadId}] 🎵 Starting audio upload (${audioBuffer.length} bytes)`);
             const formData = new FormData();
-            formData.append("audio", new Blob([audioBuffer]), "audio.wav");
+            formData.append('audio', new Blob([audioBuffer]), 'audio.wav');
             const response = await fetch(`${this.baseUrl}/audios`, {
-                method: "POST",
+                method: 'POST',
                 headers: {
                     Authorization: `Basic ${this.apiKey}`,
                 },
@@ -208,11 +208,11 @@ let DidService = DidService_1 = class DidService {
                     statusText: response.statusText,
                     url: `${this.baseUrl}/audios`,
                     audioSize: audioBuffer.length,
-                    errorBody: errorText
+                    errorBody: errorText,
                 });
                 throw new Error(`Failed to upload audio: ${response.status} - ${errorText}`);
             }
-            const result = await response.json();
+            const result = (await response.json());
             this.logger.debug(`[${uploadId}] 📋 Full audio upload response:`, result);
             // D-ID API может возвращать разные поля для URL аудио
             const audioUrl = result.audio_url || result.url || result.audio;
@@ -227,7 +227,7 @@ let DidService = DidService_1 = class DidService {
             this.logger.error(`[${uploadId}] 💥 Critical error uploading audio:`, {
                 error: error instanceof Error ? error.message : String(error),
                 audioSize: audioBuffer.length,
-                stack: error instanceof Error ? error.stack : undefined
+                stack: error instanceof Error ? error.stack : undefined,
             });
             throw error;
         }
@@ -237,9 +237,9 @@ let DidService = DidService_1 = class DidService {
         try {
             this.logger.log(`[${uploadId}] 📸 Starting image upload (${imageBuffer.length} bytes)`);
             const formData = new FormData();
-            formData.append("image", new Blob([imageBuffer]), "image.jpg");
+            formData.append('image', new Blob([imageBuffer]), 'image.jpg');
             const response = await fetch(`${this.baseUrl}/images`, {
-                method: "POST",
+                method: 'POST',
                 headers: {
                     Authorization: `Basic ${this.apiKey}`,
                 },
@@ -253,7 +253,7 @@ let DidService = DidService_1 = class DidService {
                     statusText: response.statusText,
                     url: `${this.baseUrl}/images`,
                     imageSize: imageBuffer.length,
-                    errorBody: errorText
+                    errorBody: errorText,
                 });
                 throw new Error(`Failed to upload image: ${response.status} - ${errorText}`);
             }
@@ -265,7 +265,7 @@ let DidService = DidService_1 = class DidService {
             this.logger.error(`[${uploadId}] 💥 Critical error uploading image:`, {
                 error: error instanceof Error ? error.message : String(error),
                 imageSize: imageBuffer.length,
-                stack: error instanceof Error ? error.stack : undefined
+                stack: error instanceof Error ? error.stack : undefined,
             });
             throw error;
         }

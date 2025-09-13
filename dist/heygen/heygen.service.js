@@ -72,17 +72,17 @@ const HEYGEN_API = {
         standardAvatar: '/v2/video/generate',
         uploadAsset: '/v1/asset',
         listAvatars: '/v1/avatar.list',
-        videoStatus: '/v1/video_status.get'
-    }
+        videoStatus: '/v1/video_status.get',
+    },
 };
 let HeyGenService = HeyGenService_1 = class HeyGenService {
     constructor(configService) {
         this.configService = configService;
         this.logger = new common_1.Logger(HeyGenService_1.name);
         this.baseUrl = HEYGEN_API.baseUrl;
-        this.apiKey = this.configService.get("HEYGEN_API_KEY") || "";
+        this.apiKey = this.configService.get('HEYGEN_API_KEY') || '';
         if (!this.apiKey) {
-            this.logger.warn("HEYGEN_API_KEY не найден в переменных окружения");
+            this.logger.warn('HEYGEN_API_KEY не найден в переменных окружения');
         }
     }
     /**
@@ -104,59 +104,64 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             this.logger.debug(`[${requestId}] Audio provided: ${!!request.audioUrl}, Script length: ${request.script?.length || 0} chars`);
             // Определяем, использовать ли пользовательское аудио или TTS
             const useCustomAudio = request.audioUrl &&
-                request.audioUrl.trim() !== "" &&
-                request.audioUrl !== "undefined" &&
-                request.audioUrl !== "null" &&
+                request.audioUrl.trim() !== '' &&
+                request.audioUrl !== 'undefined' &&
+                request.audioUrl !== 'null' &&
                 !request.audioUrl.includes('heygen_tts_required');
             // Получаем список доступных аватаров для дефолтного значения
             const availableAvatars = await this.getAvailableAvatars();
-            const defaultAvatarId = availableAvatars[0] || "1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b";
+            const defaultAvatarId = availableAvatars[0] || '1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b';
             // HeyGen API v2 структура согласно документации
-            let payload = {
+            const payload = {
                 video_inputs: [
                     {
                         character: {
-                            type: "avatar",
+                            type: 'avatar',
                             avatar_id: defaultAvatarId, // Рабочий аватар для бесплатного плана
-                            avatar_style: "normal"
+                            avatar_style: 'normal',
                         },
                         voice: {
-                            type: "text",
+                            type: 'text',
                             input_text: request.script,
-                            voice_id: "119caed25533477ba63822d5d1552d25", // Голос из документации
-                            speed: 1.0
-                        }
-                    }
+                            voice_id: '119caed25533477ba63822d5d1552d25', // Голос из документации
+                            speed: 1.0,
+                        },
+                    },
                 ],
                 dimension: {
                     width: 1280,
-                    height: 720
-                }
+                    height: 720,
+                },
             };
             // Если есть пользовательское фото, создаем TalkingPhoto в Standard API
-            if (request.imageUrl && request.imageUrl.trim() !== "" && request.imageUrl !== "undefined" && request.imageUrl !== "null" && request.imageUrl !== "heygen_placeholder_image_url" && request.imageUrl !== "heygen_use_available_avatar") {
+            if (request.imageUrl &&
+                request.imageUrl.trim() !== '' &&
+                request.imageUrl !== 'undefined' &&
+                request.imageUrl !== 'null' &&
+                request.imageUrl !== 'heygen_placeholder_image_url' &&
+                request.imageUrl !== 'heygen_use_available_avatar') {
                 this.logger.log(`[${requestId}] 📸 Используем пользовательское фото в Standard API: ${request.imageUrl}`);
                 // Определяем тип загруженного изображения
                 if (request.imageUrl.includes('photo_avatar_')) {
                     // Photo Avatar - используем TalkingPhoto
                     this.logger.log(`[${requestId}] 🎭 Используем Photo Avatar как TalkingPhoto`);
                     payload.video_inputs[0].character = {
-                        type: "talking_photo",
+                        type: 'talking_photo',
                         talking_photo_id: request.imageUrl,
-                        talking_photo_style: "square",
-                        talking_style: "expressive",
-                        expression: "default",
+                        talking_photo_style: 'square',
+                        talking_style: 'expressive',
+                        expression: 'default',
                         super_resolution: true,
-                        scale: 1.0
+                        scale: 1.0,
                     };
                 }
                 else {
                     // Asset или image_key - используем как Image Background
                     this.logger.log(`[${requestId}] 🖼️ Используем изображение как Background`);
                     payload.video_inputs[0].background = {
-                        type: "image",
+                        type: 'image',
                         image_asset_id: request.imageUrl,
-                        fit: "cover"
+                        fit: 'cover',
                     };
                 }
             }
@@ -164,12 +169,14 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             if (useCustomAudio) {
                 this.logger.log(`[${requestId}] 🎵 Используем пользовательское аудио asset: ${request.audioUrl}`);
                 payload.video_inputs[0].voice = {
-                    type: "audio",
-                    audio_asset_id: request.audioUrl
+                    type: 'audio',
+                    audio_asset_id: request.audioUrl,
                 };
             }
             // Если нет пользовательского фото, используем доступный аватар
-            if (!request.imageUrl || request.imageUrl === "heygen_use_available_avatar" || request.imageUrl === "heygen_placeholder_image_url") {
+            if (!request.imageUrl ||
+                request.imageUrl === 'heygen_use_available_avatar' ||
+                request.imageUrl === 'heygen_placeholder_image_url') {
                 this.logger.log(`[${requestId}] 📸 Using available avatar: ${defaultAvatarId}`);
                 // defaultAvatarId уже установлен в payload выше
             }
@@ -188,10 +195,10 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             this.logger.log(`[${requestId}] 📤 Standard Video payload (validated):`, payload);
             this.logger.log(`[${requestId}] 📤 Sending request to ${this.baseUrl}${HEYGEN_API.endpoints.standardAvatar}`);
             const response = await fetch(`${this.baseUrl}${HEYGEN_API.endpoints.standardAvatar}`, {
-                method: "POST",
+                method: 'POST',
                 headers: {
-                    "X-API-KEY": this.apiKey,
-                    "Content-Type": "application/json",
+                    'X-API-KEY': this.apiKey,
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(payload),
             });
@@ -202,7 +209,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     status: response.status,
                     statusText: response.statusText,
                     url: `${this.baseUrl}/v2/video/generate`,
-                    method: "POST",
+                    method: 'POST',
                     errorBody: errorText,
                 });
                 throw new Error(`HeyGen API error: ${response.status} - ${errorText}`);
@@ -211,8 +218,8 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             this.logger.log(`[${requestId}] ✅ Video generation started successfully with ID: ${result.data?.video_id}`);
             this.logger.log(`[${requestId}] Full HeyGen response:`, result);
             return {
-                id: result.data?.video_id || "",
-                status: "created",
+                id: result.data?.video_id || '',
+                status: 'created',
             };
         }
         catch (error) {
@@ -225,8 +232,8 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     duration: request.duration,
                     hasPhoto: !!request.photoUrl,
                     hasAudio: !!request.audioUrl,
-                    scriptLength: request.script?.length || 0
-                }
+                    scriptLength: request.script?.length || 0,
+                },
             });
             throw error;
         }
@@ -236,7 +243,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             this.logger.debug(`🔍 Checking status for HeyGen video: ${videoId}`);
             const response = await fetch(`${this.baseUrl}/v1/video_status.get?video_id=${videoId}`, {
                 headers: {
-                    "X-API-KEY": this.apiKey,
+                    'X-API-KEY': this.apiKey,
                 },
             });
             this.logger.debug(`📥 Status check response: ${response.status} ${response.statusText} for video ${videoId}`);
@@ -246,7 +253,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     status: response.status,
                     statusText: response.statusText,
                     url: `${this.baseUrl}/v1/video_status.get?video_id=${videoId}`,
-                    errorBody: errorText
+                    errorBody: errorText,
                 });
                 throw new Error(`Failed to get video status: ${response.status} - ${errorText}`);
             }
@@ -254,7 +261,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             this.logger.debug(`📊 Video ${videoId} status: ${result.data?.status}`, {
                 hasResultUrl: !!result.data?.video_url,
                 hasError: !!result.data?.error,
-                errorMessage: result.data?.error
+                errorMessage: result.data?.error,
             });
             // Логируем особые статусы
             if (result.data?.status === 'completed' && result.data?.video_url) {
@@ -264,12 +271,12 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 this.logger.error(`❌ Video ${videoId} failed:`, {
                     status: result.data?.status,
                     error: result.data?.error,
-                    fullResponse: result
+                    fullResponse: result,
                 });
             }
             return {
                 id: result.data?.id || videoId,
-                status: result.data?.status || "unknown",
+                status: result.data?.status || 'unknown',
                 result_url: result.data?.video_url,
                 error: result.data?.error,
             };
@@ -277,7 +284,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
         catch (error) {
             this.logger.error(`💥 Critical error getting video status for ${videoId}:`, {
                 error: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : undefined
+                stack: error instanceof Error ? error.stack : undefined,
             });
             throw error;
         }
@@ -310,13 +317,13 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 method: 'POST',
                 headers: {
                     'X-Api-Key': this.apiKey,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     name: `audio_${uploadId}`,
                     size: audioBuffer.length,
-                    content_type: 'audio/mpeg'
-                })
+                    content_type: 'audio/mpeg',
+                }),
             });
             this.logger.log(`[${uploadId}] 📥 Create audio resource response: ${createResponse.status} ${createResponse.statusText}`);
             if (!createResponse.ok) {
@@ -324,7 +331,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 this.logger.error(`[${uploadId}] ❌ Failed to create audio resource: ${createResponse.status} - ${errorText}`);
                 throw new Error(`Failed to create audio resource: ${createResponse.status} - ${errorText}`);
             }
-            const createResult = await createResponse.json();
+            const createResult = (await createResponse.json());
             this.logger.log(`[${uploadId}] 📋 Create audio resource response:`, createResult);
             const audioAssetId = createResult.data?.id || createResult.id;
             const uploadUrl = createResult.data?.upload_url || createResult.upload_url;
@@ -343,9 +350,9 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'audio/mpeg',
-                    'Content-Length': audioBuffer.length.toString()
+                    'Content-Length': audioBuffer.length.toString(),
                 },
-                body: audioBuffer
+                body: audioBuffer,
             });
             this.logger.log(`[${uploadId}] 📥 Upload file response: ${uploadResponse.status} ${uploadResponse.statusText}`);
             if (!uploadResponse.ok) {
@@ -381,7 +388,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             formData.append('asset', imageBuffer, {
                 filename: 'user_photo.jpg',
                 contentType: 'image/jpeg',
-                knownLength: imageBuffer.length
+                knownLength: imageBuffer.length,
             });
             this.logger.debug(`[${uploadId}] 📤 FormData prepared with ${imageBuffer.length} bytes`);
             const response = await fetch('https://upload.heygen.com/v1/asset', {
@@ -399,7 +406,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 this.logger.error(`[${uploadId}] Error details: ${errorText}`);
                 throw new Error(`Image upload failed: ${response.status} - ${errorText}`);
             }
-            const result = await response.json();
+            const result = (await response.json());
             this.logger.log(`[${uploadId}] 📋 Upload Asset response data:`, result);
             // Ищем image_key для Avatar IV или asset_id для Standard API
             const imageKey = result.data?.image_key || result.image_key;
@@ -439,9 +446,9 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 this.logger.error(`[${uploadId}] ❌ Fallback image upload failed: ${response.status} ${response.statusText}`);
                 this.logger.error(`[${uploadId}] Error details: ${errorText}`);
                 this.logger.warn(`[${uploadId}] ⚠️ Will use default avatar instead of custom photo`);
-                return "heygen_placeholder_image_url";
+                return 'heygen_placeholder_image_url';
             }
-            const result = await response.json();
+            const result = (await response.json());
             const imageUrl = result.data?.image_url || result.image_url || result.url;
             this.logger.log(`[${uploadId}] ✅ Fallback image upload successful: ${imageUrl}`);
             return imageUrl;
@@ -449,7 +456,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
         catch (error) {
             this.logger.error(`[${uploadId}] ❌ Fallback image upload error:`, error);
             this.logger.warn(`[${uploadId}] ⚠️ Will use default avatar instead of custom photo`);
-            return "heygen_placeholder_image_url";
+            return 'heygen_placeholder_image_url';
         }
     }
     // Получаем список доступных аватаров для fallback
@@ -464,7 +471,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 this.logger.warn('Failed to get available avatars, using hardcoded fallback');
                 return this.getHardcodedAvatars();
             }
-            const result = await response.json();
+            const result = (await response.json());
             const avatars = result.data?.avatars || [];
             const avatarIds = avatars.map((avatar) => avatar.avatar_id).filter(Boolean);
             if (avatarIds.length === 0) {
@@ -482,11 +489,11 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
     // Список проверенных аватаров, которые работают с HeyGen API
     getHardcodedAvatars() {
         return [
-            "Abigail_expressive_2024112501",
-            "Abigail_standing_office_front",
-            "Abigail_sitting_sofa_front",
-            "1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b", // Fallback ID
-            "Abigail_standing_office_front_2024112501"
+            'Abigail_expressive_2024112501',
+            'Abigail_standing_office_front',
+            'Abigail_sitting_sofa_front',
+            '1bd001e7-c335-4a6a-9d1b-8f8b5b5b5b5b', // Fallback ID
+            'Abigail_standing_office_front_2024112501',
         ];
     }
     /**
@@ -506,9 +513,9 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             this.logger.log(`📸 [HEYGEN_PHOTO_AVATAR] Starting Photo Avatar creation via Avatar IV API`, {
                 requestId,
                 callbackId,
-                photoUrl: photoUrl.substring(0, 100) + '...',
+                photoUrl: `${photoUrl.substring(0, 100)}...`,
                 webhookUrl: `${process.env.WEBHOOK_URL}/heygen/webhook`,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             // Сначала загружаем изображение как asset
             const uploadResponse = await this.uploadAsset(photoUrl, 'image');
@@ -516,7 +523,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 requestId,
                 callbackId,
                 assetKey: uploadResponse.asset_key,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             // Пока что возвращаем asset_key как avatar_id
             // В будущем здесь будет создание аватара через отдельный API
@@ -524,7 +531,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 requestId,
                 callbackId,
                 assetKey: uploadResponse.asset_key,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             return uploadResponse.asset_key;
         }
@@ -534,8 +541,8 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 callbackId,
                 error: error instanceof Error ? error.message : String(error),
                 stack: error instanceof Error ? error.stack : undefined,
-                photoUrl: photoUrl.substring(0, 100) + '...',
-                timestamp: new Date().toISOString()
+                photoUrl: `${photoUrl.substring(0, 100)}...`,
+                timestamp: new Date().toISOString(),
             });
             throw error;
         }
@@ -554,49 +561,49 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 requestId,
                 callbackId,
                 assetKey,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             // Создаем Photo Avatar используя Avatar IV API
             const response = await axios_1.default.post(`${HEYGEN_API.baseUrl}/v2/video/av4/generate`, {
                 video_input: {
                     character: {
-                        type: "photo_avatar",
-                        photo_avatar_id: assetKey
+                        type: 'photo_avatar',
+                        photo_avatar_id: assetKey,
                     },
                     voice: {
-                        type: "text",
-                        input_text: "Hello, this is a test video.",
-                        voice_id: "1bd001e7e50f421d891986aad5158bc3"
+                        type: 'text',
+                        input_text: 'Hello, this is a test video.',
+                        voice_id: '1bd001e7e50f421d891986aad5158bc3',
                     },
                     background: {
-                        type: "color",
-                        value: "#FFFFFF"
-                    }
+                        type: 'color',
+                        value: '#FFFFFF',
+                    },
                 },
                 dimension: {
                     width: 720,
-                    height: 1280
+                    height: 1280,
                 },
-                aspect_ratio: "9:16",
-                quality: "medium",
+                aspect_ratio: '9:16',
+                quality: 'medium',
                 callback_url: `${process.env.WEBHOOK_URL}/heygen/webhook`,
-                callback_id: callbackId
+                callback_id: callbackId,
             }, {
                 headers: {
                     'X-Api-Key': this.apiKey,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                 },
-                timeout: 30000
+                timeout: 30000,
             });
             this.logger.log(`✅ [HEYGEN_AVATAR_CREATE] Photo Avatar creation initiated`, {
                 requestId,
                 callbackId,
                 assetKey,
                 responseData: response.data,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             return {
-                avatar_id: response.data.data?.video_id || response.data.video_id || assetKey
+                avatar_id: response.data.data?.video_id || response.data.video_id || assetKey,
             };
         }
         catch (error) {
@@ -609,7 +616,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     status: error.response.status,
                     statusText: error.response.statusText,
                     errorData: error.response.data,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
                 });
             }
             else {
@@ -619,7 +626,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     assetKey,
                     error: error instanceof Error ? error.message : String(error),
                     stack: error instanceof Error ? error.stack : undefined,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
                 });
             }
             throw error;
@@ -640,10 +647,10 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
         try {
             this.logger.log(`📤 [HEYGEN_UPLOAD] Starting asset upload`, {
                 requestId,
-                fileUrl: fileUrl.substring(0, 100) + '...',
+                fileUrl: `${fileUrl.substring(0, 100)}...`,
                 fileType,
                 endpoint: `${HEYGEN_API.uploadUrl}/v1/asset`,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             // Сначала скачиваем файл по URL
             const fileResponse = await fetch(fileUrl);
@@ -656,7 +663,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 requestId,
                 fileSize: buffer.length,
                 fileType,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             // Определяем правильный Content-Type для файла
             const contentType = fileType === 'image' ? 'image/jpeg' : 'audio/wav';
@@ -664,7 +671,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 requestId,
                 fileSize: buffer.length,
                 contentType,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             let response;
             try {
@@ -673,23 +680,23 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 response = await axios_1.default.post(uploadUrl, buffer, {
                     headers: {
                         'X-Api-Key': this.apiKey,
-                        'Content-Type': contentType
+                        'Content-Type': contentType,
                     },
                     maxBodyLength: Infinity,
                     maxContentLength: Infinity,
-                    timeout: 30000 // 30 секунд таймаут
+                    timeout: 30000, // 30 секунд таймаут
                 });
                 this.logger.log(`📥 [HEYGEN_UPLOAD] Received response from HeyGen API`, {
                     requestId,
                     status: response.status,
                     statusText: response.statusText,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
                 });
                 const data = response.data;
                 this.logger.log(`✅ [HEYGEN_UPLOAD] Asset uploaded successfully`, {
                     requestId,
                     responseData: data,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
                 });
                 // Извлекаем asset_key из нового формата ответа
                 const assetKey = data.data?.image_key || data.data?.asset_key || data.image_key || data.asset_key;
@@ -697,14 +704,14 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     this.logger.error(`❌ [HEYGEN_UPLOAD] No asset_key found in response`, {
                         requestId,
                         responseData: data,
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString(),
                     });
                     throw new Error('No asset_key in response');
                 }
                 this.logger.log(`✅ [HEYGEN_UPLOAD] Asset key extracted: ${assetKey}`, {
                     requestId,
                     assetKey,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
                 });
                 return { asset_key: assetKey };
             }
@@ -717,7 +724,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                         status: axiosError.response.status,
                         statusText: axiosError.response.statusText,
                         errorBody,
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString(),
                     });
                     throw new Error(`Asset upload failed: ${axiosError.response.status} - ${JSON.stringify(errorBody)}`);
                 }
@@ -726,7 +733,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     this.logger.error(`❌ [HEYGEN_UPLOAD] Network error`, {
                         requestId,
                         error: axiosError.message,
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString(),
                     });
                     throw new Error(`Asset upload network error: ${axiosError.message}`);
                 }
@@ -737,9 +744,9 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 requestId,
                 error: error instanceof Error ? error.message : String(error),
                 stack: error instanceof Error ? error.stack : undefined,
-                fileUrl: fileUrl.substring(0, 100) + '...',
+                fileUrl: `${fileUrl.substring(0, 100)}...`,
                 fileType,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             throw error;
         }
@@ -757,9 +764,9 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
         try {
             this.logger.log(`[${requestId}] 🎵 Validating audio file`, {
                 requestId,
-                audioUrl: audioUrl.substring(0, 100) + '...',
+                audioUrl: `${audioUrl.substring(0, 100)}...`,
                 fileId,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             // Проверяем доступность файла
             const headResponse = await fetch(audioUrl, { method: 'HEAD' });
@@ -774,7 +781,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 fileSize,
                 contentType,
                 contentLength,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             // Проверяем размер файла (максимум 25MB для HeyGen)
             const maxSize = 25 * 1024 * 1024; // 25MB
@@ -788,7 +795,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     requestId,
                     fileSize,
                     minSize,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
                 });
             }
             // Проверяем поддерживаемые форматы
@@ -798,24 +805,24 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     requestId,
                     contentType,
                     supportedTypes,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
                 });
             }
             this.logger.log(`[${requestId}] ✅ Audio file validation passed`, {
                 requestId,
                 fileSize,
                 contentType,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             return audioUrl;
         }
         catch (error) {
             this.logger.error(`[${requestId}] ❌ Audio file validation failed`, {
                 requestId,
-                audioUrl: audioUrl.substring(0, 100) + '...',
+                audioUrl: `${audioUrl.substring(0, 100)}...`,
                 fileId,
                 error: error instanceof Error ? error.message : String(error),
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             throw error;
         }
@@ -837,10 +844,10 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
         try {
             this.logger.log(`[${requestId}] 🎵 Creating Voice Clone from: ${audioUrl}`, {
                 requestId,
-                audioUrl: audioUrl.substring(0, 100) + '...',
+                audioUrl: `${audioUrl.substring(0, 100)}...`,
                 callbackId,
                 fileId,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             // Валидация входных данных
             if (!audioUrl || audioUrl.trim() === '') {
@@ -855,30 +862,30 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 name: `voice_${callbackId}`,
                 audio_url: validatedAudioUrl,
                 callback_url: `${process.env.WEBHOOK_URL}/heygen/webhook`,
-                callback_id: callbackId
+                callback_id: callbackId,
             };
             this.logger.debug(`[${requestId}] 📤 Voice Cloning payload:`, {
                 requestId,
                 payload: {
                     ...payload,
-                    audio_url: payload.audio_url.substring(0, 100) + '...'
+                    audio_url: `${payload.audio_url.substring(0, 100)}...`,
                 },
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             this.logger.log(`[${requestId}] 📤 Sending request to HeyGen API`, {
                 requestId,
                 endpoint: `${this.baseUrl}/v1/voice_cloning/create`,
                 method: 'POST',
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             const response = await fetch(`${this.baseUrl}/v1/voice_cloning/create`, {
                 method: 'POST',
                 headers: {
                     'X-API-KEY': this.apiKey,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(payload),
-                signal: controller.signal
+                signal: controller.signal,
             });
             clearTimeout(timeout);
             this.logger.log(`[${requestId}] 📥 Voice Cloning response received`, {
@@ -886,7 +893,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 status: response.status,
                 statusText: response.statusText,
                 headers: Object.fromEntries(response.headers.entries()),
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             if (!response.ok) {
                 const errorText = await response.text();
@@ -895,38 +902,35 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                     status: response.status,
                     statusText: response.statusText,
                     errorText,
-                    audioUrl: audioUrl.substring(0, 100) + '...',
+                    audioUrl: `${audioUrl.substring(0, 100)}...`,
                     callbackId,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
                 });
                 throw new Error(`Voice Cloning failed: ${response.status} - ${errorText}`);
             }
-            const result = await response.json();
+            const result = (await response.json());
             this.logger.debug(`[${requestId}] 📋 Voice Cloning response data:`, {
                 requestId,
                 responseData: result,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             // Проверяем различные возможные форматы ответа
-            const voiceId = result.data?.voice_id ||
-                result.voice_id ||
-                result.data?.id ||
-                result.id;
+            const voiceId = result.data?.voice_id || result.voice_id || result.data?.id || result.id;
             if (!voiceId) {
                 this.logger.error(`[${requestId}] ❌ No voice_id found in response`, {
                     requestId,
                     responseData: result,
                     possibleFields: ['data.voice_id', 'voice_id', 'data.id', 'id'],
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
                 });
                 throw new Error('No voice_id returned from Voice Cloning API');
             }
             this.logger.log(`[${requestId}] ✅ Voice Clone created successfully`, {
                 requestId,
                 voiceId,
-                audioUrl: audioUrl.substring(0, 100) + '...',
+                audioUrl: `${audioUrl.substring(0, 100)}...`,
                 callbackId,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             return voiceId;
         }
@@ -936,9 +940,9 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             if (error.name === 'AbortError') {
                 this.logger.error(`[${requestId}] ⏰ Voice Cloning timeout after 30 seconds`, {
                     requestId,
-                    audioUrl: audioUrl.substring(0, 100) + '...',
+                    audioUrl: `${audioUrl.substring(0, 100)}...`,
                     callbackId,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
                 });
                 throw new Error('Voice Cloning request timed out after 30 seconds');
             }
@@ -946,9 +950,9 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 this.logger.error(`[${requestId}] 🌐 Network error during Voice Cloning`, {
                     requestId,
                     error: error.message,
-                    audioUrl: audioUrl.substring(0, 100) + '...',
+                    audioUrl: `${audioUrl.substring(0, 100)}...`,
                     callbackId,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
                 });
                 throw new Error(`Network error during Voice Cloning: ${error.message}`);
             }
@@ -956,9 +960,9 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 requestId,
                 error: error instanceof Error ? error.message : String(error),
                 stack: error instanceof Error ? error.stack : undefined,
-                audioUrl: audioUrl.substring(0, 100) + '...',
+                audioUrl: `${audioUrl.substring(0, 100)}...`,
                 callbackId,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
             throw error;
         }
@@ -997,13 +1001,13 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
             const audioBuffer = await elevenlabsService.textToSpeech({
                 text: script,
                 voice_id: voiceId,
-                model_id: "eleven_multilingual_v2",
+                model_id: 'eleven_multilingual_v2',
                 voice_settings: {
                     stability: 0.5,
                     similarity_boost: 0.75,
                     style: 0.0,
-                    use_speaker_boost: true
-                }
+                    use_speaker_boost: true,
+                },
             });
             this.logger.log(`[${requestId}] ✅ Audio generated: ${audioBuffer.length} bytes`);
             // Загружаем аудио в HeyGen как asset
@@ -1017,25 +1021,25 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 video_inputs: [
                     {
                         character: {
-                            type: "talking_photo",
+                            type: 'talking_photo',
                             talking_photo_id: talkingPhotoId, // UUID без префиксов
                             scale: 1.0,
-                            style: "normal"
+                            style: 'normal',
                         },
                         voice: {
-                            type: "audio",
-                            audio_asset_id: audioAssetId
+                            type: 'audio',
+                            audio_asset_id: audioAssetId,
                         },
                         background: {
-                            type: "color",
-                            value: "#f6f6fc"
-                        }
-                    }
+                            type: 'color',
+                            value: '#f6f6fc',
+                        },
+                    },
                 ],
                 dimension: {
                     width: 1280,
-                    height: 720
-                }
+                    height: 720,
+                },
             };
             // Логируем payload для отладки
             this.logger.debug(`[${requestId}] 📤 HeyGen v2 API payload:`, payload);
@@ -1044,9 +1048,9 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 method: 'POST',
                 headers: {
                     'X-API-KEY': this.apiKey,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
             });
             this.logger.log(`[${requestId}] 📥 Standard Avatar response: ${response.status} ${response.statusText}`);
             if (!response.ok) {
@@ -1054,7 +1058,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 this.logger.error(`[${requestId}] ❌ Standard Avatar generation failed: ${response.status} - ${errorText}`);
                 throw new Error(`Standard Avatar generation failed: ${response.status} - ${errorText}`);
             }
-            const result = await response.json();
+            const result = (await response.json());
             const videoId = result.data?.video_id || result.video_id;
             if (!videoId) {
                 this.logger.error(`[${requestId}] ❌ No video_id in response:`, result);
@@ -1082,7 +1086,7 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                 method: 'POST',
                 headers: {
                     'X-API-KEY': this.apiKey,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     url: webhookUrl,
@@ -1092,9 +1096,9 @@ let HeyGenService = HeyGenService_1 = class HeyGenService {
                         'voice_clone.success',
                         'voice_clone.failed',
                         'video.success',
-                        'video.failed'
-                    ]
-                })
+                        'video.failed',
+                    ],
+                }),
             });
             if (!response.ok) {
                 const errorText = await response.text();

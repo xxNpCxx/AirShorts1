@@ -21,9 +21,9 @@ let MenuUpdate = class MenuUpdate {
         return this.support(ctx);
     }
     async support(ctx) {
-        const username = (process.env.OPERATOR_USERNAME || "").replace("@", "");
-        const url = username ? `https://t.me/${username}` : "https://t.me/";
-        await ctx.reply("Связь с оператором:", telegraf_1.Markup.inlineKeyboard([telegraf_1.Markup.button.url("Написать оператору", url)]));
+        const username = (process.env.OPERATOR_USERNAME || '').replace('@', '');
+        const url = username ? `https://t.me/${username}` : 'https://t.me/';
+        await ctx.reply('Связь с оператором:', telegraf_1.Markup.inlineKeyboard([telegraf_1.Markup.button.url('Написать оператору', url)]));
     }
     async rulesAction(ctx) {
         await ctx.answerCbQuery();
@@ -58,33 +58,33 @@ let MenuUpdate = class MenuUpdate {
 За нарушение — пожизненный бан во всех наших ботах.
 
 🔔 Соблюдение правил — гарантия вашей безопасности и стабильной работы обменника.
-📲 При вопросах — обращайтесь к оператору.`, { parse_mode: "Markdown" });
+📲 При вопросах — обращайтесь к оператору.`, { parse_mode: 'Markdown' });
     }
 };
 exports.MenuUpdate = MenuUpdate;
 __decorate([
-    (0, nestjs_telegraf_1.Action)("support"),
+    (0, nestjs_telegraf_1.Action)('support'),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], MenuUpdate.prototype, "supportAction", null);
 __decorate([
-    (0, nestjs_telegraf_1.Hears)("🆘 Поддержка оператора"),
+    (0, nestjs_telegraf_1.Hears)('🆘 Поддержка оператора'),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], MenuUpdate.prototype, "support", null);
 __decorate([
-    (0, nestjs_telegraf_1.Action)("rules"),
+    (0, nestjs_telegraf_1.Action)('rules'),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], MenuUpdate.prototype, "rulesAction", null);
 __decorate([
-    (0, nestjs_telegraf_1.Hears)("📜 Правила"),
+    (0, nestjs_telegraf_1.Hears)('📜 Правила'),
     __param(0, (0, nestjs_telegraf_1.Ctx)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),

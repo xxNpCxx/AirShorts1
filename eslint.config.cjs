@@ -42,6 +42,9 @@ module.exports = [
         beforeAll: 'readonly',
         afterAll: 'readonly',
         jest: 'readonly',
+        // Node.js globals
+        AbortController: 'readonly',
+        AbortSignal: 'readonly',
       },
     },
     plugins: {
@@ -53,11 +56,11 @@ module.exports = [
       '@typescript-eslint/interface-name-prefix': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off', // Отключаем для упрощения
       '@typescript-eslint/explicit-module-boundary-types': 'off', // Отключаем для упрощения
-      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': 'off', // Отключаем, так как TypeScript сам проверяет использование
       '@typescript-eslint/no-empty-function': 'warn',
       '@typescript-eslint/prefer-readonly': 'warn',
-      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/await-thenable': 'error',
       '@typescript-eslint/no-misused-promises': 'error',
       

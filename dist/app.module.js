@@ -28,6 +28,7 @@ const akool_module_1 = require("./akool/akool.module");
 const elevenlabs_module_1 = require("./elevenlabs/elevenlabs.module");
 const video_generation_scene_1 = require("./scenes/video-generation.scene");
 const webhook_module_1 = require("./webhook/webhook.module");
+const test_files_module_1 = require("./test-files/test-files.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -36,7 +37,7 @@ exports.AppModule = AppModule = __decorate([
         imports: [
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
-                envFilePath: process.env.NODE_ENV === 'production' ? undefined : ".env",
+                envFilePath: process.env.NODE_ENV === 'production' ? undefined : '.env',
             }),
             logger_module_1.LoggerModule,
             database_module_1.DatabaseModule,
@@ -50,15 +51,16 @@ exports.AppModule = AppModule = __decorate([
             akool_module_1.AkoolModule,
             elevenlabs_module_1.ElevenLabsModule,
             webhook_module_1.WebhookModule,
+            test_files_module_1.TestFilesModule,
             nestjs_telegraf_1.TelegrafModule.forRoot({
-                token: process.env.BOT_TOKEN || "",
-                botName: "airshorts1_bot",
+                token: process.env.BOT_TOKEN || '',
+                botName: 'airshorts1_bot',
                 middlewares: [(0, telegraf_1.session)()],
                 launchOptions: {
                     dropPendingUpdates: true,
                     webhook: {
-                        domain: process.env.WEBHOOK_URL || "https://airshorts1.onrender.com",
-                        path: "/webhook",
+                        domain: process.env.WEBHOOK_URL || 'https://airshorts1.onrender.com',
+                        path: '/webhook',
                     },
                 },
                 options: {

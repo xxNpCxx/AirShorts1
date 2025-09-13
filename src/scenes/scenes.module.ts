@@ -1,5 +1,5 @@
-import { Module } from "@nestjs/common";
-import { VideoGenerationScene } from "./video-generation.scene";
+import { Module } from '@nestjs/common';
+import { VideoGenerationScene } from './video-generation.scene';
 
 @Module({
   imports: [],

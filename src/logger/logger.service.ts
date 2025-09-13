@@ -1,4 +1,4 @@
-import { Injectable, LoggerService } from "@nestjs/common";
+import { Injectable, LoggerService } from '@nestjs/common';
 
 interface TelegramUpdate {
   message?: {
@@ -51,11 +51,11 @@ interface TelegramUpdate {
 }
 
 export enum LogLevel {
-  ERROR = "error",
-  WARN = "warn",
-  LOG = "log",
-  DEBUG = "debug",
-  VERBOSE = "verbose",
+  ERROR = 'error',
+  WARN = 'warn',
+  LOG = 'log',
+  DEBUG = 'debug',
+  VERBOSE = 'verbose',
 }
 
 @Injectable()
@@ -64,19 +64,13 @@ export class CustomLoggerService implements LoggerService {
   private readonly isVerboseMode: boolean;
 
   constructor() {
-    this.isDebugMode =
-      process.env.DEBUG === "true" || process.env.DEBUG === "1";
-    this.isVerboseMode =
-      process.env.DEBUG === "verbose" || process.env.DEBUG === "2";
+    this.isDebugMode = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
+    this.isVerboseMode = process.env.DEBUG === 'verbose' || process.env.DEBUG === '2';
   }
 
-  private formatMessage(
-    level: LogLevel,
-    message: string,
-    context?: string,
-  ): string {
+  private formatMessage(level: LogLevel, message: string, context?: string): string {
     const timestamp = new Date().toISOString();
-    const contextStr = context ? `[${context}]` : "";
+    const contextStr = context ? `[${context}]` : '';
     const levelStr = `[${level.toUpperCase()}]`;
     return `${timestamp} ${levelStr} ${contextStr} ${message}`;
   }
@@ -84,10 +78,7 @@ export class CustomLoggerService implements LoggerService {
   private shouldLog(level: LogLevel): boolean {
     if (this.isVerboseMode) return true;
     if (this.isDebugMode && level !== LogLevel.VERBOSE) return true;
-    if (
-      !this.isDebugMode &&
-      [LogLevel.LOG, LogLevel.WARN, LogLevel.ERROR].includes(level)
-    )
+    if (!this.isDebugMode && [LogLevel.LOG, LogLevel.WARN, LogLevel.ERROR].includes(level))
       return true;
     return false;
   }
@@ -136,40 +127,34 @@ export class CustomLoggerService implements LoggerService {
 
       this.debug(
         `Telegram Update: type=${type}, userId=${userId}, username=${username}, text="${text}", callback="${callback}"`,
-        context,
+        context
       );
 
       // Всегда логируем полный webhook в DEBUG режиме
-      this.debug(
-        `Full webhook data: ${JSON.stringify(update, null, 2)}`,
-        context,
-      );
+      this.debug(`Full webhook data: ${JSON.stringify(update, null, 2)}`, context);
 
       if (this.isVerboseMode) {
-        this.verbose(
-          `Full update: ${JSON.stringify(update, null, 2)}`,
-          context,
-        );
+        this.verbose(`Full update: ${JSON.stringify(update, null, 2)}`, context);
       }
     }
   }
 
   private getUpdateType(update: TelegramUpdate): string {
-    if (update.message) return "message";
-    if (update.callback_query) return "callback_query";
-    if (update.inline_query) return "inline_query";
-    if (update.chosen_inline_result) return "chosen_inline_result";
-    if (update.channel_post) return "channel_post";
-    if (update.edited_message) return "edited_message";
-    if (update.edited_channel_post) return "edited_channel_post";
-    if (update.shipping_query) return "shipping_query";
-    if (update.pre_checkout_query) return "pre_checkout_query";
-    if (update.poll) return "poll";
-    if (update.poll_answer) return "poll_answer";
-    if (update.my_chat_member) return "my_chat_member";
-    if (update.chat_member) return "chat_member";
-    if (update.chat_join_request) return "chat_join_request";
-    return "unknown";
+    if (update.message) return 'message';
+    if (update.callback_query) return 'callback_query';
+    if (update.inline_query) return 'inline_query';
+    if (update.chosen_inline_result) return 'chosen_inline_result';
+    if (update.channel_post) return 'channel_post';
+    if (update.edited_message) return 'edited_message';
+    if (update.edited_channel_post) return 'edited_channel_post';
+    if (update.shipping_query) return 'shipping_query';
+    if (update.pre_checkout_query) return 'pre_checkout_query';
+    if (update.poll) return 'poll';
+    if (update.poll_answer) return 'poll_answer';
+    if (update.my_chat_member) return 'my_chat_member';
+    if (update.chat_member) return 'chat_member';
+    if (update.chat_join_request) return 'chat_join_request';
+    return 'unknown';
   }
 
   private getUserId(update: TelegramUpdate): string | number {
@@ -186,7 +171,7 @@ export class CustomLoggerService implements LoggerService {
       update.my_chat_member?.from?.id ||
       update.chat_member?.from?.id ||
       update.chat_join_request?.from?.id ||
-      "unknown"
+      'unknown'
     );
   }
 
@@ -204,7 +189,7 @@ export class CustomLoggerService implements LoggerService {
       update.my_chat_member?.from?.username ||
       update.chat_member?.from?.username ||
       update.chat_join_request?.from?.username ||
-      "unknown"
+      'unknown'
     );
   }
 
@@ -214,11 +199,11 @@ export class CustomLoggerService implements LoggerService {
       update.edited_message?.text ||
       update.channel_post?.text ||
       update.edited_channel_post?.text ||
-      ""
+      ''
     );
   }
 
   private getCallbackData(update: TelegramUpdate): string {
-    return update.callback_query?.data || "";
+    return update.callback_query?.data || '';
   }
 }

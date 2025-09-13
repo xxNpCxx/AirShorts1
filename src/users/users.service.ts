@@ -1,6 +1,6 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
-import { PG_POOL } from "../database/database.module";
-import { Pool } from "pg";
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { PG_POOL } from '../database/database.module';
+import { Pool } from 'pg';
 
 interface TelegramUser {
   id: number;
@@ -11,7 +11,7 @@ interface TelegramUser {
   is_bot?: boolean;
 }
 
-import { Context } from "telegraf";
+import { Context } from 'telegraf';
 
 interface TelegramContext extends Context {}
 
@@ -25,10 +25,9 @@ export class UsersService {
     const u = ctx.from;
     if (!u) return false;
     try {
-      const res = await this.pool.query(
-        "SELECT telegram_id FROM users WHERE telegram_id = $1",
-        [u.id],
-      );
+      const res = await this.pool.query('SELECT telegram_id FROM users WHERE telegram_id = $1', [
+        u.id,
+      ]);
       const isNewUser = res.rowCount === 0;
       await this.pool.query(
         `INSERT INTO users (telegram_id, username, first_name, last_name, language_code, is_bot)
@@ -48,11 +47,11 @@ export class UsersService {
           u.last_name || null,
           u.language_code || null,
           u.is_bot || false,
-        ],
+        ]
       );
       return isNewUser;
     } catch (err) {
-      this.logger.error("[users][pg] Ошибка upsert:", err);
+      this.logger.error('[users][pg] Ошибка upsert:', err);
       return false;
     }
   }
@@ -60,8 +59,8 @@ export class UsersService {
   async getUserPreferredService(telegramId: number): Promise<'did' | 'heygen'> {
     try {
       const res = await this.pool.query(
-        "SELECT preferred_service FROM users WHERE telegram_id = $1",
-        [telegramId],
+        'SELECT preferred_service FROM users WHERE telegram_id = $1',
+        [telegramId]
       );
       if (res.rowCount === 0) {
         return 'did'; // По умолчанию D-ID для новых пользователей
@@ -70,7 +69,9 @@ export class UsersService {
     } catch (error: any) {
       // Если колонка не существует, возвращаем значение по умолчанию
       if (error.code === '42703' && error.message.includes('preferred_service')) {
-        this.logger.warn(`[users][pg] Колонка preferred_service не существует, используем значение по умолчанию для пользователя ${telegramId}`);
+        this.logger.warn(
+          `[users][pg] Колонка preferred_service не существует, используем значение по умолчанию для пользователя ${telegramId}`
+        );
         return 'did';
       }
       throw error; // Перебрасываем другие ошибки
@@ -79,16 +80,20 @@ export class UsersService {
 
   async setUserPreferredService(telegramId: number, service: 'did' | 'heygen'): Promise<boolean> {
     try {
-      await this.pool.query(
-        "UPDATE users SET preferred_service = $1 WHERE telegram_id = $2",
-        [service, telegramId],
+      await this.pool.query('UPDATE users SET preferred_service = $1 WHERE telegram_id = $2', [
+        service,
+        telegramId,
+      ]);
+      this.logger.log(
+        `Установлен предпочтительный сервис ${service} для пользователя ${telegramId}`
       );
-      this.logger.log(`Установлен предпочтительный сервис ${service} для пользователя ${telegramId}`);
       return true;
     } catch (error: any) {
       // Если колонка не существует, логируем предупреждение
       if (error.code === '42703' && error.message.includes('preferred_service')) {
-        this.logger.warn(`[users][pg] Колонка preferred_service не существует, не можем сохранить предпочтение для пользователя ${telegramId}`);
+        this.logger.warn(
+          `[users][pg] Колонка preferred_service не существует, не можем сохранить предпочтение для пользователя ${telegramId}`
+        );
         return false;
       }
       throw error; // Перебрасываем другие ошибки

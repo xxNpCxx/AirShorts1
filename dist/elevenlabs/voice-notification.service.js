@@ -33,7 +33,7 @@ let VoiceNotificationService = VoiceNotificationService_1 = class VoiceNotificat
             chatId,
             voiceId,
             voiceName,
-            status: "processing"
+            status: 'processing',
         };
         this.pendingNotifications.set(voiceId, notificationData);
         this.logger.log(`Registered voice notification for user ${userId}, voice ${voiceId}`);
@@ -100,6 +100,6 @@ let VoiceNotificationService = VoiceNotificationService_1 = class VoiceNotificat
 exports.VoiceNotificationService = VoiceNotificationService;
 exports.VoiceNotificationService = VoiceNotificationService = VoiceNotificationService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, common_2.Inject)((0, nestjs_telegraf_1.getBotToken)("airshorts1_bot"))),
+    __param(0, (0, common_2.Inject)((0, nestjs_telegraf_1.getBotToken)('airshorts1_bot'))),
     __metadata("design:paramtypes", [telegraf_1.Telegraf])
 ], VoiceNotificationService);

@@ -1,6 +1,6 @@
-import { Controller, Post, Body, Logger, HttpCode, HttpStatus } from "@nestjs/common";
-import { ElevenLabsService } from "./elevenlabs.service";
-import { VoiceNotificationService } from "./voice-notification.service";
+import { Controller, Post, Body, Logger, HttpCode, HttpStatus } from '@nestjs/common';
+import { ElevenLabsService } from './elevenlabs.service';
+import { VoiceNotificationService } from './voice-notification.service';
 
 interface ElevenLabsWebhookPayload {
   event: string;
@@ -11,33 +11,35 @@ interface ElevenLabsWebhookPayload {
   updated_at?: string;
 }
 
-@Controller("elevenlabs/webhook")
+@Controller('elevenlabs/webhook')
 export class ElevenLabsWebhookController {
   private readonly logger = new Logger(ElevenLabsWebhookController.name);
 
   constructor(
     private readonly elevenLabsService: ElevenLabsService,
-    private readonly voiceNotificationService: VoiceNotificationService,
+    private readonly voiceNotificationService: VoiceNotificationService
   ) {}
 
   @Post()
   @HttpCode(HttpStatus.OK)
   async handleWebhook(@Body() payload: ElevenLabsWebhookPayload) {
     try {
-      this.logger.log(`📨 Received ElevenLabs webhook: ${payload.event} for voice ${payload.voice_id}`);
-      this.logger.debug("Webhook payload:", payload);
+      this.logger.log(
+        `📨 Received ElevenLabs webhook: ${payload.event} for voice ${payload.voice_id}`
+      );
+      this.logger.debug('Webhook payload:', payload);
 
       switch (payload.event) {
-        case "voice.created":
+        case 'voice.created':
           await this.handleVoiceCreated(payload);
           break;
-        case "voice.updated":
+        case 'voice.updated':
           await this.handleVoiceUpdated(payload);
           break;
-        case "voice.deleted":
+        case 'voice.deleted':
           await this.handleVoiceDeleted(payload);
           break;
-        case "voice.failed":
+        case 'voice.failed':
           await this.handleVoiceFailed(payload);
           break;
         default:
@@ -46,17 +48,17 @@ export class ElevenLabsWebhookController {
 
       return { success: true };
     } catch (error) {
-      this.logger.error("Error processing ElevenLabs webhook:", error);
+      this.logger.error('Error processing ElevenLabs webhook:', error);
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
   private async handleVoiceCreated(payload: ElevenLabsWebhookPayload) {
     this.logger.log(`✅ Voice created successfully: ${payload.voice_id}`);
-    
+
     // Проверяем статус голоса и уведомляем пользователя
     const voiceStatus = await this.elevenLabsService.getVoiceStatus(payload.voice_id);
-    
+
     if (voiceStatus.ready) {
       await this.voiceNotificationService.notifyVoiceReady(payload.voice_id);
     } else {
@@ -66,10 +68,10 @@ export class ElevenLabsWebhookController {
 
   private async handleVoiceUpdated(payload: ElevenLabsWebhookPayload) {
     this.logger.log(`🔄 Voice updated: ${payload.voice_id}`);
-    
+
     // Проверяем, готов ли голос после обновления
     const voiceStatus = await this.elevenLabsService.getVoiceStatus(payload.voice_id);
-    
+
     if (voiceStatus.ready) {
       await this.voiceNotificationService.notifyVoiceReady(payload.voice_id);
     }
@@ -83,13 +85,13 @@ export class ElevenLabsWebhookController {
   private async handleVoiceFailed(payload: ElevenLabsWebhookPayload) {
     this.logger.error(`❌ Voice creation failed: ${payload.voice_id}`, {
       error: payload.error,
-      status: payload.status
+      status: payload.status,
     });
-    
+
     // Уведомляем пользователя об ошибке
     await this.voiceNotificationService.notifyVoiceError(
-      payload.voice_id, 
-      payload.error || "Неизвестная ошибка"
+      payload.voice_id,
+      payload.error || 'Неизвестная ошибка'
     );
   }
 }

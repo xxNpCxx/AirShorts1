@@ -26,18 +26,18 @@ let ElevenLabsWebhookController = ElevenLabsWebhookController_1 = class ElevenLa
     async handleWebhook(payload) {
         try {
             this.logger.log(`📨 Received ElevenLabs webhook: ${payload.event} for voice ${payload.voice_id}`);
-            this.logger.debug("Webhook payload:", payload);
+            this.logger.debug('Webhook payload:', payload);
             switch (payload.event) {
-                case "voice.created":
+                case 'voice.created':
                     await this.handleVoiceCreated(payload);
                     break;
-                case "voice.updated":
+                case 'voice.updated':
                     await this.handleVoiceUpdated(payload);
                     break;
-                case "voice.deleted":
+                case 'voice.deleted':
                     await this.handleVoiceDeleted(payload);
                     break;
-                case "voice.failed":
+                case 'voice.failed':
                     await this.handleVoiceFailed(payload);
                     break;
                 default:
@@ -46,7 +46,7 @@ let ElevenLabsWebhookController = ElevenLabsWebhookController_1 = class ElevenLa
             return { success: true };
         }
         catch (error) {
-            this.logger.error("Error processing ElevenLabs webhook:", error);
+            this.logger.error('Error processing ElevenLabs webhook:', error);
             return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
@@ -76,10 +76,10 @@ let ElevenLabsWebhookController = ElevenLabsWebhookController_1 = class ElevenLa
     async handleVoiceFailed(payload) {
         this.logger.error(`❌ Voice creation failed: ${payload.voice_id}`, {
             error: payload.error,
-            status: payload.status
+            status: payload.status,
         });
         // Уведомляем пользователя об ошибке
-        await this.voiceNotificationService.notifyVoiceError(payload.voice_id, payload.error || "Неизвестная ошибка");
+        await this.voiceNotificationService.notifyVoiceError(payload.voice_id, payload.error || 'Неизвестная ошибка');
     }
 };
 exports.ElevenLabsWebhookController = ElevenLabsWebhookController;
@@ -92,7 +92,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ElevenLabsWebhookController.prototype, "handleWebhook", null);
 exports.ElevenLabsWebhookController = ElevenLabsWebhookController = ElevenLabsWebhookController_1 = __decorate([
-    (0, common_1.Controller)("elevenlabs/webhook"),
+    (0, common_1.Controller)('elevenlabs/webhook'),
     __metadata("design:paramtypes", [elevenlabs_service_1.ElevenLabsService,
         voice_notification_service_1.VoiceNotificationService])
 ], ElevenLabsWebhookController);

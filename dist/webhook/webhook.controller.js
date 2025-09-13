@@ -37,7 +37,7 @@ let WebhookController = class WebhookController {
             this.logger.error(`❌ Ошибка обработки webhook: ${error}`, error instanceof Error ? error.stack : undefined, 'WebhookController');
             res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({
                 ok: false,
-                error: 'Internal server error'
+                error: 'Internal server error',
             });
         }
     }
@@ -53,7 +53,7 @@ __decorate([
 ], WebhookController.prototype, "handleWebhook", null);
 exports.WebhookController = WebhookController = __decorate([
     (0, common_1.Controller)('webhook'),
-    __param(1, (0, common_1.Inject)((0, nestjs_telegraf_1.getBotToken)("airshorts1_bot"))),
+    __param(1, (0, common_1.Inject)((0, nestjs_telegraf_1.getBotToken)('airshorts1_bot'))),
     __metadata("design:paramtypes", [logger_service_1.CustomLoggerService,
         telegraf_1.Telegraf])
 ], WebhookController);

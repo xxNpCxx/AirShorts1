@@ -1,0 +1,25 @@
+#!/bin/sh
+# Commit-msg hook для проверки сообщений коммитов
+
+echo "📝 Проверка сообщения коммита..."
+
+# Проверка формата сообщения коммита
+if ! npx commitlint --edit "$1"; then
+  echo "❌ Сообщение коммита не соответствует стандарту!"
+  echo ""
+  echo "Используйте формат: type(scope): description"
+  echo ""
+  echo "Примеры:"
+  echo "  feat: add new feature"
+  echo "  fix: resolve bug in authentication"
+  echo "  docs: update README"
+  echo "  style: format code with prettier"
+  echo "  refactor: improve code structure"
+  echo "  test: add unit tests"
+  echo "  chore: update dependencies"
+  echo ""
+  echo "Типы: feat, fix, docs, style, refactor, perf, test, chore, ci, build, revert"
+  exit 1
+fi
+
+echo "✅ Сообщение коммита корректно!"

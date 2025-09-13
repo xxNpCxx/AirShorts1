@@ -1,7 +1,7 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { Telegraf } from "telegraf";
-import { getBotToken } from "nestjs-telegraf";
-import { Inject } from "@nestjs/common";
+import { Injectable, Logger } from '@nestjs/common';
+import { Telegraf } from 'telegraf';
+import { getBotToken } from 'nestjs-telegraf';
+import { Inject } from '@nestjs/common';
 
 interface VoiceNotificationData {
   userId: number;
@@ -16,9 +16,7 @@ export class VoiceNotificationService {
   private readonly logger = new Logger(VoiceNotificationService.name);
   private readonly pendingNotifications = new Map<string, VoiceNotificationData>();
 
-  constructor(
-    @Inject(getBotToken("airshorts1_bot")) private readonly bot: Telegraf,
-  ) {}
+  constructor(@Inject(getBotToken('airshorts1_bot')) private readonly bot: Telegraf) {}
 
   /**
    * Регистрирует ожидающее уведомление о готовности голоса
@@ -34,7 +32,7 @@ export class VoiceNotificationService {
       chatId,
       voiceId,
       voiceName,
-      status: "processing"
+      status: 'processing',
     };
 
     this.pendingNotifications.set(voiceId, notificationData);
@@ -55,16 +53,19 @@ export class VoiceNotificationService {
       await this.bot.telegram.sendMessage(
         notification.chatId,
         `🎉 Ваш клонированный голос готов!\n\n` +
-        `🎤 Голос: ${notification.voiceName}\n` +
-        `🆔 ID: ${voiceId.substring(0, 8)}...\n\n` +
-        `✅ Теперь вы можете создавать видео с вашим голосом!\n\n` +
-        `💡 Перейдите в меню создания видео для продолжения.`
+          `🎤 Голос: ${notification.voiceName}\n` +
+          `🆔 ID: ${voiceId.substring(0, 8)}...\n\n` +
+          `✅ Теперь вы можете создавать видео с вашим голосом!\n\n` +
+          `💡 Перейдите в меню создания видео для продолжения.`
       );
 
       this.pendingNotifications.delete(voiceId);
       this.logger.log(`Voice ready notification sent to user ${notification.userId}`);
     } catch (error) {
-      this.logger.error(`Failed to send voice ready notification to user ${notification.userId}:`, error);
+      this.logger.error(
+        `Failed to send voice ready notification to user ${notification.userId}:`,
+        error
+      );
     }
   }
 
@@ -82,16 +83,19 @@ export class VoiceNotificationService {
       await this.bot.telegram.sendMessage(
         notification.chatId,
         `❌ Ошибка при клонировании голоса\n\n` +
-        `🎤 Голос: ${notification.voiceName}\n` +
-        `🆔 ID: ${voiceId.substring(0, 8)}...\n\n` +
-        `⚠️ Причина: ${error}\n\n` +
-        `🔄 Вы можете попробовать загрузить голос заново или использовать синтетический голос.`
+          `🎤 Голос: ${notification.voiceName}\n` +
+          `🆔 ID: ${voiceId.substring(0, 8)}...\n\n` +
+          `⚠️ Причина: ${error}\n\n` +
+          `🔄 Вы можете попробовать загрузить голос заново или использовать синтетический голос.`
       );
 
       this.pendingNotifications.delete(voiceId);
       this.logger.log(`Voice error notification sent to user ${notification.userId}`);
     } catch (error) {
-      this.logger.error(`Failed to send voice error notification to user ${notification.userId}:`, error);
+      this.logger.error(
+        `Failed to send voice error notification to user ${notification.userId}:`,
+        error
+      );
     }
   }
 

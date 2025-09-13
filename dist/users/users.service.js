@@ -27,7 +27,9 @@ let UsersService = UsersService_1 = class UsersService {
         if (!u)
             return false;
         try {
-            const res = await this.pool.query("SELECT telegram_id FROM users WHERE telegram_id = $1", [u.id]);
+            const res = await this.pool.query('SELECT telegram_id FROM users WHERE telegram_id = $1', [
+                u.id,
+            ]);
             const isNewUser = res.rowCount === 0;
             await this.pool.query(`INSERT INTO users (telegram_id, username, first_name, last_name, language_code, is_bot)
          VALUES ($1, $2, $3, $4, $5, $6)
@@ -49,13 +51,13 @@ let UsersService = UsersService_1 = class UsersService {
             return isNewUser;
         }
         catch (err) {
-            this.logger.error("[users][pg] Ошибка upsert:", err);
+            this.logger.error('[users][pg] Ошибка upsert:', err);
             return false;
         }
     }
     async getUserPreferredService(telegramId) {
         try {
-            const res = await this.pool.query("SELECT preferred_service FROM users WHERE telegram_id = $1", [telegramId]);
+            const res = await this.pool.query('SELECT preferred_service FROM users WHERE telegram_id = $1', [telegramId]);
             if (res.rowCount === 0) {
                 return 'did'; // По умолчанию D-ID для новых пользователей
             }
@@ -72,7 +74,10 @@ let UsersService = UsersService_1 = class UsersService {
     }
     async setUserPreferredService(telegramId, service) {
         try {
-            await this.pool.query("UPDATE users SET preferred_service = $1 WHERE telegram_id = $2", [service, telegramId]);
+            await this.pool.query('UPDATE users SET preferred_service = $1 WHERE telegram_id = $2', [
+                service,
+                telegramId,
+            ]);
             this.logger.log(`Установлен предпочтительный сервис ${service} для пользователя ${telegramId}`);
             return true;
         }

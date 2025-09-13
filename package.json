@@ -12,8 +12,18 @@
     "start:prod": "node dist/main",
     "migrate": "ts-node src/migrate.ts",
     "lint": "eslint \"src/**/*.ts\" --fix",
+    "lint:check": "eslint \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\"",
-    "dev": "nodemon --exec ts-node src/main.ts"
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "dev": "nodemon --exec ts-node src/main.ts",
+    "prepare": "husky install",
+    "pre-commit": "lint-staged",
+    "validate": "npm run type-check && npm run lint:check && npm run format:check && npm run build",
+    "audit": "npm audit --audit-level=high",
+    "audit:fix": "npm audit fix",
+    "security": "npm run audit",
+    "pre-deploy": "./scripts/pre-deploy-check.sh",
+    "test": "echo \"No tests specified\" && exit 0"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",
@@ -40,6 +50,8 @@
     "telegraf": "^4.15.0"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@eslint/js": "^9.34.0",
     "@nestjs/cli": "^11.0.10",
     "@types/form-data": "^2.2.1",
@@ -49,7 +61,10 @@
     "eslint": "^9.34.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.6",
     "nodemon": "^3.0.0",
+    "npm-audit-resolver": "^3.0.0-RC.0",
     "prettier": "^3.6.2",
     "ts-node": "^10.9.1",
     "typescript": "^5.3.3"
@@ -74,5 +89,19 @@
   "engines": {
     "node": "22.19.0",
     "npm": ">=10.0.0"
+  },
+  "lint-staged": {
+    "src/**/*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "src/**/*.{js,json,md}": [
+      "prettier --write"
+    ]
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
   }
 }

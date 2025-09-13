@@ -35,33 +35,33 @@ let ElevenLabsController = class ElevenLabsController {
 };
 exports.ElevenLabsController = ElevenLabsController;
 __decorate([
-    (0, common_1.Post)("clone-voice"),
+    (0, common_1.Post)('clone-voice'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], ElevenLabsController.prototype, "cloneVoice", null);
 __decorate([
-    (0, common_1.Post)("text-to-speech"),
+    (0, common_1.Post)('text-to-speech'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], ElevenLabsController.prototype, "textToSpeech", null);
 __decorate([
-    (0, common_1.Get)("voices"),
+    (0, common_1.Get)('voices'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], ElevenLabsController.prototype, "getVoices", null);
 __decorate([
-    (0, common_1.Delete)("voices/:id"),
-    __param(0, (0, common_1.Param)("id")),
+    (0, common_1.Delete)('voices/:id'),
+    __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], ElevenLabsController.prototype, "deleteVoice", null);
 exports.ElevenLabsController = ElevenLabsController = __decorate([
-    (0, common_1.Controller)("elevenlabs"),
+    (0, common_1.Controller)('elevenlabs'),
     __metadata("design:paramtypes", [elevenlabs_service_1.ElevenLabsService])
 ], ElevenLabsController);
