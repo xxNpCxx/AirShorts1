@@ -3,6 +3,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { createReadStream, existsSync } from 'fs';
 import { join } from 'path';
+import { Multer } from 'multer';
 
 @Controller('test-files')
 export class TestFilesController {
