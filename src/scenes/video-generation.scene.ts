@@ -15,6 +15,17 @@ import {
 } from '../types';
 import { BaseScene } from './base-scene';
 
+// Константы для шагов сцены
+const SCENE_STEPS = {
+  INITIAL: 'initial',
+  PHOTO_UPLOADED: 'photo_uploaded',
+  VOICE_UPLOADED: 'voice_uploaded',
+  SCRIPT_SAVED: 'script_saved',
+  READY_TO_GENERATE: 'ready_to_generate',
+} as const;
+
+type SceneStep = (typeof SCENE_STEPS)[keyof typeof SCENE_STEPS];
+
 @Scene('video-generation')
 export class VideoGenerationScene extends BaseScene {
   constructor(
@@ -37,6 +48,150 @@ export class VideoGenerationScene extends BaseScene {
     return Math.max(5, Math.min(60, Math.ceil(durationInMinutes * 60)));
   }
 
+  /**
+   * Устанавливает текущий шаг в сессии
+   */
+  private setCurrentStep(session: any, step: SceneStep): void {
+    session.currentStep = step;
+  }
+
+  /**
+   * Получает текущий шаг из сессии
+   */
+  private getCurrentStep(session: any): SceneStep {
+    return session.currentStep || SCENE_STEPS.INITIAL;
+  }
+
+  /**
+   * Создает клавиатуру для навигации по шагам
+   */
+  private createStepKeyboard(currentStep: SceneStep, canGenerate: boolean = false) {
+    const keyboard: any[] = [];
+
+    // Кнопка "Назад" - показываем только если не на начальном шаге
+    if (currentStep !== SCENE_STEPS.INITIAL) {
+      keyboard.push([{ text: '⬅️ Назад', callback_data: 'step_back' }]);
+    }
+
+    // Кнопка "Генерировать видео" - показываем если все готово
+    if (canGenerate) {
+      keyboard.push([{ text: '🎬 Генерировать видео', callback_data: 'generate_video' }]);
+    }
+
+    // Кнопка "Назад в меню" - всегда внизу
+    keyboard.push([{ text: '🏠 Главное меню', callback_data: 'back_to_menu' }]);
+
+    return {
+      inline_keyboard: keyboard,
+    };
+  }
+
+  /**
+   * Обрабатывает навигацию назад по шагам
+   */
+  private async handleStepBack(ctx: Context, session: any): Promise<void> {
+    const currentStep = this.getCurrentStep(session);
+
+    switch (currentStep) {
+      case SCENE_STEPS.SCRIPT_SAVED:
+        // Возвращаемся к шагу загрузки голоса или фото
+        if ((session as any).voiceFileId) {
+          this.setCurrentStep(session, SCENE_STEPS.VOICE_UPLOADED);
+          await this.showVoiceUploadedState(ctx, session);
+        } else {
+          this.setCurrentStep(session, SCENE_STEPS.PHOTO_UPLOADED);
+          await this.showPhotoUploadedState(ctx, session);
+        }
+        break;
+
+      case SCENE_STEPS.VOICE_UPLOADED:
+        // Возвращаемся к шагу загрузки фото
+        this.setCurrentStep(session, SCENE_STEPS.PHOTO_UPLOADED);
+        await this.showPhotoUploadedState(ctx, session);
+        break;
+
+      case SCENE_STEPS.PHOTO_UPLOADED:
+        // Возвращаемся к начальному шагу
+        this.setCurrentStep(session, SCENE_STEPS.INITIAL);
+        await this.showInitialState(ctx, session);
+        break;
+
+      default:
+        // Если на начальном шаге, показываем начальное состояние
+        await this.showInitialState(ctx, session);
+    }
+  }
+
+  /**
+   * Показывает начальное состояние сцены
+   */
+  private async showInitialState(ctx: Context, session: any): Promise<void> {
+    const hasPhoto = (session as any).photoFileId;
+    const hasVoiceOrScript = (session as any).voiceFileId || session.script;
+    const canGenerate = hasPhoto && hasVoiceOrScript;
+
+    await ctx.reply(
+      `🎬 **Генерация видео**\n\n` +
+        `📸 Фото: ${(session as any).photoFileId ? '✅ Загружено' : '❌ Не загружено'}\n` +
+        `🎤 Голос: ${(session as any).voiceFileId ? '✅ Загружен' : '❌ Не загружен'}\n` +
+        `📝 Скрипт: ${session.script ? '✅ Написан' : '❌ Не написан'}\n\n${
+          canGenerate
+            ? 'Все готово! Можете генерировать видео.'
+            : 'Отправьте фото, голосовое сообщение или текст для продолжения.'
+        }`,
+      {
+        parse_mode: 'Markdown',
+        reply_markup: this.createStepKeyboard(SCENE_STEPS.INITIAL, canGenerate),
+      }
+    );
+  }
+
+  /**
+   * Показывает состояние после загрузки фото
+   */
+  private async showPhotoUploadedState(ctx: Context, session: any): Promise<void> {
+    await ctx.reply(
+      '📸 **Фото получено!**\n\n' +
+        'Теперь отправьте голосовое сообщение или текст для генерации видео.',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: this.createStepKeyboard(SCENE_STEPS.PHOTO_UPLOADED),
+      }
+    );
+  }
+
+  /**
+   * Показывает состояние после загрузки голоса
+   */
+  private async showVoiceUploadedState(ctx: Context, session: any): Promise<void> {
+    const canGenerate = (session as any).photoFileId && (session as any).voiceFileId;
+
+    await ctx.reply(
+      '🎤 **Голосовое сообщение получено!**\n\n' +
+        'Теперь отправьте текст скрипта или нажмите "Генерировать видео" если все готово.',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: this.createStepKeyboard(SCENE_STEPS.VOICE_UPLOADED, canGenerate),
+      }
+    );
+  }
+
+  /**
+   * Показывает состояние после сохранения скрипта
+   */
+  private async showScriptSavedState(ctx: Context, session: any, text: string): Promise<void> {
+    await ctx.reply(
+      `📝 **Скрипт сохранен!**\n\n` +
+        `Текст: "${text}"\n` +
+        `Предполагаемая длительность: ${session.duration} секунд\n\n` +
+        'Теперь нажмите "Генерировать видео" для создания ролика.',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: this.createStepKeyboard(SCENE_STEPS.SCRIPT_SAVED, true),
+      }
+    );
+  }
+
   @SceneEnter()
   async onSceneEnter(@Ctx() ctx: Context) {
     this.logger.debug('🎬 Вход в сцену генерации видео', 'VideoGenerationScene');
@@ -53,37 +208,13 @@ export class VideoGenerationScene extends BaseScene {
       return;
     }
 
-    // Проверяем, есть ли все необходимые данные для генерации
-    const hasPhoto = session.photoFileId;
-    const hasVoiceOrScript = session.voiceFileId || session.script;
-    const canGenerate = hasPhoto && hasVoiceOrScript;
+    // Устанавливаем начальный шаг если его нет
+    if (!this.getCurrentStep(session)) {
+      this.setCurrentStep(session, SCENE_STEPS.INITIAL);
+    }
 
-    const keyboard = canGenerate 
-      ? {
-          inline_keyboard: [
-            [{ text: '🎬 Генерировать видео', callback_data: 'generate_video' }],
-            [{ text: '🔙 Назад в меню', callback_data: 'back_to_menu' }]
-          ]
-        }
-      : {
-          inline_keyboard: [
-            [{ text: '🔙 Назад в меню', callback_data: 'back_to_menu' }]
-          ]
-        };
-
-    await ctx.reply(
-      `🎬 **Генерация видео**\n\n` +
-        `📸 Фото: ${session.photoFileId ? '✅ Загружено' : '❌ Не загружено'}\n` +
-        `🎤 Голос: ${session.voiceFileId ? '✅ Загружен' : '❌ Не загружен'}\n` +
-        `📝 Скрипт: ${session.script ? '✅ Написан' : '❌ Не написан'}\n\n` +
-        (canGenerate 
-          ? 'Все готово! Можете генерировать видео.' 
-          : 'Отправьте фото, голосовое сообщение или текст для продолжения.'),
-      { 
-        parse_mode: 'Markdown',
-        reply_markup: keyboard
-      }
-    );
+    // Показываем соответствующее состояние
+    await this.showInitialState(ctx, session);
   }
 
   @On('photo')
@@ -100,18 +231,9 @@ export class VideoGenerationScene extends BaseScene {
       const photo = (ctx.message as any).photo[(ctx.message as any).photo.length - 1];
       (session as any).photoFileId = photo.file_id;
 
-      await ctx.reply(
-        '📸 **Фото получено!**\n\n' +
-          'Теперь отправьте голосовое сообщение или текст для генерации видео.',
-        { 
-          parse_mode: 'Markdown',
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '🔙 Назад в меню', callback_data: 'back_to_menu' }]
-            ]
-          }
-        }
-      );
+      // Устанавливаем шаг и показываем состояние
+      this.setCurrentStep(session, SCENE_STEPS.PHOTO_UPLOADED);
+      await this.showPhotoUploadedState(ctx, session);
     } catch (error) {
       this.logger.error('Ошибка при обработке фото:', error);
       await ctx.reply('❌ Ошибка при обработке фото. Попробуйте еще раз.');
@@ -130,19 +252,9 @@ export class VideoGenerationScene extends BaseScene {
     try {
       (session as any).voiceFileId = (ctx.message as any).voice.file_id;
 
-      await ctx.reply(
-        '🎤 **Голосовое сообщение получено!**\n\n' +
-          'Теперь отправьте текст скрипта или нажмите "Генерировать видео" если все готово.',
-        { 
-          parse_mode: 'Markdown',
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '🎬 Генерировать видео', callback_data: 'generate_video' }],
-              [{ text: '🔙 Назад в меню', callback_data: 'back_to_menu' }]
-            ]
-          }
-        }
-      );
+      // Устанавливаем шаг и показываем состояние
+      this.setCurrentStep(session, SCENE_STEPS.VOICE_UPLOADED);
+      await this.showVoiceUploadedState(ctx, session);
     } catch (error) {
       this.logger.error('Ошибка при обработке голоса:', error);
       await ctx.reply('❌ Ошибка при обработке голоса. Попробуйте еще раз.');
@@ -178,21 +290,9 @@ export class VideoGenerationScene extends BaseScene {
     (session as any).script = text;
     (session as any).duration = this.calculateVideoDuration(text);
 
-    await ctx.reply(
-      `📝 **Скрипт сохранен!**\n\n` +
-        `Текст: "${text}"\n` +
-        `Предполагаемая длительность: ${session.duration} секунд\n\n` +
-        'Теперь нажмите "Генерировать видео" для создания ролика.',
-      { 
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '🎬 Генерировать видео', callback_data: 'generate_video' }],
-            [{ text: '🔙 Назад в меню', callback_data: 'back_to_menu' }]
-          ]
-        }
-      }
-    );
+    // Устанавливаем шаг и показываем состояние
+    this.setCurrentStep(session, SCENE_STEPS.SCRIPT_SAVED);
+    await this.showScriptSavedState(ctx, session, text);
   }
 
   @Action('generate_video')
@@ -261,6 +361,19 @@ export class VideoGenerationScene extends BaseScene {
         { parse_mode: 'Markdown' }
       );
     }
+  }
+
+  @Action('step_back')
+  async onStepBack(@Ctx() ctx: Context) {
+    const session = (ctx as any).session;
+
+    if (!session) {
+      await ctx.reply('❌ Ошибка: сессия не найдена.');
+      return;
+    }
+
+    await ctx.answerCbQuery();
+    await this.handleStepBack(ctx, session);
   }
 
   @Action('back_to_menu')
