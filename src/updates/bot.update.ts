@@ -266,7 +266,6 @@ export class BotUpdate {
     return this.onMyId(ctx);
   }
 
-
   @Action('create_video')
   async onCreateVideo(@Ctx() ctx: Context) {
     await ctx.answerCbQuery();
@@ -276,5 +275,4 @@ export class BotUpdate {
       }
     ).scene.enter('video-generation');
   }
-
 }

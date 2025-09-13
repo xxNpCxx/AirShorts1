@@ -4,13 +4,13 @@ import { getBotToken } from 'nestjs-telegraf';
 import { Pool } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { ConfigService } from '@nestjs/config';
-import { 
-  AkoolWebhookBody, 
-  AkoolDecryptedData, 
-  AkoolWebhookLog, 
+import {
+  AkoolWebhookBody,
+  AkoolDecryptedData,
+  AkoolWebhookLog,
   AkoolVideoRequestRecord,
   validateAkoolWebhookBody,
-  validateAkoolDecryptedData 
+  validateAkoolDecryptedData,
 } from '../types';
 
 @Controller('akool/webhook')
@@ -294,7 +294,11 @@ export class AkoolWebhookController {
   /**
    * Сохранение webhook лога в БД
    */
-  private async saveWebhookLog(service: string, webhookType: string, payload: AkoolWebhookBody): Promise<void> {
+  private async saveWebhookLog(
+    service: string,
+    webhookType: string,
+    payload: AkoolWebhookBody
+  ): Promise<void> {
     try {
       await this.pool.query(
         `INSERT INTO webhook_logs (service, webhook_type, payload, created_at) 

@@ -3,11 +3,11 @@ import { AkoolService, AkoolVideoRequest, AkoolVideoResponse } from './akool.ser
 import { Inject } from '@nestjs/common';
 import { Pool } from 'pg';
 import { PG_POOL } from '../database/database.module';
-import { 
-  AkoolVideoStatusResponse, 
+import {
+  AkoolVideoStatusResponse,
   AkoolWebhookLogsResponse,
   AkoolWebhookLog,
-  AKOOL_CONTROLLER_MESSAGES 
+  AKOOL_CONTROLLER_MESSAGES,
 } from '../types';
 
 @Controller('akool')

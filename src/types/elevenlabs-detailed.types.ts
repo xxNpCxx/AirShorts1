@@ -151,7 +151,9 @@ export interface ElevenLabsVoiceVerification {
 // ВАЛИДАЦИЯ
 // ============================================================================
 
-export function validateElevenLabsVerificationAttempt(data: unknown): data is ElevenLabsVerificationAttempt {
+export function validateElevenLabsVerificationAttempt(
+  data: unknown
+): data is ElevenLabsVerificationAttempt {
   return (
     typeof data === 'object' &&
     data !== null &&
@@ -162,7 +164,9 @@ export function validateElevenLabsVerificationAttempt(data: unknown): data is El
   );
 }
 
-export function validateElevenLabsManualVerification(data: unknown): data is ElevenLabsManualVerification {
+export function validateElevenLabsManualVerification(
+  data: unknown
+): data is ElevenLabsManualVerification {
   return (
     typeof data === 'object' &&
     data !== null &&

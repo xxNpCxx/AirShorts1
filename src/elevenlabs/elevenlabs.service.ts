@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { 
-  ElevenLabsVerificationAttempt, 
-  ElevenLabsManualVerification, 
-  ElevenLabsSafetyControl, 
-  ElevenLabsPermission 
+import {
+  ElevenLabsVerificationAttempt,
+  ElevenLabsManualVerification,
+  ElevenLabsSafetyControl,
+  ElevenLabsPermission,
 } from '../types';
 
 export interface VoiceCloneRequest {
