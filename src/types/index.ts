@@ -96,6 +96,99 @@ export interface TelegramUpdate {
   update_id: number;
   message?: TelegramMessage;
   callback_query?: TelegramCallbackQuery;
+  inline_query?: {
+    id: string;
+    from: TelegramUser;
+    query: string;
+    offset: string;
+  };
+  chosen_inline_result?: {
+    result_id: string;
+    from: TelegramUser;
+    query: string;
+  };
+  channel_post?: TelegramMessage;
+  edited_message?: TelegramMessage;
+  edited_channel_post?: TelegramMessage;
+  shipping_query?: {
+    id: string;
+    from: TelegramUser;
+    invoice_payload: string;
+    shipping_address: {
+      country_code: string;
+      state: string;
+      city: string;
+      street_line1: string;
+      street_line2: string;
+      post_code: string;
+    };
+  };
+  pre_checkout_query?: {
+    id: string;
+    from: TelegramUser;
+    currency: string;
+    total_amount: number;
+    invoice_payload: string;
+  };
+  poll?: {
+    id: string;
+    question: string;
+    options: Array<{
+      text: string;
+      voter_count: number;
+    }>;
+    total_voter_count: number;
+    is_closed: boolean;
+    is_anonymous: boolean;
+    type: string;
+    allows_multiple_answers: boolean;
+  };
+  poll_answer?: {
+    poll_id: string;
+    user: TelegramUser;
+    option_ids: number[];
+  };
+  my_chat_member?: {
+    chat: TelegramChat;
+    from: TelegramUser;
+    date: number;
+    old_chat_member: {
+      user: TelegramUser;
+      status: string;
+    };
+    new_chat_member: {
+      user: TelegramUser;
+      status: string;
+    };
+  };
+  chat_member?: {
+    chat: TelegramChat;
+    from: TelegramUser;
+    date: number;
+    old_chat_member: {
+      user: TelegramUser;
+      status: string;
+    };
+    new_chat_member: {
+      user: TelegramUser;
+      status: string;
+    };
+  };
+  chat_join_request?: {
+    chat: TelegramChat;
+    from: TelegramUser;
+    date: number;
+    bio?: string;
+    invite_link?: {
+      creator: TelegramUser;
+      is_primary: boolean;
+      is_revoked: boolean;
+      name?: string;
+      expire_date?: number;
+      member_limit?: number;
+      pending_join_request_count?: number;
+    };
+  };
 }
 
 // ============================================================================

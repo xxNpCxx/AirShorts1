@@ -22,12 +22,44 @@ import {
 // ============================================================================
 
 export function isTelegramUpdate(data: unknown): data is TelegramUpdate {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof (data as any).update_id === 'number' &&
-    ((data as any).message !== undefined || (data as any).callback_query !== undefined)
-  );
+  if (typeof data !== 'object' || data === null) {
+    console.log('❌ isTelegramUpdate: data is not object or is null');
+    return false;
+  }
+
+  const update = data as any;
+  
+  // Проверяем обязательное поле update_id
+  if (typeof update.update_id !== 'number') {
+    console.log('❌ isTelegramUpdate: update_id is not number, type:', typeof update.update_id, 'value:', update.update_id);
+    return false;
+  }
+
+  // Проверяем, что есть хотя бы одно из возможных обновлений
+  const hasValidUpdate = 
+    update.message !== undefined ||
+    update.callback_query !== undefined ||
+    update.inline_query !== undefined ||
+    update.chosen_inline_result !== undefined ||
+    update.channel_post !== undefined ||
+    update.edited_message !== undefined ||
+    update.edited_channel_post !== undefined ||
+    update.shipping_query !== undefined ||
+    update.pre_checkout_query !== undefined ||
+    update.poll !== undefined ||
+    update.poll_answer !== undefined ||
+    update.my_chat_member !== undefined ||
+    update.chat_member !== undefined ||
+    update.chat_join_request !== undefined;
+
+  if (!hasValidUpdate) {
+    console.log('❌ isTelegramUpdate: no valid update type found');
+    console.log('Available keys:', Object.keys(update));
+  } else {
+    console.log('✅ isTelegramUpdate: validation passed');
+  }
+
+  return hasValidUpdate;
 }
 
 export function isTelegramMessage(data: unknown): data is TelegramMessage {

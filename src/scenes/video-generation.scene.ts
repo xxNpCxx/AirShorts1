@@ -39,7 +39,7 @@ export class VideoGenerationScene {
   @SceneEnter()
   async onSceneEnter(@Ctx() ctx: Context) {
     this.logger.debug('🎬 Вход в сцену генерации видео', 'VideoGenerationScene');
-    
+
     if (!isTypedContext(ctx)) {
       await ctx.reply('❌ Ошибка: контекст не поддерживает сессии. Начните заново.');
       return;
@@ -112,7 +112,8 @@ export class VideoGenerationScene {
 
   @On('text')
   async onText(@Ctx() ctx: Context) {
-    this.logger.debug('📝 Получено текстовое сообщение в сцене', 'VideoGenerationScene');
+    const text = (ctx.message as any).text;
+    this.logger.debug(`📝 Получено текстовое сообщение в сцене: "${text}"`, 'VideoGenerationScene');
     
     const session = (ctx as any).session as SessionData;
 
@@ -121,12 +122,12 @@ export class VideoGenerationScene {
       return;
     }
 
-    const text = (ctx.message as any).text;
-
-    // Проверяем команды (middleware обрабатывает главное меню автоматически)
-    if (text === '/start' || text === 'Назад в меню') {
+    // Проверяем команды главного меню
+    if (text === '/start' || text === 'Назад в меню' || text === '🏠 Главное меню' || text === 'Главное меню') {
+      this.logger.debug(`🚪 Выходим из сцены по команде главного меню: "${text}"`, 'VideoGenerationScene');
       await (ctx as any).scene.leave();
       await ctx.reply('🏠 Возвращаемся в главное меню...');
+      this.logger.debug('✅ Сцена завершена, пользователь возвращен в главное меню', 'VideoGenerationScene');
       return;
     }
 

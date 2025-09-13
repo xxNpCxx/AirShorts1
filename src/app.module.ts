@@ -18,8 +18,6 @@ import { ElevenLabsModule } from './elevenlabs/elevenlabs.module';
 import { VideoGenerationScene } from './scenes/video-generation.scene';
 import { WebhookModule } from './webhook/webhook.module';
 import { TestFilesModule } from './test-files/test-files.module';
-import { MiddlewareModule } from './middleware/middleware.module';
-import { sceneMainMenuMiddleware } from './middleware/scene-main-menu.middleware';
 
 @Module({
   imports: [
@@ -38,11 +36,10 @@ import { sceneMainMenuMiddleware } from './middleware/scene-main-menu.middleware
     ElevenLabsModule,
     WebhookModule,
     TestFilesModule,
-    MiddlewareModule,
     TelegrafModule.forRoot({
       token: process.env.BOT_TOKEN || '',
       botName: 'airshorts1_bot',
-      middlewares: [session(), sceneMainMenuMiddleware],
+      middlewares: [session()],
       launchOptions: {
         dropPendingUpdates: true,
         webhook: {
