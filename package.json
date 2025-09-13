@@ -24,6 +24,7 @@
     "audit:fix": "npm audit fix",
     "security": "npm run audit",
     "pre-deploy": "./scripts/pre-deploy-check.sh",
+    "analyze-any": "./scripts/replace-any-types.sh",
     "test": "echo \"No tests specified\" && exit 0"
   },
   "dependencies": {

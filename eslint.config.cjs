@@ -83,6 +83,12 @@ module.exports = [
     },
   },
   {
+    files: ['src/types/**/*.ts', 'src/utils/type-guards.ts', 'src/utils/validation.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
     ignores: [
       'dist/**/*', 
       'node_modules/**/*', 

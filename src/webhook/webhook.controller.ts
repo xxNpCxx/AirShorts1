@@ -3,6 +3,8 @@ import { Response } from 'express';
 import { CustomLoggerService } from '../logger/logger.service';
 import { Telegraf } from 'telegraf';
 import { getBotToken } from 'nestjs-telegraf';
+import { TelegramUpdate } from '../types';
+import { isTelegramUpdate } from '../utils/type-guards';
 
 @Controller('webhook')
 export class WebhookController {
@@ -12,8 +14,18 @@ export class WebhookController {
   ) {}
 
   @Post()
-  async handleWebhook(@Body() update: any, @Res() res: Response) {
+  async handleWebhook(@Body() update: unknown, @Res() res: Response) {
     try {
+      // Валидация входящих данных
+      if (!isTelegramUpdate(update)) {
+        this.logger.error('❌ Invalid Telegram update received', undefined, 'WebhookController');
+        res.status(HttpStatus.BAD_REQUEST).json({
+          ok: false,
+          error: 'Invalid Telegram update format',
+        });
+        return;
+      }
+
       this.logger.log(`📥 Webhook получен: update_id=${update.update_id}`, 'WebhookController');
 
       if (update.message?.text) {
@@ -24,7 +36,8 @@ export class WebhookController {
       }
 
       // Передаем обновление в Telegraf для обработки
-      await this.bot.handleUpdate(update);
+      // Приводим к типу Update для совместимости с Telegraf
+      await this.bot.handleUpdate(update as any);
 
       this.logger.log(`✅ Webhook обработан успешно`, 'WebhookController');
 

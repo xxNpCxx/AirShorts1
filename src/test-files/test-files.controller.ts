@@ -12,6 +12,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { createReadStream, existsSync } from 'fs';
 import { join } from 'path';
+import { FileUpload } from '../types';
+import { isFileUpload } from '../utils/type-guards';
 
 @Controller('test-files')
 export class TestFilesController {
@@ -19,9 +21,9 @@ export class TestFilesController {
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(@UploadedFile() file: any) {
-    if (!file) {
-      throw new BadRequestException('Файл не предоставлен');
+  async uploadFile(@UploadedFile() file: unknown) {
+    if (!isFileUpload(file)) {
+      throw new BadRequestException('Файл не предоставлен или имеет неверный формат');
     }
 
     // В реальном проекте здесь была бы загрузка в облачное хранилище
