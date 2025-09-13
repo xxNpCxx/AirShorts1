@@ -12,6 +12,7 @@ export const sceneMainMenuMiddleware: MiddlewareFn<Context> = async (ctx, next) 
   }
 
   const text = ctx.message.text;
+  console.log(`🔍 [MIDDLEWARE] Проверяем сообщение: "${text}"`);
 
   // Проверяем, является ли сообщение запросом главного меню
   if (MainMenuHandler.isMainMenuMessage(text)) {

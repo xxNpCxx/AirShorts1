@@ -38,6 +38,8 @@ export class VideoGenerationScene {
 
   @SceneEnter()
   async onSceneEnter(@Ctx() ctx: Context) {
+    this.logger.debug('🎬 Вход в сцену генерации видео', 'VideoGenerationScene');
+    
     if (!isTypedContext(ctx)) {
       await ctx.reply('❌ Ошибка: контекст не поддерживает сессии. Начните заново.');
       return;
@@ -110,6 +112,8 @@ export class VideoGenerationScene {
 
   @On('text')
   async onText(@Ctx() ctx: Context) {
+    this.logger.debug('📝 Получено текстовое сообщение в сцене', 'VideoGenerationScene');
+    
     const session = (ctx as any).session as SessionData;
 
     if (!session) {

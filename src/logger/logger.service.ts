@@ -72,7 +72,51 @@ export class CustomLoggerService implements LoggerService {
     const timestamp = new Date().toISOString();
     const contextStr = context ? `[${context}]` : '';
     const levelStr = `[${level.toUpperCase()}]`;
-    return `${timestamp} ${levelStr} ${contextStr} ${message}`;
+    
+    // Получаем информацию о месте вызова
+    const callerInfo = this.getCallerInfo();
+    
+    return `${timestamp} ${levelStr} ${contextStr} ${callerInfo} ${message}`;
+  }
+
+  private getCallerInfo(): string {
+    const stack = new Error().stack;
+    if (!stack) return '';
+
+    const lines = stack.split('\n');
+    
+    // Ищем строку, которая содержит наш код (не node_modules)
+    for (let i = 3; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Пропускаем строки из node_modules
+      if (line.includes('node_modules')) continue;
+      
+      // Пропускаем строки из самого логгера
+      if (line.includes('logger.service.ts')) continue;
+      
+      // Ищем строку с путем к файлу
+      const match = line.match(/at\s+.*\s+\((.+):(\d+):(\d+)\)/) || 
+                   line.match(/at\s+(.+):(\d+):(\d+)/);
+      
+      if (match) {
+        const filePath = match[1];
+        const lineNumber = match[2];
+        
+        // Извлекаем только относительный путь от src/
+        const srcIndex = filePath.indexOf('/src/');
+        if (srcIndex !== -1) {
+          const relativePath = filePath.substring(srcIndex + 1); // убираем /src/
+          return `[${relativePath}:${lineNumber}]`;
+        }
+        
+        // Если не нашли /src/, используем имя файла
+        const fileName = filePath.split('/').pop();
+        return `[${fileName}:${lineNumber}]`;
+      }
+    }
+    
+    return '';
   }
 
   private shouldLog(level: LogLevel): boolean {
