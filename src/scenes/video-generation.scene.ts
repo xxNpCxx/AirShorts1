@@ -13,15 +13,17 @@ import {
   SessionData,
   isTypedContext,
 } from '../types';
+import { BaseScene } from './base-scene';
 
 @Scene('video-generation')
-export class VideoGenerationScene {
-  private readonly logger = new Logger(VideoGenerationScene.name);
+export class VideoGenerationScene extends BaseScene {
 
   constructor(
     private readonly akoolService: AkoolService,
     @Inject(getBotToken('airshorts1_bot')) private readonly bot: Telegraf
-  ) {}
+  ) {
+    super();
+  }
 
   /**
    * Рассчитывает длительность видео на основе текста
@@ -122,12 +124,11 @@ export class VideoGenerationScene {
       return;
     }
 
-    // Проверяем команды главного меню
-    if (text === '/start' || text === 'Назад в меню' || text === '🏠 Главное меню' || text === 'Главное меню') {
-      this.logger.debug(`🚪 Выходим из сцены по команде главного меню: "${text}"`, 'VideoGenerationScene');
-      await (ctx as any).scene.leave();
-      await ctx.reply('🏠 Возвращаемся в главное меню...');
-      this.logger.debug('✅ Сцена завершена, пользователь возвращен в главное меню', 'VideoGenerationScene');
+    // Логируем сообщения главного меню (обрабатываются в BotUpdate)
+    this.logMainMenuMessage(text);
+
+    // Обрабатываем команды выхода из сцены
+    if (await this.handleExitCommand(ctx, text)) {
       return;
     }
 

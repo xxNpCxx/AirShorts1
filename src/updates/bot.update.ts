@@ -94,15 +94,33 @@ export class BotUpdate {
       return;
     }
 
-    // Обрабатываем сообщения главного меню напрямую
+    // Обрабатываем сообщения главного меню напрямую - ПРИНУДИТЕЛЬНО выходим из всех сцен
     const { MainMenuHandler } = await import('../utils/main-menu-handler');
     if (MainMenuHandler.isMainMenuMessage(messageText)) {
       this._logger.debug(
-        `[@On text] Обнаружено сообщение главного меню: "${messageText}" - выход из сцены и показ главного меню`,
+        `[@On text] Обнаружено сообщение главного меню: "${messageText}" - ПРИНУДИТЕЛЬНЫЙ выход из сцены и показ главного меню`,
         'BotUpdate'
       );
+      
+      // ПРИНУДИТЕЛЬНО выходим из сцены (если есть)
+      const sceneContext = ctx as unknown as {
+        scene: {
+          current?: { id: string };
+          leave: () => Promise<void>;
+        };
+      };
+      
+      if (sceneContext.scene?.current) {
+        this._logger.debug(
+          `[@On text] ПРИНУДИТЕЛЬНО выходим из сцены: "${sceneContext.scene.current.id}"`,
+          'BotUpdate'
+        );
+        await sceneContext.scene.leave();
+      }
+      
+      // Обновляем пользователя и показываем главное меню
       await this._users.upsertFromContext(ctx);
-      await MainMenuHandler.handleMainMenuRequest(ctx, 'BotUpdate-OnText');
+      await MainMenuHandler.handleMainMenuRequest(ctx, 'BotUpdate-OnText-ForceExit');
       return;
     }
 

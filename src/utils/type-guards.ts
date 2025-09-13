@@ -28,15 +28,20 @@ export function isTelegramUpdate(data: unknown): data is TelegramUpdate {
   }
 
   const update = data as any;
-  
+
   // Проверяем обязательное поле update_id
   if (typeof update.update_id !== 'number') {
-    console.log('❌ isTelegramUpdate: update_id is not number, type:', typeof update.update_id, 'value:', update.update_id);
+    console.log(
+      '❌ isTelegramUpdate: update_id is not number, type:',
+      typeof update.update_id,
+      'value:',
+      update.update_id
+    );
     return false;
   }
 
   // Проверяем, что есть хотя бы одно из возможных обновлений
-  const hasValidUpdate = 
+  const hasValidUpdate =
     update.message !== undefined ||
     update.callback_query !== undefined ||
     update.inline_query !== undefined ||

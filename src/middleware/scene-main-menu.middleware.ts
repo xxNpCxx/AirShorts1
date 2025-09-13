@@ -17,7 +17,7 @@ export const sceneMainMenuMiddleware: MiddlewareFn<Context> = async (ctx, next) 
   // Проверяем, является ли сообщение запросом главного меню
   if (MainMenuHandler.isMainMenuMessage(text)) {
     console.log(`✅ [MIDDLEWARE] Обнаружено главное меню: "${text}"`);
-    
+
     // Проверяем, находимся ли мы в сцене
     const sceneContext = ctx as unknown as {
       scene: {
@@ -28,11 +28,11 @@ export const sceneMainMenuMiddleware: MiddlewareFn<Context> = async (ctx, next) 
 
     if (sceneContext.scene?.current) {
       console.log(`🚪 [MIDDLEWARE] Выходим из сцены: "${sceneContext.scene.current.id}"`);
-      
+
       // Выходим из сцены и показываем главное меню
       await sceneContext.scene.leave();
       await ctx.reply('🏠 Возвращаемся в главное меню...');
-      
+
       console.log(`✅ [MIDDLEWARE] Главное меню обработано, сцена завершена`);
       return; // Не вызываем next(), так как уже обработали сообщение
     } else {

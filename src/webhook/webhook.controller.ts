@@ -27,8 +27,11 @@ export class WebhookController {
       }
 
       // Логируем входящие данные для отладки
-      this.logger.debug(`📥 Webhook received: ${JSON.stringify(update, null, 2)}`, 'WebhookController');
-      
+      this.logger.debug(
+        `📥 Webhook received: ${JSON.stringify(update, null, 2)}`,
+        'WebhookController'
+      );
+
       // Валидация входящих данных
       if (!isTelegramUpdate(update)) {
         // Всегда логируем детали при ошибке валидации
@@ -37,12 +40,25 @@ export class WebhookController {
         console.log('Data type:', typeof update);
         console.log('Is object:', typeof update === 'object');
         console.log('Is null:', update === null);
-        console.log('Has update_id:', update && typeof update === 'object' && 'update_id' in update);
-        console.log('update_id type:', update && typeof update === 'object' ? typeof (update as any).update_id : 'N/A');
-        console.log('update_id value:', update && typeof update === 'object' ? (update as any).update_id : 'N/A');
+        console.log(
+          'Has update_id:',
+          update && typeof update === 'object' && 'update_id' in update
+        );
+        console.log(
+          'update_id type:',
+          update && typeof update === 'object' ? typeof (update as any).update_id : 'N/A'
+        );
+        console.log(
+          'update_id value:',
+          update && typeof update === 'object' ? (update as any).update_id : 'N/A'
+        );
         console.log('================================');
-        
-        this.logger.error(`❌ Invalid Telegram update received. Data: ${JSON.stringify(update, null, 2)}`, undefined, 'WebhookController');
+
+        this.logger.error(
+          `❌ Invalid Telegram update received. Data: ${JSON.stringify(update, null, 2)}`,
+          undefined,
+          'WebhookController'
+        );
         res.status(HttpStatus.BAD_REQUEST).json({
           ok: false,
           error: 'Invalid Telegram update format',
