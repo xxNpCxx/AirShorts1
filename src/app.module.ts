@@ -20,6 +20,7 @@ import { AkoolModule } from "./akool/akool.module";
 import { ElevenLabsModule } from "./elevenlabs/elevenlabs.module";
 import { VideoGenerationScene } from "./scenes/video-generation.scene";
 import { WebhookModule } from "./webhook/webhook.module";
+import { TestFilesModule } from "./test-files/test-files.module";
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { WebhookModule } from "./webhook/webhook.module";
     AkoolModule,
     ElevenLabsModule,
     WebhookModule,
+    TestFilesModule,
     TelegrafModule.forRoot({
       token: process.env.BOT_TOKEN || "",
       botName: "airshorts1_bot",
