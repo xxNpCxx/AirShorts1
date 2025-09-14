@@ -201,7 +201,9 @@ export class AkoolWebhookController {
   }
 
   /**
-   * Проверка подписи webhook согласно документации AKOOL
+   * Проверка подписи webhook согласно официальной документации AKOOL
+   * https://docs.akool.com/ai-tools-suite/webhook
+   *
    * signature = sha1(sort(clientId, timestamp, nonce, dataEncrypt))
    */
   private verifySignature(
@@ -214,17 +216,24 @@ export class AkoolWebhookController {
     try {
       const crypto = require('crypto');
 
-      // Сортируем параметры и объединяем
+      // Согласно документации: сортируем параметры и объединяем
       const sortedParams = [clientId, timestamp.toString(), nonce, dataEncrypt].sort().join('');
 
       // Вычисляем SHA1 хеш
       const calculatedSignature = crypto.createHash('sha1').update(sortedParams).digest('hex');
 
       this.logger.log(`🔍 Проверка подписи:`);
-      this.logger.log(`  Ожидаемая: ${signature}`);
-      this.logger.log(`  Вычисленная: ${calculatedSignature}`);
+      this.logger.log(
+        `  Параметры для сортировки: [${clientId}, ${timestamp}, ${nonce}, ${dataEncrypt.substring(0, 20)}...]`
+      );
+      this.logger.log(`  Отсортированные параметры: ${sortedParams.substring(0, 100)}...`);
+      this.logger.log(`  Ожидаемая подпись: ${signature}`);
+      this.logger.log(`  Вычисленная подпись: ${calculatedSignature}`);
 
-      return calculatedSignature === signature;
+      const isValid = calculatedSignature === signature;
+      this.logger.log(`  Результат проверки: ${isValid ? '✅ Валидна' : '❌ Невалидна'}`);
+
+      return isValid;
     } catch (error) {
       this.logger.error('❌ Ошибка проверки подписи:', error);
       return false;
@@ -232,15 +241,16 @@ export class AkoolWebhookController {
   }
 
   /**
-   * Расшифровка AES-192-CBC согласно документации AKOOL
-   * data = AES_Decrypt(dataEncrypt, clientSecret, clientId)
+   * Расшифровка AES-192-CBC согласно официальной документации AKOOL
+   * https://docs.akool.com/ai-tools-suite/webhook
+   *
+   * Использует crypto-js для совместимости с официальным примером
    */
   private decryptAES(dataEncrypt: string, clientId: string, clientSecret: string): string {
     try {
-      const crypto = require('crypto');
+      const CryptoJS = require('crypto-js');
 
-      // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем переменные окружения напрямую!
-      // НЕ декодируем Base64, используем ключи как есть из переменных окружения
+      // Получаем ключи из переменных окружения
       const actualClientId = this.configService.get<string>('AKOOL_CLIENT_ID');
       const actualClientSecret = this.configService.get<string>('AKOOL_CLIENT_SECRET');
 
@@ -248,43 +258,24 @@ export class AkoolWebhookController {
       this.logger.log(`🔑 AKOOL_CLIENT_ID: ${actualClientId}`);
       this.logger.log(`🔑 AKOOL_CLIENT_SECRET: ${actualClientSecret?.substring(0, 10)}...`);
 
-      // Преобразуем в буферы
-      const keyBuffer = Buffer.from(actualClientSecret, 'utf8');
-      const ivBuffer = Buffer.from(actualClientId, 'utf8');
+      // Создаем ключ и IV согласно документации
+      const aesKey = actualClientSecret;
+      const key = CryptoJS.enc.Utf8.parse(aesKey);
+      const iv = CryptoJS.enc.Utf8.parse(actualClientId);
 
-      this.logger.log(`🔑 Client ID (${ivBuffer.length} байт): ${ivBuffer.toString('hex')}`);
-      this.logger.log(`🔑 Client Secret (${keyBuffer.length} байт): ${keyBuffer.toString('hex')}`);
+      this.logger.log(`🔑 Ключ (UTF-8): ${key.toString(CryptoJS.enc.Hex)} (${key.sigBytes} байт)`);
+      this.logger.log(`🔑 IV (UTF-8): ${iv.toString(CryptoJS.enc.Hex)} (${iv.sigBytes} байт)`);
 
-      // Для AES-192-CBC нужен ключ 24 байта и IV 16 байт
-      // Создаем ключ и IV правильной длины
-      let key: Buffer;
-      let iv: Buffer;
+      // Расшифровываем AES-192-CBC с PKCS#7 padding используя crypto-js
+      const decrypted = CryptoJS.AES.decrypt(dataEncrypt, key, {
+        iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7,
+      });
 
-      if (keyBuffer.length >= 24) {
-        key = keyBuffer.slice(0, 24);
-      } else {
-        // Дополняем ключ нулями если он короче 24 байт
-        key = Buffer.alloc(24);
-        keyBuffer.copy(key);
-      }
-
-      if (ivBuffer.length >= 16) {
-        iv = ivBuffer.slice(0, 16);
-      } else {
-        // Дополняем IV нулями если он короче 16 байт
-        iv = Buffer.alloc(16);
-        ivBuffer.copy(iv);
-      }
-
-      this.logger.log(`🔑 Финальный ключ (${key.length} байт): ${key.toString('hex')}`);
-      this.logger.log(`🔑 Финальный IV (${iv.length} байт): ${iv.toString('hex')}`);
-
-      // Расшифровываем AES-192-CBC
-      const decipher = crypto.createDecipheriv('aes-192-cbc', key, iv);
-      let decrypted = decipher.update(dataEncrypt, 'base64', 'utf8');
-      decrypted += decipher.final('utf8');
-
-      return decrypted;
+      const result = decrypted.toString(CryptoJS.enc.Utf8);
+      this.logger.log('✅ Расшифровка успешна');
+      return result;
     } catch (error) {
       this.logger.error('❌ Ошибка AES расшифровки:', error);
       throw error;
