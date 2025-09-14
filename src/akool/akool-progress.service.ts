@@ -249,13 +249,81 @@ export class AkoolProgressService {
   private async checkVideoStatus(
     taskId: string
   ): Promise<{ status: ProgressUpdate['status']; progress: number; message: string } | null> {
-    // Здесь можно добавить вызов API для проверки статуса
-    // Пока возвращаем заглушку
-    return {
-      status: 'processing',
-      progress: 50,
-      message: 'Обрабатывается на сервере...',
-    };
+    try {
+      const axios = require('axios');
+      
+      // Получаем токен
+      const tokenResponse = await axios.post('https://openapi.akool.com/api/open/v3/getToken', {
+        clientId: process.env.AKOOL_CLIENT_ID,
+        clientSecret: process.env.AKOOL_CLIENT_SECRET
+      });
+      
+      if (tokenResponse.data.code !== 1000) {
+        this.logger.error('❌ Ошибка получения токена для проверки статуса:', tokenResponse.data);
+        return null;
+      }
+      
+      const token = tokenResponse.data.token;
+      
+      // Проверяем статус через API
+      const response = await axios.get('https://openapi.akool.com/api/open/v3/content/video/list', {
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.data.code === 1000 && response.data.data && response.data.data.list) {
+        const ourTask = response.data.data.list.find((task: any) => task.task_id === taskId);
+        
+        if (ourTask) {
+          this.logger.log(`🔍 Найдена задача ${taskId}:`, ourTask);
+          
+          // Маппим статусы Akool на наши
+          let status: ProgressUpdate['status'] = 'processing';
+          let progress = 0;
+          let message = '';
+          
+          switch (ourTask.video_status) {
+            case 1: // В очереди
+              status = 'queued';
+              progress = 10;
+              message = '⏳ В очереди на обработку...';
+              break;
+            case 2: // Обрабатывается
+              status = 'processing';
+              progress = 50;
+              message = '🔄 Обрабатывается на сервере...';
+              break;
+            case 3: // Готово
+              status = 'completed';
+              progress = 100;
+              message = '✅ Видео готово!';
+              break;
+            case 4: // Ошибка
+              status = 'failed';
+              progress = 0;
+              message = '❌ Ошибка обработки';
+              break;
+            default:
+              status = 'processing';
+              progress = 25;
+              message = '🔄 Обрабатывается...';
+          }
+          
+          return { status, progress, message };
+        } else {
+          this.logger.warn(`⚠️ Задача ${taskId} не найдена в списке Akool`);
+          return null;
+        }
+      } else {
+        this.logger.error('❌ Ошибка получения списка задач:', response.data);
+        return null;
+      }
+    } catch (error) {
+      this.logger.error('❌ Ошибка проверки статуса через API:', error);
+      return null;
+    }
   }
 
   /**

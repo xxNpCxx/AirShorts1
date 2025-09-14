@@ -261,13 +261,17 @@ export class AkoolService {
         async () => {
           const token = await this.getAccessToken();
 
+          const webhookUrl = `${this.configService.get('WEBHOOK_URL')}/akool/webhook`;
+          this.logger.log(`[${requestId}] 🔗 Webhook URL: ${webhookUrl}`);
+
           const talkingPhotoRequest: AkoolTalkingPhotoRequest = {
             talking_photo_url: request.photoUrl,
             audio_url: request.audioUrl,
-            webhookUrl: `${this.configService.get('WEBHOOK_URL')}/akool/webhook`,
+            webhookUrl: webhookUrl,
           };
 
           this.logger.log(`[${requestId}] 📤 Отправляю запрос на создание Talking Photo...`);
+          this.logger.log(`[${requestId}] 📋 Запрос:`, talkingPhotoRequest);
 
           const response = await axios.post<AkoolTalkingPhotoResponse>(
             `${this.baseUrl}/content/video/createbytalkingphoto`,

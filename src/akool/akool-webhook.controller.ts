@@ -87,16 +87,17 @@ export class AkoolWebhookController {
           } else if (status === 4) {
             // 4 = ошибка
             this.logger.error(`❌ Ошибка создания ${type} для задачи: ${_id}`);
-            
+
             // Обновляем прогресс на ошибку
             await this.progressService.updateProgress(_id, 'failed', 0, '❌ Ошибка обработки');
-            
+
             await this.notifyUserError(_id);
           } else {
             // 1 = очередь, 2 = обработка
             const progress = status === 1 ? 10 : 50;
-            const message = status === 1 ? '⏳ В очереди на обработку...' : '🔄 Обрабатывается на сервере...';
-            
+            const message =
+              status === 1 ? '⏳ В очереди на обработку...' : '🔄 Обрабатывается на сервере...';
+
             this.logger.log(
               `⏳ Статус ${type}: ${status} (${status === 1 ? 'очередь' : 'обработка'})`
             );
@@ -147,7 +148,7 @@ export class AkoolWebhookController {
     try {
       // Получаем userId по taskId из базы данных
       const videoRequest = await this.findVideoRequestByTaskId(taskId);
-      
+
       if (!videoRequest) {
         this.logger.error(`❌ Запрос на видео не найден для taskId: ${taskId}`);
         return;
@@ -158,7 +159,7 @@ export class AkoolWebhookController {
 
       await this.bot.telegram.sendVideo(userId, videoUrl, {
         caption: `🎉 **Ваше видео готово!**\n\n📋 Task ID: ${taskId}\n🔗 Ссылка: ${videoUrl}\n\n✨ Спасибо за использование нашего сервиса!`,
-        parse_mode: 'Markdown'
+        parse_mode: 'Markdown',
       });
 
       this.logger.log(`✅ Видео отправлено пользователю ${userId}`);
@@ -171,14 +172,16 @@ export class AkoolWebhookController {
     try {
       // Получаем userId по taskId из базы данных
       const videoRequest = await this.findVideoRequestByTaskId(taskId);
-      
+
       if (!videoRequest) {
         this.logger.error(`❌ Запрос на видео не найден для taskId: ${taskId}`);
         return;
       }
 
       const userId = videoRequest.user_id;
-      this.logger.log(`📱 Отправляю уведомление об ошибке пользователю ${userId} для задачи ${taskId}`);
+      this.logger.log(
+        `📱 Отправляю уведомление об ошибке пользователю ${userId} для задачи ${taskId}`
+      );
 
       await this.bot.telegram.sendMessage(
         userId,
@@ -355,10 +358,9 @@ export class AkoolWebhookController {
    */
   private async markWebhookProcessed(webhookId: string): Promise<void> {
     try {
-      await this.pool.query(
-        `UPDATE webhook_logs SET processed = true WHERE webhook_id = $1`,
-        [webhookId]
-      );
+      await this.pool.query(`UPDATE webhook_logs SET processed = true WHERE webhook_id = $1`, [
+        webhookId,
+      ]);
       this.logger.debug(`✅ Webhook отмечен как обработанный: ${webhookId}`);
     } catch (error) {
       this.logger.error('❌ Ошибка отметки webhook:', error);
