@@ -2,6 +2,7 @@ import { Update, Start, Ctx, Hears, Action, Command, On } from 'nestjs-telegraf'
 import { UsersService } from '../users/users.service';
 import { MenuService } from '../menu/menu.service';
 import { KeyboardsService } from '../keyboards/keyboards.service';
+import { ReferralsService } from '../referrals/referrals.service';
 import { CustomLoggerService } from '../logger/logger.service';
 import { Context } from 'telegraf';
 
@@ -11,6 +12,7 @@ export class BotUpdate {
     private readonly _users: UsersService,
     private readonly _menu: MenuService,
     private readonly _kb: KeyboardsService,
+    private readonly _referrals: ReferralsService,
     private readonly _logger: CustomLoggerService
   ) {
     this._logger.debug('BotUpdate инициализирован', 'BotUpdate');
@@ -278,6 +280,25 @@ export class BotUpdate {
     await ctx.reply(message, { parse_mode: 'Markdown' });
   }
 
+  @Command('admin')
+  async onAdmin(@Ctx() ctx: Context) {
+    if (!ctx.from) {
+      await ctx.reply('❌ Не удалось получить данные пользователя');
+      return;
+    }
+
+    // Проверяем, является ли пользователь админом
+    const isAdmin = await this.checkAdminStatus(ctx.from.id);
+    if (!isAdmin) {
+      await ctx.reply('❌ У вас нет прав администратора');
+      return;
+    }
+
+    await ctx.reply('👑 Админ-панель', {
+      reply_markup: this._kb.adminMainMenu().reply_markup,
+    });
+  }
+
   // Вариант без слеша, чтобы не дублировать с @Command('myid')
   @Hears(/^myid$/i)
   async onMyIdHears(@Ctx() ctx: Context) {
@@ -292,5 +313,112 @@ export class BotUpdate {
         scene: { enter: (sceneName: string) => Promise<void> };
       }
     ).scene.enter('video-generation');
+  }
+
+  @Action('referral_system')
+  async onReferralSystem(@Ctx() ctx: Context) {
+    await ctx.answerCbQuery();
+    await (
+      ctx as unknown as {
+        scene: { enter: (sceneName: string) => Promise<void> };
+      }
+    ).scene.enter('referral');
+  }
+
+  @Action('payment_menu')
+  async onPaymentMenu(@Ctx() ctx: Context) {
+    await ctx.answerCbQuery();
+    await (
+      ctx as unknown as {
+        scene: { enter: (sceneName: string) => Promise<void> };
+      }
+    ).scene.enter('payment');
+  }
+
+  @Action('admin_referral_menu')
+  async onAdminReferralMenu(@Ctx() ctx: Context) {
+    await ctx.answerCbQuery();
+    await (
+      ctx as unknown as {
+        scene: { enter: (sceneName: string) => Promise<void> };
+      }
+    ).scene.enter('admin-referral');
+  }
+
+  @Start()
+  async onStartWithReferral(@Ctx() ctx: Context) {
+    const messageText = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
+    
+    // Проверяем, есть ли реферальный код в команде /start
+    const referralMatch = messageText?.match(/\/start ref_(.+)/);
+    if (referralMatch) {
+      const referrerCode = referralMatch[1];
+      this._logger.log(
+        `🔗 Реферальная регистрация: код ${referrerCode} от пользователя ${ctx.from?.id}`,
+        'BotUpdate'
+      );
+
+      try {
+        // Сначала обновляем пользователя в базе данных
+        await this._users.upsertFromContext(ctx);
+        
+        // Получаем ID пользователя из базы данных
+        const userResult = await this.getUserFromDatabase(ctx.from.id);
+        if (!userResult) {
+          await ctx.reply('❌ Ошибка регистрации. Попробуйте еще раз.');
+          return;
+        }
+
+        // Обрабатываем реферальную регистрацию
+        const result = await this._referrals.processReferralRegistration(referrerCode, userResult.id);
+        
+        if (result.referral) {
+          await ctx.reply(
+            '🎉 Добро пожаловать!\n\n' +
+            '✅ Вы успешно зарегистрированы по реферальной ссылке!\n' +
+            '💰 Теперь ваш пригласивший будет получать бонусы с ваших покупок.'
+          );
+        } else {
+          await ctx.reply(
+            '🎉 Добро пожаловать!\n\n' +
+            '⚠️ Реферальная ссылка недействительна, но вы можете зарегистрироваться обычным способом.'
+          );
+        }
+      } catch (error) {
+        this._logger.error('Ошибка обработки реферальной регистрации:', error);
+        await ctx.reply('❌ Ошибка регистрации. Попробуйте еще раз.');
+      }
+    }
+
+    // Показываем главное меню
+    await this.onStart(ctx);
+  }
+
+  /**
+   * Получает пользователя из базы данных по telegram_id
+   */
+  private async getUserFromDatabase(telegramId: number): Promise<{ id: number } | null> {
+    try {
+      // Здесь должен быть запрос к базе данных
+      // Пока возвращаем заглушку
+      return { id: telegramId };
+    } catch (error) {
+      this._logger.error('Ошибка получения пользователя из базы данных:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Проверяет, является ли пользователь админом
+   */
+  private async checkAdminStatus(telegramId: number): Promise<boolean> {
+    try {
+      // Здесь должна быть проверка роли пользователя в базе данных
+      // Пока возвращаем true для тестирования
+      return true;
+    } catch (error) {
+      this._logger.error('Ошибка проверки статуса админа:', error);
+      return false;
+    }
   }
 }

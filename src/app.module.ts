@@ -16,6 +16,10 @@ import { LoggerModule } from './logger/logger.module';
 import { AkoolModule } from './akool/akool.module';
 import { ElevenLabsModule } from './elevenlabs/elevenlabs.module';
 import { VideoGenerationScene } from './scenes/video-generation.scene';
+import { ReferralScene } from './scenes/referral.scene';
+import { PaymentScene } from './scenes/payment.scene';
+import { AdminReferralScene } from './scenes/admin-referral.scene';
+import { ReferralsModule } from './referrals/referrals.module';
 import { WebhookModule } from './webhook/webhook.module';
 import { TestFilesModule } from './test-files/test-files.module';
 
@@ -34,6 +38,7 @@ import { TestFilesModule } from './test-files/test-files.module';
     RedisModule,
     AkoolModule,
     ElevenLabsModule,
+    ReferralsModule,
     WebhookModule,
     TestFilesModule,
     TelegrafModule.forRoot({
@@ -54,7 +59,7 @@ import { TestFilesModule } from './test-files/test-files.module';
       },
     }),
   ],
-  providers: [BotUpdate, MenuUpdate, VideoGenerationScene],
+  providers: [BotUpdate, MenuUpdate, VideoGenerationScene, ReferralScene, PaymentScene, AdminReferralScene],
   controllers: [HealthController],
 })
 export class AppModule {}

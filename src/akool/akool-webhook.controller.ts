@@ -5,6 +5,7 @@ import { Pool } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { ConfigService } from '@nestjs/config';
 import { AkoolProgressService } from './akool-progress.service';
+import { ReferralPaymentHook } from '../referrals/referral-payment.hook';
 import {
   AkoolWebhookBody,
   AkoolDecryptedData,
@@ -22,7 +23,8 @@ export class AkoolWebhookController {
     @Inject(getBotToken('airshorts1_bot')) private readonly bot: Telegraf,
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly configService: ConfigService,
-    private readonly progressService: AkoolProgressService
+    private readonly progressService: AkoolProgressService,
+    private readonly referralPaymentHook: ReferralPaymentHook
   ) {}
 
   @Post()

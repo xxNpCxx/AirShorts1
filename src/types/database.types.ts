@@ -17,6 +17,7 @@ export interface UserTable {
   language_code?: string;
   is_premium?: boolean;
   preferred_service?: ServiceType;
+  referral_code?: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -64,6 +65,42 @@ export interface UserRolesTable {
   granted_by: number;
   created_at: Date;
   updated_at: Date;
+}
+
+export interface ReferralsTable {
+  id: number;
+  referrer_id: number;
+  referred_id: number;
+  referral_code: string;
+  level: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface ReferralPaymentsTable {
+  id: number;
+  referral_id: number;
+  payer_id: number;
+  amount: number;
+  bonus_type: 'percentage' | 'fixed';
+  bonus_value: number;
+  level: number;
+  status: 'pending' | 'paid' | 'cancelled';
+  payment_reference?: string;
+  created_at: Date;
+  updated_at: Date;
+  paid_at?: Date;
+}
+
+export interface ReferralStatsTable {
+  id: number;
+  user_id: number;
+  total_referrals: number;
+  level_1_referrals: number;
+  level_2_referrals: number;
+  level_3_referrals: number;
+  total_earned: number;
+  last_updated: Date;
 }
 
 // ============================================================================
@@ -123,6 +160,33 @@ export interface CreateUserRoleData {
   granted_by: number;
 }
 
+export interface CreateReferralData {
+  referrer_id: number;
+  referred_id: number;
+  referral_code: string;
+  level: number;
+}
+
+export interface CreateReferralPaymentData {
+  referral_id: number;
+  payer_id: number;
+  amount: number;
+  bonus_type: 'percentage' | 'fixed';
+  bonus_value: number;
+  level: number;
+  status: 'pending' | 'paid' | 'cancelled';
+  payment_reference?: string;
+}
+
+export interface CreateReferralStatsData {
+  user_id: number;
+  total_referrals: number;
+  level_1_referrals: number;
+  level_2_referrals: number;
+  level_3_referrals: number;
+  total_earned: number;
+}
+
 // ============================================================================
 // РЕЗУЛЬТАТЫ ЗАПРОСОВ
 // ============================================================================
@@ -144,6 +208,21 @@ export interface WebhookLogQueryResult {
 
 export interface UserRoleQueryResult {
   userRole: UserRolesTable | null;
+  error?: string;
+}
+
+export interface ReferralQueryResult {
+  referral: ReferralsTable | null;
+  error?: string;
+}
+
+export interface ReferralPaymentQueryResult {
+  referralPayment: ReferralPaymentsTable | null;
+  error?: string;
+}
+
+export interface ReferralStatsQueryResult {
+  referralStats: ReferralStatsTable | null;
   error?: string;
 }
 
@@ -175,6 +254,20 @@ export interface WebhookStats {
   failed_webhooks: number;
   webhooks_by_service: Record<ServiceType, number>;
   average_processing_time: number;
+}
+
+export interface ReferralStats {
+  total_referrals: number;
+  active_referrers: number;
+  total_earned: number;
+  referrals_by_level: Record<number, number>;
+  top_referrers: Array<{
+    user_id: number;
+    username?: string;
+    first_name: string;
+    total_referrals: number;
+    total_earned: number;
+  }>;
 }
 
 // ============================================================================
@@ -255,6 +348,34 @@ export function validateCreateVideoRequestData(data: unknown): data is CreateVid
   );
 }
 
+export function validateCreateReferralData(data: unknown): data is CreateReferralData {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof (data as any).referrer_id === 'number' &&
+    typeof (data as any).referred_id === 'number' &&
+    typeof (data as any).referral_code === 'string' &&
+    typeof (data as any).level === 'number' &&
+    [1, 2, 3].includes((data as any).level)
+  );
+}
+
+export function validateCreateReferralPaymentData(data: unknown): data is CreateReferralPaymentData {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof (data as any).referral_id === 'number' &&
+    typeof (data as any).payer_id === 'number' &&
+    typeof (data as any).amount === 'number' &&
+    ['percentage', 'fixed'].includes((data as any).bonus_type) &&
+    typeof (data as any).bonus_value === 'number' &&
+    typeof (data as any).level === 'number' &&
+    [1, 2, 3].includes((data as any).level) &&
+    ['pending', 'paid', 'cancelled'].includes((data as any).status) &&
+    ((data as any).payment_reference === undefined || typeof (data as any).payment_reference === 'string')
+  );
+}
+
 // ============================================================================
 // КОНСТАНТЫ
 // ============================================================================
@@ -265,6 +386,9 @@ export const DATABASE_TABLES = {
   VIDEO_REQUESTS: 'video_requests',
   WEBHOOK_LOGS: 'webhook_logs',
   USER_ROLES: 'user_roles',
+  REFERRALS: 'referrals',
+  REFERRAL_PAYMENTS: 'referral_payments',
+  REFERRAL_STATS: 'referral_stats',
 } as const;
 
 export const USER_ROLES: UserRole[] = ['owner', 'admin', 'operator'];
@@ -276,3 +400,15 @@ export const PROCESS_STATUSES: ProcessStatus[] = [
   'failed',
   'cancelled',
 ];
+
+export const REFERRAL_LEVELS = [1, 2, 3] as const;
+
+export const REFERRAL_BONUS_TYPES = ['percentage', 'fixed'] as const;
+
+export const REFERRAL_PAYMENT_STATUSES = ['pending', 'paid', 'cancelled'] as const;
+
+export const REFERRAL_BONUS_RATES = {
+  1: 0.10, // 10% для первого уровня
+  2: 0.05, // 5% для второго уровня
+  3: 0.02, // 2% для третьего уровня
+} as const;

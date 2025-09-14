@@ -251,39 +251,39 @@ export class AkoolProgressService {
   ): Promise<{ status: ProgressUpdate['status']; progress: number; message: string } | null> {
     try {
       const axios = require('axios');
-      
+
       // Получаем токен
       const tokenResponse = await axios.post('https://openapi.akool.com/api/open/v3/getToken', {
         clientId: process.env.AKOOL_CLIENT_ID,
-        clientSecret: process.env.AKOOL_CLIENT_SECRET
+        clientSecret: process.env.AKOOL_CLIENT_SECRET,
       });
-      
+
       if (tokenResponse.data.code !== 1000) {
         this.logger.error('❌ Ошибка получения токена для проверки статуса:', tokenResponse.data);
         return null;
       }
-      
+
       const token = tokenResponse.data.token;
-      
+
       // Проверяем статус через API
       const response = await axios.get('https://openapi.akool.com/api/open/v3/content/video/list', {
         headers: {
-          'Authorization': 'Bearer ' + token,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
-      
+
       if (response.data.code === 1000 && response.data.data && response.data.data.list) {
         const ourTask = response.data.data.list.find((task: any) => task.task_id === taskId);
-        
+
         if (ourTask) {
           this.logger.log(`🔍 Найдена задача ${taskId}:`, ourTask);
-          
+
           // Маппим статусы Akool на наши
           let status: ProgressUpdate['status'] = 'processing';
           let progress = 0;
           let message = '';
-          
+
           switch (ourTask.video_status) {
             case 1: // В очереди
               status = 'queued';
@@ -310,7 +310,7 @@ export class AkoolProgressService {
               progress = 25;
               message = '🔄 Обрабатывается...';
           }
-          
+
           return { status, progress, message };
         } else {
           this.logger.warn(`⚠️ Задача ${taskId} не найдена в списке Akool`);

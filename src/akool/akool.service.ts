@@ -267,7 +267,7 @@ export class AkoolService {
           const talkingPhotoRequest: AkoolTalkingPhotoRequest = {
             talking_photo_url: request.photoUrl,
             audio_url: request.audioUrl,
-            webhookUrl: webhookUrl,
+            webhookUrl,
           };
 
           this.logger.log(`[${requestId}] 📤 Отправляю запрос на создание Talking Photo...`);
