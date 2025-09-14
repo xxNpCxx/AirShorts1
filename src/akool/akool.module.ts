@@ -6,9 +6,10 @@ import { AkoolWebhookController } from './akool-webhook.controller';
 import { AkoolProgressService } from './akool-progress.service';
 import { ElevenLabsModule } from '../elevenlabs/elevenlabs.module';
 import { DatabaseModule } from '../database/database.module';
+import { ReferralsModule } from '../referrals/referrals.module';
 
 @Module({
-  imports: [ConfigModule, ElevenLabsModule, DatabaseModule],
+  imports: [ConfigModule, ElevenLabsModule, DatabaseModule, ReferralsModule],
   providers: [AkoolService, AkoolProgressService],
   controllers: [AkoolController, AkoolWebhookController],
   exports: [AkoolService, AkoolProgressService],
