@@ -68,7 +68,7 @@ export class KeyboardsService {
 
   paymentProcessing(): ReturnType<typeof Markup.inlineKeyboard> {
     return Markup.inlineKeyboard([
-      [Markup.button.callback('⏳ Обработка...', 'payment_processing', { disabled: true })],
+      [Markup.button.callback('⏳ Обработка...', 'payment_processing')],
     ]);
   }
 
@@ -89,6 +89,7 @@ export class KeyboardsService {
   adminReferralMenu(): ReturnType<typeof Markup.inlineKeyboard> {
     return Markup.inlineKeyboard([
       [Markup.button.callback('📊 Общая статистика', 'admin_referral_stats')],
+      [Markup.button.callback('📅 Статистика за день', 'admin_referral_daily')],
       [Markup.button.callback('💰 Все начисления', 'admin_referral_payments')],
       [Markup.button.callback('🏆 Топ рефералов', 'admin_referral_top')],
       [Markup.button.callback('⚙️ Настройки', 'admin_referral_settings')],
@@ -99,6 +100,13 @@ export class KeyboardsService {
   adminReferralStats(): ReturnType<typeof Markup.inlineKeyboard> {
     return Markup.inlineKeyboard([
       [Markup.button.callback('🔄 Обновить', 'admin_referral_stats')],
+      [Markup.button.callback('🔙 Назад к админ-панели', 'admin_referral_menu')],
+    ]);
+  }
+
+  adminReferralDaily(): ReturnType<typeof Markup.inlineKeyboard> {
+    return Markup.inlineKeyboard([
+      [Markup.button.callback('🔄 Обновить', 'admin_referral_daily')],
       [Markup.button.callback('🔙 Назад к админ-панели', 'admin_referral_menu')],
     ]);
   }

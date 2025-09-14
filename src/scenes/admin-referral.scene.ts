@@ -174,10 +174,53 @@ export class AdminReferralScene {
     }
   }
 
+  @Action('admin_referral_daily')
+  async showDailyStats(@Ctx() ctx: TelegramContext): Promise<void> {
+    try {
+      const stats = await this.referralsService.getDailyReferralStats();
+      const today = new Date().toLocaleDateString('ru-RU');
+
+      let message = `📅 <b>СТАТИСТИКА ЗА ДЕНЬ</b>\n`;
+      message += `📆 Дата: ${today}\n\n`;
+      
+      message += `📊 <b>Общая статистика:</b>\n`;
+      message += `• Всего рефералов: ${stats.totalReferrals}\n`;
+      message += `• Общий доход: ${stats.totalEarnings.toFixed(2)}₽\n\n`;
+      
+      message += `🎯 <b>По уровням:</b>\n`;
+      message += `• 1-й уровень: ${stats.level1Referrals} рефералов (${stats.level1Earnings.toFixed(2)}₽)\n`;
+      message += `• 2-й уровень: ${stats.level2Referrals} рефералов (${stats.level2Earnings.toFixed(2)}₽)\n`;
+      message += `• 3-й уровень: ${stats.level3Referrals} рефералов (${stats.level3Earnings.toFixed(2)}₽)\n\n`;
+
+      if (stats.topReferrers.length > 0) {
+        message += `🏆 <b>Топ рефереров за день:</b>\n`;
+        stats.topReferrers.forEach((referrer, index) => {
+          message += `${index + 1}. ID ${referrer.user_id}: ${referrer.total_referrals} рефералов (${referrer.total_earned.toFixed(2)}₽)\n`;
+        });
+      } else {
+        message += `🏆 <b>Топ рефереров за день:</b>\n`;
+        message += `• Пока нет активности\n`;
+      }
+
+      await ctx.editMessageText(message, {
+        parse_mode: 'HTML',
+        reply_markup: this.keyboardsService.adminReferralDaily().reply_markup,
+      });
+    } catch (error) {
+      this.logger.error('Ошибка показа дневной статистики:', error);
+      await ctx.editMessageText(
+        '❌ Ошибка загрузки статистики за день. Попробуйте позже.',
+        {
+          reply_markup: this.keyboardsService.adminReferralMenu().reply_markup,
+        }
+      );
+    }
+  }
+
   @Action('admin_referral_back')
   async backToMainMenu(@Ctx() ctx: TelegramContext): Promise<void> {
     try {
-      await ctx.scene.leave();
+      await (ctx as any).scene.leave();
       // Здесь должен быть вызов главного меню
       // await this.menuService.sendMainMenu(ctx);
     } catch (error) {

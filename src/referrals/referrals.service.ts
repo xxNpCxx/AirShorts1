@@ -375,4 +375,93 @@ export class ReferralsService {
       return null;
     }
   }
+
+  /**
+   * Получает статистику рефералов за день
+   */
+  async getDailyReferralStats(date?: string): Promise<{
+    totalReferrals: number;
+    totalEarnings: number;
+    level1Referrals: number;
+    level2Referrals: number;
+    level3Referrals: number;
+    level1Earnings: number;
+    level2Earnings: number;
+    level3Earnings: number;
+    topReferrers: Array<{
+      user_id: number;
+      total_referrals: number;
+      total_earned: number;
+    }>;
+  }> {
+    try {
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      const startOfDay = `${targetDate} 00:00:00`;
+      const endOfDay = `${targetDate} 23:59:59`;
+
+      // Получаем общую статистику за день
+      const statsResult = await this.pool.query(`
+        SELECT 
+          COUNT(DISTINCT r.id) as total_referrals,
+          COALESCE(SUM(rp.amount), 0) as total_earnings,
+          COUNT(DISTINCT CASE WHEN r.level = 1 THEN r.id END) as level1_referrals,
+          COUNT(DISTINCT CASE WHEN r.level = 2 THEN r.id END) as level2_referrals,
+          COUNT(DISTINCT CASE WHEN r.level = 3 THEN r.id END) as level3_referrals,
+          COALESCE(SUM(CASE WHEN r.level = 1 THEN rp.amount ELSE 0 END), 0) as level1_earnings,
+          COALESCE(SUM(CASE WHEN r.level = 2 THEN rp.amount ELSE 0 END), 0) as level2_earnings,
+          COALESCE(SUM(CASE WHEN r.level = 3 THEN rp.amount ELSE 0 END), 0) as level3_earnings
+        FROM referrals r
+        LEFT JOIN referral_payments rp ON r.id = rp.referral_id 
+          AND rp.created_at >= $1 AND rp.created_at <= $2
+        WHERE r.created_at >= $1 AND r.created_at <= $2
+      `, [startOfDay, endOfDay]);
+
+      // Получаем топ рефереров за день
+      const topReferrersResult = await this.pool.query(`
+        SELECT 
+          r.referrer_id as user_id,
+          COUNT(DISTINCT r.id) as total_referrals,
+          COALESCE(SUM(rp.amount), 0) as total_earned
+        FROM referrals r
+        LEFT JOIN referral_payments rp ON r.id = rp.referral_id 
+          AND rp.created_at >= $1 AND rp.created_at <= $2
+        WHERE r.created_at >= $1 AND r.created_at <= $2
+        GROUP BY r.referrer_id
+        ORDER BY total_earned DESC, total_referrals DESC
+        LIMIT 10
+      `, [startOfDay, endOfDay]);
+
+      const stats = statsResult.rows[0];
+      const topReferrers = topReferrersResult.rows;
+
+      return {
+        totalReferrals: parseInt(stats.total_referrals) || 0,
+        totalEarnings: parseFloat(stats.total_earnings) || 0,
+        level1Referrals: parseInt(stats.level1_referrals) || 0,
+        level2Referrals: parseInt(stats.level2_referrals) || 0,
+        level3Referrals: parseInt(stats.level3_referrals) || 0,
+        level1Earnings: parseFloat(stats.level1_earnings) || 0,
+        level2Earnings: parseFloat(stats.level2_earnings) || 0,
+        level3Earnings: parseFloat(stats.level3_earnings) || 0,
+        topReferrers: topReferrers.map(row => ({
+          user_id: row.user_id,
+          total_referrals: parseInt(row.total_referrals) || 0,
+          total_earned: parseFloat(row.total_earned) || 0,
+        })),
+      };
+    } catch (error) {
+      this.logger.error(`Ошибка получения дневной статистики рефералов:`, error);
+      return {
+        totalReferrals: 0,
+        totalEarnings: 0,
+        level1Referrals: 0,
+        level2Referrals: 0,
+        level3Referrals: 0,
+        level1Earnings: 0,
+        level2Earnings: 0,
+        level3Earnings: 0,
+        topReferrers: [],
+      };
+    }
+  }
 }

@@ -159,7 +159,7 @@ ${referralLink}
       const userId = ctx.from?.id;
       if (!userId) return;
 
-      const match = ctx.callbackQuery?.data?.match(/referral_list_level_(\d+)/);
+      const match = (ctx.callbackQuery as any)?.data?.match(/referral_list_level_(\d+)/);
       if (!match) return;
 
       const level = parseInt(match[1]);
@@ -342,7 +342,7 @@ ${referralLink}
   @Action('main_menu')
   async backToMainMenu(@Ctx() ctx: TelegramContext): Promise<void> {
     try {
-      await ctx.scene.leave();
+      await (ctx as any).scene.leave();
       // Здесь должен быть вызов главного меню
       // await this.menuService.sendMainMenu(ctx);
     } catch (error) {
