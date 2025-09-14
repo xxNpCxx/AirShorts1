@@ -9,6 +9,7 @@ import { AkoolFileUploader } from '../utils/akool-file-uploader';
 import { Pool } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { AkoolVoice } from '../types';
+import { AkoolProgressService } from './akool-progress.service';
 
 /**
  * AKOOL Video Request Interface
@@ -122,7 +123,8 @@ export class AkoolService {
     private readonly configService: ConfigService,
     private readonly elevenlabsService: ElevenLabsService,
     @Inject(getBotToken('airshorts1_bot')) private readonly bot: Telegraf,
-    @Inject(PG_POOL) private readonly pool: Pool
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly progressService: AkoolProgressService
   ) {
     this.clientId = this.configService.get<string>('AKOOL_CLIENT_ID');
     this.clientSecret = this.configService.get<string>('AKOOL_CLIENT_SECRET');
@@ -296,6 +298,9 @@ export class AkoolService {
                 request.script || '',
                 request.quality
               );
+
+              // Запускаем отслеживание прогресса
+              await this.progressService.startProgressTracking(taskId, userId);
             }
 
             return {

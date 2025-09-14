@@ -4,6 +4,7 @@ import { getBotToken } from 'nestjs-telegraf';
 import { Pool } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { ConfigService } from '@nestjs/config';
+import { AkoolProgressService } from './akool-progress.service';
 import {
   AkoolWebhookBody,
   AkoolDecryptedData,
@@ -20,7 +21,8 @@ export class AkoolWebhookController {
   constructor(
     @Inject(getBotToken('airshorts1_bot')) private readonly bot: Telegraf,
     @Inject(PG_POOL) private readonly pool: Pool,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly progressService: AkoolProgressService
   ) {}
 
   @Post()
@@ -31,6 +33,13 @@ export class AkoolWebhookController {
       return { success: false, error: 'Invalid webhook body format' };
     }
     this.logger.log('📥 AKOOL webhook received:', body);
+
+    // Проверяем, не обрабатывали ли мы уже этот webhook
+    const webhookId = this.generateWebhookId(body);
+    if (await this.isWebhookProcessed(webhookId)) {
+      this.logger.log(`⚠️ Webhook уже обработан: ${webhookId}`);
+      return { status: 'ok', message: 'Webhook already processed' };
+    }
 
     // Сохраняем webhook в БД
     await this.saveWebhookLog('akool', 'video_status', body);
@@ -69,23 +78,39 @@ export class AkoolWebhookController {
             // 3 = готово
             this.logger.log(`🎉 ${type} готово! ID: ${_id}, URL: ${url}`);
 
+            // Обновляем прогресс на 100%
+            await this.progressService.updateProgress(_id, 'completed', 100, '🎉 Видео готово!');
+
             if (url) {
               await this.sendVideoToUser(url, _id);
             }
           } else if (status === 4) {
             // 4 = ошибка
             this.logger.error(`❌ Ошибка создания ${type} для задачи: ${_id}`);
+            
+            // Обновляем прогресс на ошибку
+            await this.progressService.updateProgress(_id, 'failed', 0, '❌ Ошибка обработки');
+            
             await this.notifyUserError(_id);
           } else {
+            // 1 = очередь, 2 = обработка
+            const progress = status === 1 ? 10 : 50;
+            const message = status === 1 ? '⏳ В очереди на обработку...' : '🔄 Обрабатывается на сервере...';
+            
             this.logger.log(
               `⏳ Статус ${type}: ${status} (${status === 1 ? 'очередь' : 'обработка'})`
             );
+
+            // Обновляем прогресс
+            await this.progressService.updateProgress(_id, 'processing', progress, message);
           }
         } catch (decryptError) {
           this.logger.warn('⚠️ Не удалось расшифровать данные:', decryptError);
           this.logger.log('⏳ Ожидаем ключ расшифровки...');
         }
 
+        // Отмечаем webhook как обработанный
+        await this.markWebhookProcessed(webhookId);
         return { status: 'ok', message: 'Webhook processed' };
       }
 
@@ -120,15 +145,23 @@ export class AkoolWebhookController {
 
   private async sendVideoToUser(videoUrl: string, taskId: string) {
     try {
-      // Здесь нужно получить userId по taskId из базы данных
-      // Пока отправляем в общий чат для тестирования
-      const chatId = process.env.TEST_CHAT_ID || '161693997'; // Ваш ID для тестирования
+      // Получаем userId по taskId из базы данных
+      const videoRequest = await this.findVideoRequestByTaskId(taskId);
+      
+      if (!videoRequest) {
+        this.logger.error(`❌ Запрос на видео не найден для taskId: ${taskId}`);
+        return;
+      }
 
-      await this.bot.telegram.sendVideo(chatId, videoUrl, {
-        caption: `🎉 Ваше видео готово!\n\n📋 Task ID: ${taskId}\n🔗 Ссылка: ${videoUrl}`,
+      const userId = videoRequest.user_id;
+      this.logger.log(`📱 Отправляю видео пользователю ${userId} для задачи ${taskId}`);
+
+      await this.bot.telegram.sendVideo(userId, videoUrl, {
+        caption: `🎉 **Ваше видео готово!**\n\n📋 Task ID: ${taskId}\n🔗 Ссылка: ${videoUrl}\n\n✨ Спасибо за использование нашего сервиса!`,
+        parse_mode: 'Markdown'
       });
 
-      this.logger.log(`✅ Видео отправлено пользователю ${chatId}`);
+      this.logger.log(`✅ Видео отправлено пользователю ${userId}`);
     } catch (error) {
       this.logger.error('❌ Ошибка отправки видео:', error);
     }
@@ -136,16 +169,26 @@ export class AkoolWebhookController {
 
   private async notifyUserError(taskId: string) {
     try {
-      const chatId = process.env.TEST_CHAT_ID || '161693997';
+      // Получаем userId по taskId из базы данных
+      const videoRequest = await this.findVideoRequestByTaskId(taskId);
+      
+      if (!videoRequest) {
+        this.logger.error(`❌ Запрос на видео не найден для taskId: ${taskId}`);
+        return;
+      }
+
+      const userId = videoRequest.user_id;
+      this.logger.log(`📱 Отправляю уведомление об ошибке пользователю ${userId} для задачи ${taskId}`);
 
       await this.bot.telegram.sendMessage(
-        chatId,
-        `❌ Произошла ошибка при создании видео.\n\n📋 Task ID: ${taskId}\n\nПопробуйте еще раз или обратитесь в поддержку.`
+        userId,
+        `❌ **Ошибка при создании видео**\n\nПричина: Ошибка обработки на сервере.\n\n🔄 Попробуйте создать видео еще раз или обратитесь в поддержку.`,
+        { parse_mode: 'Markdown' }
       );
 
-      this.logger.log(`✅ Уведомление об ошибке отправлено пользователю ${chatId}`);
+      this.logger.log(`✅ Уведомление об ошибке отправлено пользователю ${userId}`);
     } catch (error) {
-      this.logger.error('❌ Ошибка отправки уведомления об ошибке:', error);
+      this.logger.error('❌ Ошибка уведомления об ошибке:', error);
     }
   }
 
@@ -283,6 +326,46 @@ export class AkoolWebhookController {
   }
 
   /**
+   * Генерация уникального ID для webhook
+   */
+  private generateWebhookId(body: AkoolWebhookBody): string {
+    const crypto = require('crypto');
+    const content = JSON.stringify(body);
+    return crypto.createHash('sha256').update(content).digest('hex');
+  }
+
+  /**
+   * Проверка, был ли webhook уже обработан
+   */
+  private async isWebhookProcessed(webhookId: string): Promise<boolean> {
+    try {
+      const result = await this.pool.query(
+        `SELECT id FROM webhook_logs WHERE webhook_id = $1 AND processed = true`,
+        [webhookId]
+      );
+      return result.rows.length > 0;
+    } catch (error) {
+      this.logger.error('❌ Ошибка проверки webhook:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Отметка webhook как обработанного
+   */
+  private async markWebhookProcessed(webhookId: string): Promise<void> {
+    try {
+      await this.pool.query(
+        `UPDATE webhook_logs SET processed = true WHERE webhook_id = $1`,
+        [webhookId]
+      );
+      this.logger.debug(`✅ Webhook отмечен как обработанный: ${webhookId}`);
+    } catch (error) {
+      this.logger.error('❌ Ошибка отметки webhook:', error);
+    }
+  }
+
+  /**
    * Сохранение webhook лога в БД
    */
   private async saveWebhookLog(
@@ -291,10 +374,11 @@ export class AkoolWebhookController {
     payload: AkoolWebhookBody
   ): Promise<void> {
     try {
+      const webhookId = this.generateWebhookId(payload);
       await this.pool.query(
-        `INSERT INTO webhook_logs (service, webhook_type, payload, created_at) 
-         VALUES ($1, $2, $3, NOW())`,
-        [service, webhookType, JSON.stringify(payload)]
+        `INSERT INTO webhook_logs (service, webhook_type, payload, webhook_id, processed, created_at) 
+         VALUES ($1, $2, $3, $4, false, NOW())`,
+        [service, webhookType, JSON.stringify(payload), webhookId]
       );
       this.logger.debug(`💾 Webhook лог сохранен: ${service}/${webhookType}`);
     } catch (error) {
