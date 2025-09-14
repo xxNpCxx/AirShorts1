@@ -7,7 +7,10 @@ import { MainMenuHandler } from '../utils/main-menu-handler';
  */
 export const sceneMainMenuMiddleware: MiddlewareFn<Context> = async (ctx, next) => {
   // Проверяем, что это текстовое сообщение
-  if (!ctx.message || !('text' in ctx.message)) {
+  const isMessagePresent = ctx.message !== undefined && ctx.message !== null;
+  const isTextInMessage = isMessagePresent === true && 'text' in ctx.message;
+  const isNotTextMessage = isMessagePresent === false || isTextInMessage === false;
+  if (isNotTextMessage === true) {
     return next();
   }
 
@@ -15,7 +18,8 @@ export const sceneMainMenuMiddleware: MiddlewareFn<Context> = async (ctx, next) 
   console.log(`🔍 [MIDDLEWARE] Проверяем сообщение: "${text}"`);
 
   // Проверяем, является ли сообщение запросом главного меню
-  if (MainMenuHandler.isMainMenuMessage(text)) {
+  const isMainMenuMessage = MainMenuHandler.isMainMenuMessage(text) === true;
+  if (isMainMenuMessage === true) {
     console.log(`✅ [MIDDLEWARE] Обнаружено главное меню: "${text}"`);
 
     // Проверяем, находимся ли мы в сцене
@@ -26,7 +30,12 @@ export const sceneMainMenuMiddleware: MiddlewareFn<Context> = async (ctx, next) 
       };
     };
 
-    if (sceneContext.scene?.current) {
+    const isInScene =
+      sceneContext.scene !== undefined &&
+      sceneContext.scene !== null &&
+      sceneContext.scene.current !== undefined &&
+      sceneContext.scene.current !== null;
+    if (isInScene === true) {
       console.log(`🚪 [MIDDLEWARE] Выходим из сцены: "${sceneContext.scene.current.id}"`);
 
       // Выходим из сцены и показываем главное меню

@@ -22,7 +22,10 @@ import {
 // ============================================================================
 
 export function isTelegramUpdate(data: unknown): data is TelegramUpdate {
-  if (typeof data !== 'object' || data === null) {
+  const isObject = typeof data === 'object';
+  const isNull = data === null;
+  const isInvalidTop = isObject === false || isNull === true;
+  if (isInvalidTop === true) {
     console.log('❌ isTelegramUpdate: data is not object or is null');
     return false;
   }
@@ -30,7 +33,8 @@ export function isTelegramUpdate(data: unknown): data is TelegramUpdate {
   const update = data as any;
 
   // Проверяем обязательное поле update_id
-  if (typeof update.update_id !== 'number') {
+  const isUpdateIdNumber = typeof update.update_id === 'number';
+  if (isUpdateIdNumber === false) {
     console.log(
       '❌ isTelegramUpdate: update_id is not number, type:',
       typeof update.update_id,
@@ -57,52 +61,68 @@ export function isTelegramUpdate(data: unknown): data is TelegramUpdate {
     update.chat_member !== undefined ||
     update.chat_join_request !== undefined;
 
-  if (!hasValidUpdate) {
+  const isHasValidUpdate = hasValidUpdate === true;
+  if (isHasValidUpdate === false) {
     console.log('❌ isTelegramUpdate: no valid update type found');
     console.log('Available keys:', Object.keys(update));
   } else {
     console.log('✅ isTelegramUpdate: validation passed');
   }
 
-  return hasValidUpdate;
+  return isHasValidUpdate;
 }
 
 export function isTelegramMessage(data: unknown): data is TelegramMessage {
+  const isObject = typeof data === 'object';
+  const isNull = data === null;
+  const isMessageIdNumber = typeof (data as any).message_id === 'number';
+  const isChatObject = typeof (data as any).chat === 'object';
+  const isDateNumber = typeof (data as any).date === 'number';
   return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof (data as any).message_id === 'number' &&
-    typeof (data as any).chat === 'object' &&
-    typeof (data as any).date === 'number'
+    isObject === true &&
+    isNull === false &&
+    isMessageIdNumber === true &&
+    isChatObject === true &&
+    isDateNumber === true
   );
 }
 
 export function isTelegramCallbackQuery(data: unknown): data is TelegramCallbackQuery {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof (data as any).id === 'string' &&
-    typeof (data as any).from === 'object'
-  );
+  const isObject = typeof data === 'object';
+  const isNull = data === null;
+  const isIdString = typeof (data as any).id === 'string';
+  const isFromObject = typeof (data as any).from === 'object';
+  return isObject === true && isNull === false && isIdString === true && isFromObject === true;
 }
 
 export function isTelegramUser(data: unknown): data is TelegramUser {
+  const isObject = typeof data === 'object';
+  const isNull = data === null;
+  const isIdNumber = typeof (data as any).id === 'number';
+  const isIsBotBoolean = typeof (data as any).is_bot === 'boolean';
+  const isFirstNameString = typeof (data as any).first_name === 'string';
   return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof (data as any).id === 'number' &&
-    typeof (data as any).is_bot === 'boolean' &&
-    typeof (data as any).first_name === 'string'
+    isObject === true &&
+    isNull === false &&
+    isIdNumber === true &&
+    isIsBotBoolean === true &&
+    isFirstNameString === true
   );
 }
 
 export function isTelegramChat(data: unknown): data is TelegramChat {
+  const isObject = typeof data === 'object';
+  const isNull = data === null;
+  const isIdNumber = typeof (data as any).id === 'number';
+  const isTypeString = typeof (data as any).type === 'string';
+  const isTypeAllowed =
+    ['private', 'group', 'supergroup', 'channel'].includes((data as any).type) === true;
   return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof (data as any).id === 'number' &&
-    typeof (data as any).type === 'string' &&
-    ['private', 'group', 'supergroup', 'channel'].includes((data as any).type)
+    isObject === true &&
+    isNull === false &&
+    isIdNumber === true &&
+    isTypeString === true &&
+    isTypeAllowed === true
   );
 }
 
@@ -111,15 +131,23 @@ export function isTelegramChat(data: unknown): data is TelegramChat {
 // ============================================================================
 
 export function isFileUpload(data: unknown): data is FileUpload {
+  const isObject = typeof data === 'object';
+  const isNull = data === null;
+  const isFieldNameString = typeof (data as any).fieldname === 'string';
+  const isOriginalNameString = typeof (data as any).originalname === 'string';
+  const isEncodingString = typeof (data as any).encoding === 'string';
+  const isMimeTypeString = typeof (data as any).mimetype === 'string';
+  const isSizeNumber = typeof (data as any).size === 'number';
+  const isBufferInstance = Buffer.isBuffer((data as any).buffer) === true;
   return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof (data as any).fieldname === 'string' &&
-    typeof (data as any).originalname === 'string' &&
-    typeof (data as any).encoding === 'string' &&
-    typeof (data as any).mimetype === 'string' &&
-    typeof (data as any).size === 'number' &&
-    Buffer.isBuffer((data as any).buffer)
+    isObject === true &&
+    isNull === false &&
+    isFieldNameString === true &&
+    isOriginalNameString === true &&
+    isEncodingString === true &&
+    isMimeTypeString === true &&
+    isSizeNumber === true &&
+    isBufferInstance === true
   );
 }
 
@@ -128,13 +156,19 @@ export function isFileUpload(data: unknown): data is FileUpload {
 // ============================================================================
 
 export function isWebhookPayload(data: unknown): data is WebhookPayload {
+  const isObject = typeof data === 'object';
+  const isNull = data === null;
+  const isIdString = typeof (data as any).id === 'string';
+  const isStatusString = typeof (data as any).status === 'string';
+  const isTypeString = typeof (data as any).type === 'string';
+  const isTimestampDate = (data as any).timestamp instanceof Date;
   return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof (data as any).id === 'string' &&
-    typeof (data as any).status === 'string' &&
-    typeof (data as any).type === 'string' &&
-    (data as any).timestamp instanceof Date
+    isObject === true &&
+    isNull === false &&
+    isIdString === true &&
+    isStatusString === true &&
+    isTypeString === true &&
+    isTimestampDate === true
   );
 }
 
@@ -143,24 +177,36 @@ export function isWebhookPayload(data: unknown): data is WebhookPayload {
 // ============================================================================
 
 export function isApiError(data: unknown): data is ApiError {
+  const isObject = typeof data === 'object';
+  const isNull = data === null;
+  const isCodeNumber = typeof (data as any).code === 'number';
+  const isMessageString = typeof (data as any).message === 'string';
+  const isServiceString = typeof (data as any).service === 'string';
+  const isRequestIdString = typeof (data as any).requestId === 'string';
+  const isTimestampDate = (data as any).timestamp instanceof Date;
   return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof (data as any).code === 'number' &&
-    typeof (data as any).message === 'string' &&
-    typeof (data as any).service === 'string' &&
-    typeof (data as any).requestId === 'string' &&
-    (data as any).timestamp instanceof Date
+    isObject === true &&
+    isNull === false &&
+    isCodeNumber === true &&
+    isMessageString === true &&
+    isServiceString === true &&
+    isRequestIdString === true &&
+    isTimestampDate === true
   );
 }
 
 export function isValidationError(data: unknown): data is ValidationError {
+  const isObject = typeof data === 'object';
+  const isNull = data === null;
+  const isFieldString = typeof (data as any).field === 'string';
+  const isMessageString = typeof (data as any).message === 'string';
+  const isServiceString = typeof (data as any).service === 'string';
   return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof (data as any).field === 'string' &&
-    typeof (data as any).message === 'string' &&
-    typeof (data as any).service === 'string'
+    isObject === true &&
+    isNull === false &&
+    isFieldString === true &&
+    isMessageString === true &&
+    isServiceString === true
   );
 }
 
@@ -169,18 +215,22 @@ export function isValidationError(data: unknown): data is ValidationError {
 // ============================================================================
 
 export function isProcessStatus(data: unknown): data is ProcessStatus {
-  return (
-    typeof data === 'string' &&
-    ['pending', 'processing', 'completed', 'failed', 'cancelled'].includes(data)
-  );
+  const isStringType = typeof data === 'string';
+  const isAllowed =
+    ['pending', 'processing', 'completed', 'failed', 'cancelled'].includes(data as string) === true;
+  return isStringType === true && isAllowed === true;
 }
 
 export function isServiceType(data: unknown): data is ServiceType {
-  return typeof data === 'string' && ['heygen', 'd-id', 'akool', 'elevenlabs'].includes(data);
+  const isStringType = typeof data === 'string';
+  const isAllowed = ['heygen', 'd-id', 'akool', 'elevenlabs'].includes(data as string) === true;
+  return isStringType === true && isAllowed === true;
 }
 
 export function isUserRole(data: unknown): data is UserRole {
-  return typeof data === 'string' && ['owner', 'admin', 'operator'].includes(data);
+  const isStringType = typeof data === 'string';
+  const isAllowed = ['owner', 'admin', 'operator'].includes(data as string) === true;
+  return isStringType === true && isAllowed === true;
 }
 
 // ============================================================================
@@ -204,21 +254,34 @@ export function isNumberArray(data: unknown): data is number[] {
 // ============================================================================
 
 export function isRecord(data: unknown): data is Record<string, unknown> {
+  const isObject = typeof data === 'object';
+  const isNull = data === null;
+  const isArray = Array.isArray(data) === true;
+  const isDateInstance = data instanceof Date;
+  const isBufferInstance = data instanceof Buffer;
   return (
-    typeof data === 'object' &&
-    data !== null &&
-    !Array.isArray(data) &&
-    !(data instanceof Date) &&
-    !(data instanceof Buffer)
+    isObject === true &&
+    isNull === false &&
+    isArray === false &&
+    isDateInstance === false &&
+    isBufferInstance === false
   );
 }
 
 export function isStringRecord(data: unknown): data is Record<string, string> {
-  return isRecord(data) && Object.values(data).every(value => typeof value === 'string');
+  const isRec = isRecord(data) === true;
+  const isAllStrings =
+    Object.values(data as Record<string, unknown>).every(value => typeof value === 'string') ===
+    true;
+  return isRec === true && isAllStrings === true;
 }
 
 export function isNumberRecord(data: unknown): data is Record<string, number> {
-  return isRecord(data) && Object.values(data).every(value => typeof value === 'number');
+  const isRec = isRecord(data) === true;
+  const isAllNumbers =
+    Object.values(data as Record<string, unknown>).every(value => typeof value === 'number') ===
+    true;
+  return isRec === true && isAllNumbers === true;
 }
 
 // ============================================================================
@@ -230,7 +293,9 @@ export function isString(data: unknown): data is string {
 }
 
 export function isNumber(data: unknown): data is number {
-  return typeof data === 'number' && !isNaN(data);
+  const isNum = typeof data === 'number';
+  const isValueNaN = Number.isNaN(data as number) === true;
+  return isNum === true && isValueNaN === false;
 }
 
 export function isBoolean(data: unknown): data is boolean {
@@ -238,11 +303,13 @@ export function isBoolean(data: unknown): data is boolean {
 }
 
 export function isDate(data: unknown): data is Date {
-  return data instanceof Date && !isNaN(data.getTime());
+  const isDateInstance = data instanceof Date;
+  const isTimeNaN = Number.isNaN((data as Date).getTime()) === true;
+  return isDateInstance === true && isTimeNaN === false;
 }
 
 export function isBuffer(data: unknown): data is Buffer {
-  return Buffer.isBuffer(data);
+  return Buffer.isBuffer(data) === true;
 }
 
 // ============================================================================
@@ -250,23 +317,35 @@ export function isBuffer(data: unknown): data is Buffer {
 // ============================================================================
 
 export function isNonEmptyString(data: unknown): data is string {
-  return typeof data === 'string' && data.length > 0;
+  const isStr = typeof data === 'string';
+  const isLengthPositive = (data as string).length > 0;
+  return isStr === true && isLengthPositive === true;
 }
 
 export function isPositiveNumber(data: unknown): data is number {
-  return typeof data === 'number' && data > 0 && !isNaN(data);
+  const isNum = typeof data === 'number';
+  const isPositive = (data as number) > 0;
+  const isValueNaN = Number.isNaN(data as number) === true;
+  return isNum === true && isPositive === true && isValueNaN === false;
 }
 
 export function isNonNegativeNumber(data: unknown): data is number {
-  return typeof data === 'number' && data >= 0 && !isNaN(data);
+  const isNum = typeof data === 'number';
+  const isNonNegative = (data as number) >= 0;
+  const isValueNaN = Number.isNaN(data as number) === true;
+  return isNum === true && isNonNegative === true && isValueNaN === false;
 }
 
 export function isInteger(data: unknown): data is number {
-  return typeof data === 'number' && Number.isInteger(data);
+  const isNum = typeof data === 'number';
+  const isInt = Number.isInteger(data) === true;
+  return isNum === true && isInt === true;
 }
 
 export function isPositiveInteger(data: unknown): data is number {
-  return isInteger(data) && data > 0;
+  const isInt = isInteger(data) === true;
+  const isPositive = (data as number) > 0;
+  return isInt === true && isPositive === true;
 }
 
 // ============================================================================
@@ -274,7 +353,9 @@ export function isPositiveInteger(data: unknown): data is number {
 // ============================================================================
 
 export function isDefined<T>(data: T | null | undefined): data is T {
-  return data !== null && data !== undefined;
+  const isNull = data === null;
+  const isUndef = data === undefined;
+  return isNull === false && isUndef === false;
 }
 
 export function isNull(data: unknown): data is null {
@@ -298,7 +379,10 @@ export function isStringOrUndefined(data: unknown): data is string | undefined {
 }
 
 export function isNumberOrUndefined(data: unknown): data is number | undefined {
-  return data === undefined || (typeof data === 'number' && !isNaN(data));
+  const isUndef = data === undefined;
+  const isNum = typeof data === 'number';
+  const isValueNaN = Number.isNaN(data as number) === true;
+  return isUndef === true || (isNum === true && isValueNaN === false);
 }
 
 export function isBooleanOrUndefined(data: unknown): data is boolean | undefined {
@@ -309,5 +393,8 @@ export function isArrayOrUndefined<T>(
   data: unknown,
   guard: (item: unknown) => item is T
 ): data is T[] | undefined {
-  return data === undefined || (Array.isArray(data) && data.every(guard));
+  const isUndef = data === undefined;
+  const isArr = Array.isArray(data) === true;
+  const isEveryGuard = isArr === true ? (data as unknown[]).every(guard) === true : false;
+  return isUndef === true || (isArr === true && isEveryGuard === true);
 }

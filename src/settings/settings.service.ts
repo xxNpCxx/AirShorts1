@@ -21,12 +21,18 @@ export class SettingsService {
   async getCommissionPercent(): Promise<number> {
     const value = await this.getSetting('commission_percent');
     const percent = parseFloat(value || '0');
-    if (isNaN(percent) || percent < 0 || percent > 1) return 0.2;
+    const isPercentNaN = Number.isNaN(percent) === true;
+    const isPercentOutOfRange = percent < 0 || percent > 1;
+    const isInvalidPercent = isPercentNaN === true || isPercentOutOfRange === true;
+    if (isInvalidPercent === true) return 0.2;
     return percent;
   }
 
   async setCommissionPercent(percent: number): Promise<void> {
-    if (typeof percent !== 'number' || percent < 0 || percent > 1) {
+    const isNotNumber = typeof percent === 'number' ? false : true;
+    const isOutOfRange = percent < 0 || percent > 1;
+    const isInvalid = isNotNumber === true || isOutOfRange === true;
+    if (isInvalid === true) {
       throw new Error('Процент должен быть от 0 до 1');
     }
     await this.setSetting('commission_percent', percent.toString());
@@ -35,12 +41,18 @@ export class SettingsService {
   async getReferralCommissionPercent(): Promise<number> {
     const value = await this.getSetting('referral_commission_percent');
     const percent = parseFloat(value || '0');
-    if (isNaN(percent) || percent < 0 || percent > 1) return 0.25;
+    const isRefPercentNaN = Number.isNaN(percent) === true;
+    const isRefPercentOutOfRange = percent < 0 || percent > 1;
+    const isRefInvalid = isRefPercentNaN === true || isRefPercentOutOfRange === true;
+    if (isRefInvalid === true) return 0.25;
     return percent;
   }
 
   async setReferralCommissionPercent(percent: number): Promise<void> {
-    if (typeof percent !== 'number' || percent < 0 || percent > 1) {
+    const isNotNumberRef = typeof percent === 'number' ? false : true;
+    const isOutOfRangeRef = percent < 0 || percent > 1;
+    const isInvalidRef = isNotNumberRef === true || isOutOfRangeRef === true;
+    if (isInvalidRef === true) {
       throw new Error('Процент должен быть от 0 до 1');
     }
     await this.setSetting('referral_commission_percent', percent.toString());
@@ -73,16 +85,21 @@ export class SettingsService {
 
   async checkRole(userId: string, role: 'owner' | 'admin' | 'operator'): Promise<boolean> {
     userId = String(userId);
-    if (role === 'owner') {
+    const isRoleOwner = role === 'owner';
+    if (isRoleOwner === true) {
       return (await this.getOwnerId()) === userId;
     }
-    if (role === 'admin') {
+    const isRoleAdmin = role === 'admin';
+    if (isRoleAdmin === true) {
       const admins = await this.getAdminIds();
-      return admins.includes(userId);
+      const isAdminIncluded = admins.includes(userId) === true;
+      return isAdminIncluded;
     }
-    if (role === 'operator') {
+    const isRoleOperator = role === 'operator';
+    if (isRoleOperator === true) {
       const ops = await this.getOperatorIds();
-      if (ops.includes(userId)) return true;
+      const isOperatorIncluded = ops.includes(userId) === true;
+      if (isOperatorIncluded === true) return true;
       return this.checkRole(userId, 'admin');
     }
     return false;

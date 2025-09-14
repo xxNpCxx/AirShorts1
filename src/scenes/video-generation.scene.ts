@@ -69,7 +69,8 @@ export class VideoGenerationScene extends BaseScene {
     const keyboard: any[] = [];
 
     // Кнопка "Назад" - показываем только если не на начальном шаге
-    if (currentStep !== SCENE_STEPS.INITIAL) {
+    const isNotInitialStep = currentStep === SCENE_STEPS.INITIAL ? false : true;
+    if (isNotInitialStep === true) {
       keyboard.push([{ text: '⬅️ Назад', callback_data: 'step_back' }]);
     }
 
@@ -226,20 +227,24 @@ export class VideoGenerationScene extends BaseScene {
   async onSceneEnter(@Ctx() ctx: Context) {
     this.logger.debug('🎬 Вход в сцену генерации видео', 'VideoGenerationScene');
 
-    if (!isTypedContext(ctx)) {
+    const isTyped = isTypedContext(ctx) === true;
+    const isNotTyped = isTyped === false;
+    if (isNotTyped === true) {
       await ctx.reply('❌ Ошибка: контекст не поддерживает сессии. Начните заново.');
       return;
     }
 
     const session = ctx.session;
 
-    if (!session) {
+    const isSessionMissingOnEnter = session === undefined || session === null;
+    if (isSessionMissingOnEnter === true) {
       await ctx.reply('❌ Ошибка: сессия не найдена. Начните заново.');
       return;
     }
 
     // Устанавливаем начальный шаг если его нет
-    if (!this.getCurrentStep(session)) {
+    const isCurrentStepMissing = this.getCurrentStep(session) ? false : true;
+    if (isCurrentStepMissing === true) {
       this.setCurrentStep(session, SCENE_STEPS.INITIAL);
     }
 
@@ -251,7 +256,8 @@ export class VideoGenerationScene extends BaseScene {
   async onPhoto(@Ctx() ctx: Context) {
     const session = (ctx as any).session as SessionData;
 
-    if (!session) {
+    const isSessionMissingOnPhoto = session === undefined || session === null;
+    if (isSessionMissingOnPhoto === true) {
       await ctx.reply('❌ Ошибка: сессия не найдена.');
       return;
     }
@@ -274,7 +280,8 @@ export class VideoGenerationScene extends BaseScene {
   async onVoice(@Ctx() ctx: Context) {
     const session = (ctx as any).session as SessionData;
 
-    if (!session) {
+    const isSessionMissingOnVoice = session === undefined || session === null;
+    if (isSessionMissingOnVoice === true) {
       await ctx.reply('❌ Ошибка: сессия не найдена.');
       return;
     }
@@ -298,7 +305,8 @@ export class VideoGenerationScene extends BaseScene {
 
     const session = (ctx as any).session as SessionData;
 
-    if (!session) {
+    const isSessionMissingOnText = session === undefined || session === null;
+    if (isSessionMissingOnText === true) {
       await ctx.reply('❌ Ошибка: сессия не найдена.');
       return;
     }
@@ -307,7 +315,8 @@ export class VideoGenerationScene extends BaseScene {
     this.logMainMenuMessage(text);
 
     // Обрабатываем команды выхода из сцены
-    if (await this.handleExitCommand(ctx, text)) {
+    const isHandledExit = (await this.handleExitCommand(ctx, text)) === true;
+    if (isHandledExit === true) {
       return;
     }
 
@@ -329,18 +338,23 @@ export class VideoGenerationScene extends BaseScene {
   async generateVideo(@Ctx() ctx: Context) {
     const session = (ctx as any).session as SessionData;
 
-    if (!session) {
+    const isSessionMissingOnGenerate = session === undefined || session === null;
+    if (isSessionMissingOnGenerate === true) {
       await ctx.reply('❌ Ошибка: сессия не найдена.');
       return;
     }
 
     // Проверяем наличие всех необходимых данных
-    if (!(session as any).photoFileId) {
+    const isPhotoMissing = (session as any).photoFileId ? false : true;
+    if (isPhotoMissing === true) {
       await ctx.reply('❌ Сначала отправьте фото для генерации видео.');
       return;
     }
 
-    if (!(session as any).voiceFileId && !(session as any).script) {
+    const isVoiceMissing = (session as any).voiceFileId ? false : true;
+    const isScriptMissing = (session as any).script ? false : true;
+    const isVoiceAndScriptMissing = isVoiceMissing === true && isScriptMissing === true;
+    if (isVoiceAndScriptMissing === true) {
       await ctx.reply('❌ Сначала отправьте голосовое сообщение или текст скрипта.');
       return;
     }

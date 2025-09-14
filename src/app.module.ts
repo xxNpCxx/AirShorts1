@@ -22,6 +22,7 @@ import { AdminReferralScene } from './scenes/admin-referral.scene';
 import { ReferralsModule } from './referrals/referrals.module';
 import { WebhookModule } from './webhook/webhook.module';
 import { TestFilesModule } from './test-files/test-files.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { TestFilesModule } from './test-files/test-files.module';
     ReferralsModule,
     WebhookModule,
     TestFilesModule,
+    AdminModule,
     TelegrafModule.forRoot({
       token: process.env.BOT_TOKEN || '',
       botName: 'airshorts1_bot',
@@ -59,7 +61,14 @@ import { TestFilesModule } from './test-files/test-files.module';
       },
     }),
   ],
-  providers: [BotUpdate, MenuUpdate, VideoGenerationScene, ReferralScene, PaymentScene, AdminReferralScene],
+  providers: [
+    BotUpdate,
+    MenuUpdate,
+    VideoGenerationScene,
+    ReferralScene,
+    PaymentScene,
+    AdminReferralScene,
+  ],
   controllers: [HealthController],
 })
 export class AppModule {}

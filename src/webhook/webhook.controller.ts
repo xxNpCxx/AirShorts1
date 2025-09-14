@@ -17,7 +17,14 @@ export class WebhookController {
   async handleWebhook(@Body() update: unknown, @Res() res: Response) {
     try {
       // Проверяем, что данные не пустые
-      if (!update || (typeof update === 'object' && Object.keys(update).length === 0)) {
+      const isUpdateIsNull = update === null;
+      const isUpdateIsUndefined = update === undefined;
+      const isUpdateIsObject = typeof update === 'object';
+      const isUpdateIsEmptyObject =
+        isUpdateIsObject === true && Object.keys(update as object).length === 0;
+      const isUpdateEmpty =
+        isUpdateIsNull === true || isUpdateIsUndefined === true || isUpdateIsEmptyObject === true;
+      if (isUpdateEmpty === true) {
         this.logger.warn('⚠️ Empty webhook received', 'WebhookController');
         res.status(HttpStatus.BAD_REQUEST).json({
           ok: false,
@@ -33,7 +40,8 @@ export class WebhookController {
       );
 
       // Валидация входящих данных
-      if (!isTelegramUpdate(update)) {
+      const isTelegramUpdateValid = isTelegramUpdate(update) === true;
+      if (isTelegramUpdateValid === false) {
         // Всегда логируем детали при ошибке валидации
         console.log('=== WEBHOOK VALIDATION ERROR ===');
         console.log('Received data:', JSON.stringify(update, null, 2));
@@ -72,17 +80,33 @@ export class WebhookController {
       const updateType = this.getUpdateType(update);
       this.logger.log(`📋 Тип обновления: ${updateType}`, 'WebhookController');
 
-      if (update.message?.text) {
+      const isHasMessageText =
+        update.message !== undefined &&
+        update.message !== null &&
+        update.message.text !== undefined &&
+        update.message.text !== null;
+      const isHasCallbackData =
+        update.callback_query !== undefined &&
+        update.callback_query !== null &&
+        update.callback_query.data !== undefined &&
+        update.callback_query.data !== null;
+      const isHasInlineQuery =
+        update.inline_query !== undefined &&
+        update.inline_query !== null &&
+        update.inline_query.query !== undefined &&
+        update.inline_query.query !== null;
+
+      if (isHasMessageText === true) {
         this.logger.log(
           `📝 Сообщение: "${update.message.text}" от пользователя ${update.message.from?.id}`,
           'WebhookController'
         );
-      } else if (update.callback_query?.data) {
+      } else if (isHasCallbackData === true) {
         this.logger.log(
           `🔘 Callback query: "${update.callback_query.data}" от пользователя ${update.callback_query.from?.id}`,
           'WebhookController'
         );
-      } else if (update.inline_query?.query) {
+      } else if (isHasInlineQuery === true) {
         this.logger.log(
           `🔍 Inline query: "${update.inline_query.query}" от пользователя ${update.inline_query.from?.id}`,
           'WebhookController'

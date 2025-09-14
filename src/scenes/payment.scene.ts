@@ -95,7 +95,9 @@ export class PaymentScene {
     const session = (ctx as any).session;
     const text = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
 
-    if (session?.waitingForAmount) {
+    const isWaitingForAmount =
+      session !== undefined && session !== null && (session as any).waitingForAmount === true;
+    if (isWaitingForAmount === true) {
       await this.handleAmountInput(ctx, text);
       return;
     }
@@ -107,13 +109,17 @@ export class PaymentScene {
   private async handleAmountInput(@Ctx() ctx: TelegramContext, text: string): Promise<void> {
     try {
       const amount = parseFloat(text);
-      
-      if (isNaN(amount) || amount <= 0) {
+
+      const isAmountNaN = Number.isNaN(amount) === true;
+      const isAmountNonPositive = amount <= 0;
+      const isAmountInvalid = isAmountNaN === true || isAmountNonPositive === true;
+      if (isAmountInvalid === true) {
         await ctx.reply('❌ Введите корректную сумму (только положительное число)');
         return;
       }
 
-      if (amount > 10000) {
+      const isAmountTooLarge = amount > 10000;
+      if (isAmountTooLarge === true) {
         await ctx.reply('❌ Сумма не может превышать 10,000₽');
         return;
       }
@@ -135,17 +141,19 @@ export class PaymentScene {
   ): Promise<void> {
     try {
       const userId = ctx.from?.id;
-      if (!userId) return;
+      const isUserIdMissing = userId === undefined || userId === null;
+      if (isUserIdMissing === true) return;
 
       // Получаем ID пользователя из базы данных
       const userResult = await this.getUserFromDatabase(userId);
-      if (!userResult) {
+      const isUserResultMissing = userResult === undefined || userResult === null;
+      if (isUserResultMissing === true) {
         await ctx.reply('❌ Пользователь не найден в базе данных');
         return;
       }
 
       const requestId = this.generateRequestId();
-      
+
       // Показываем информацию об оплате
       const message = `💳 <b>ОПЛАТА</b>
 
@@ -164,7 +172,6 @@ export class PaymentScene {
 
       // Симулируем обработку платежа
       await this.simulatePaymentProcessing(ctx, userResult.id, service, amount, requestId);
-
     } catch (error) {
       this.logger.error('Ошибка обработки платежа:', error);
       await ctx.reply('❌ Ошибка обработки платежа');
@@ -187,12 +194,7 @@ export class PaymentScene {
 
       if (paymentSuccess) {
         // Начисляем реферальные бонусы
-        await this.referralPaymentHook.onVideoRequestCompleted(
-          userId,
-          amount,
-          requestId,
-          service
-        );
+        await this.referralPaymentHook.onVideoRequestCompleted(userId, amount, requestId, service);
 
         const message = `✅ <b>ПЛАТЕЖ УСПЕШНО ОБРАБОТАН</b>
 
@@ -211,7 +213,6 @@ export class PaymentScene {
 
         // Показываем уведомление о реферальных бонусах
         await this.showReferralBonusNotification(ctx, userId, amount);
-
       } else {
         const message = `❌ <b>ОШИБКА ОПЛАТЫ</b>
 
@@ -227,7 +228,6 @@ export class PaymentScene {
           reply_markup: this.keyboardsService.paymentError().reply_markup,
         });
       }
-
     } catch (error) {
       this.logger.error('Ошибка симуляции платежа:', error);
       await ctx.reply('❌ Ошибка обработки платежа');
@@ -242,7 +242,7 @@ export class PaymentScene {
     try {
       // Получаем статистику рефералов пользователя
       const statsResult = await this.referralsService.getReferralStats(userId);
-      
+
       if (statsResult.referralStats && statsResult.referralStats.total_referrals > 0) {
         const stats = statsResult.referralStats;
         const message = `🎉 <b>РЕФЕРАЛЬНЫЕ БОНУСЫ НАЧИСЛЕНЫ!</b>
@@ -262,7 +262,6 @@ export class PaymentScene {
           reply_markup: this.keyboardsService.referralSystem().reply_markup,
         });
       }
-
     } catch (error) {
       this.logger.error('Ошибка показа уведомления о реферальных бонусах:', error);
     }
@@ -286,9 +285,9 @@ export class PaymentScene {
 
   private getServiceName(service: string): string {
     const names: Record<string, string> = {
-      'full_video': 'Полное видео с голосом (AKOOL + ElevenLabs)',
-      'audio_only': 'Только аудио (ElevenLabs)',
-      'custom': 'Кастомная оплата',
+      full_video: 'Полное видео с голосом (AKOOL + ElevenLabs)',
+      audio_only: 'Только аудио (ElevenLabs)',
+      custom: 'Кастомная оплата',
     };
     return names[service] || service;
   }

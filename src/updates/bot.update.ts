@@ -22,7 +22,7 @@ export class BotUpdate {
   @Start()
   async onStart(@Ctx() ctx: Context) {
     const messageText = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
-    
+
     this._logger.log(
       `🚀 [@Start] Команда /start получена от пользователя ${ctx.from?.id}`,
       'BotUpdate'
@@ -30,7 +30,8 @@ export class BotUpdate {
 
     // Проверяем, есть ли реферальный код в команде /start
     const referralMatch = messageText?.match(/\/start ref_(.+)/);
-    if (referralMatch) {
+    const isReferralMatch = referralMatch !== null && referralMatch !== undefined;
+    if (isReferralMatch === true) {
       const referrerCode = referralMatch[1];
       this._logger.log(
         `🔗 Реферальная регистрация: код ${referrerCode} от пользователя ${ctx.from?.id}`,
@@ -40,27 +41,32 @@ export class BotUpdate {
       try {
         // Сначала обновляем пользователя в базе данных
         await this._users.upsertFromContext(ctx);
-        
+
         // Получаем ID пользователя из базы данных
         const userResult = await this.getUserFromDatabase(ctx.from.id);
-        if (!userResult) {
+        const isUserResultAbsent = userResult === null || userResult === undefined;
+        if (isUserResultAbsent === true) {
           await ctx.reply('❌ Ошибка регистрации. Попробуйте еще раз.');
           return;
         }
 
         // Обрабатываем реферальную регистрацию
-        const result = await this._referrals.processReferralRegistration(referrerCode, userResult.id);
-        
-        if (result.referral) {
+        const result = await this._referrals.processReferralRegistration(
+          referrerCode,
+          userResult.id
+        );
+
+        const isReferralCreated = result.referral !== null && result.referral !== undefined;
+        if (isReferralCreated === true) {
           await ctx.reply(
             '🎉 Добро пожаловать!\n\n' +
-            '✅ Вы успешно зарегистрированы по реферальной ссылке!\n' +
-            '💰 Теперь ваш пригласивший будет получать бонусы с ваших покупок.'
+              '✅ Вы успешно зарегистрированы по реферальной ссылке!\n' +
+              '💰 Теперь ваш пригласивший будет получать бонусы с ваших покупок.'
           );
         } else {
           await ctx.reply(
             '🎉 Добро пожаловать!\n\n' +
-            '⚠️ Реферальная ссылка недействительна, но вы можете зарегистрироваться обычным способом.'
+              '⚠️ Реферальная ссылка недействительна, но вы можете зарегистрироваться обычным способом.'
           );
         }
       } catch (error) {
@@ -134,14 +140,17 @@ export class BotUpdate {
     }
 
     // Пропускаем команды - они обрабатываются отдельными декораторами
-    if (messageText?.startsWith('/')) {
+    const isCommand =
+      messageText !== undefined && messageText !== null && messageText.startsWith('/') === true;
+    if (isCommand === true) {
       this._logger.debug(`[@On text] Пропускаем команду: "${messageText}"`, 'BotUpdate');
       return;
     }
 
     // Обрабатываем сообщения главного меню напрямую - ПРИНУДИТЕЛЬНО выходим из всех сцен
     const { MainMenuHandler } = await import('../utils/main-menu-handler');
-    if (MainMenuHandler.isMainMenuMessage(messageText)) {
+    const isMainMenuMessage = MainMenuHandler.isMainMenuMessage(messageText) === true;
+    if (isMainMenuMessage === true) {
       this._logger.debug(
         `[@On text] Обнаружено сообщение главного меню: "${messageText}" - ПРИНУДИТЕЛЬНЫЙ выход из сцены и показ главного меню`,
         'BotUpdate'
@@ -155,7 +164,12 @@ export class BotUpdate {
         };
       };
 
-      if (sceneContext.scene?.current) {
+      const isInScene =
+        sceneContext.scene !== undefined &&
+        sceneContext.scene !== null &&
+        sceneContext.scene.current !== undefined &&
+        sceneContext.scene.current !== null;
+      if (isInScene === true) {
         this._logger.debug(
           `[@On text] ПРИНУДИТЕЛЬНО выходим из сцены: "${sceneContext.scene.current.id}"`,
           'BotUpdate'
@@ -176,7 +190,12 @@ export class BotUpdate {
       };
     };
 
-    if (sceneContext.scene?.current) {
+    const isInSceneOnText =
+      sceneContext.scene !== undefined &&
+      sceneContext.scene !== null &&
+      sceneContext.scene.current !== undefined &&
+      sceneContext.scene.current !== null;
+    if (isInSceneOnText === true) {
       this._logger.debug(
         `[@On text] Пользователь ${ctx.from?.id} находится в сцене "${sceneContext.scene.current.id}", пропускаем обработку в BotUpdate`,
         'BotUpdate'
@@ -206,7 +225,12 @@ export class BotUpdate {
       };
     };
 
-    if (sceneContext.scene?.current) {
+    const isInSceneOnPhoto =
+      sceneContext.scene !== undefined &&
+      sceneContext.scene !== null &&
+      sceneContext.scene.current !== undefined &&
+      sceneContext.scene.current !== null;
+    if (isInSceneOnPhoto === true) {
       this._logger.debug(
         `[@On photo] Пользователь ${ctx.from?.id} находится в сцене "${sceneContext.scene.current.id}", пропускаем обработку в BotUpdate`,
         'BotUpdate'
@@ -237,7 +261,12 @@ export class BotUpdate {
       };
     };
 
-    if (sceneContext.scene?.current) {
+    const isInSceneOnVoice =
+      sceneContext.scene !== undefined &&
+      sceneContext.scene !== null &&
+      sceneContext.scene.current !== undefined &&
+      sceneContext.scene.current !== null;
+    if (isInSceneOnVoice === true) {
       this._logger.debug(
         `[@On voice] Пользователь ${ctx.from?.id} находится в сцене "${sceneContext.scene.current.id}", пропускаем обработку в BotUpdate`,
         'BotUpdate'
@@ -306,7 +335,8 @@ export class BotUpdate {
 
   @Command('myid')
   async onMyId(@Ctx() ctx: Context) {
-    if (!ctx.from) {
+    const isCtxFromMissing = ctx.from === undefined || ctx.from === null;
+    if (isCtxFromMissing === true) {
       await ctx.reply('❌ Не удалось получить данные пользователя');
       return;
     }
@@ -325,14 +355,16 @@ export class BotUpdate {
 
   @Command('admin')
   async onAdmin(@Ctx() ctx: Context) {
-    if (!ctx.from) {
+    const isCtxFromMissingForAdmin = ctx.from === undefined || ctx.from === null;
+    if (isCtxFromMissingForAdmin === true) {
       await ctx.reply('❌ Не удалось получить данные пользователя');
       return;
     }
 
     // Проверяем, является ли пользователь админом
     const isAdmin = await this.checkAdminStatus(ctx.from.id);
-    if (!isAdmin) {
+    const isNotAdmin = isAdmin === false;
+    if (isNotAdmin === true) {
       await ctx.reply('❌ У вас нет прав администратора');
       return;
     }
@@ -388,7 +420,6 @@ export class BotUpdate {
     ).scene.enter('admin-referral');
   }
 
-
   /**
    * Получает пользователя из базы данных по telegram_id
    */
@@ -407,13 +438,15 @@ export class BotUpdate {
    * Проверяет, является ли пользователь админом
    */
   private async checkAdminStatus(telegramId: number): Promise<boolean> {
+    let isAdmin = true;
     try {
       // Здесь должна быть проверка роли пользователя в базе данных
       // Пока возвращаем true для тестирования
-      return true;
+      isAdmin = true;
     } catch (error) {
       this._logger.error('Ошибка проверки статуса админа:', error);
-      return false;
+      isAdmin = false;
     }
+    return isAdmin;
   }
 }

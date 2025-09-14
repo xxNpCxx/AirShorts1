@@ -133,7 +133,12 @@ export class AkoolService {
     this.logger.log(`   Client ID: ${this.clientId ? '✅ Set' : '❌ Missing'}`);
     this.logger.log(`   Client Secret: ${this.clientSecret ? '✅ Set' : '❌ Missing'}`);
 
-    if (!this.clientId || !this.clientSecret) {
+    const isClientIdMissing =
+      this.clientId === undefined || this.clientId === null || this.clientId === '';
+    const isClientSecretMissing =
+      this.clientSecret === undefined || this.clientSecret === null || this.clientSecret === '';
+    const isCredentialsMissing = isClientIdMissing === true || isClientSecretMissing === true;
+    if (isCredentialsMissing === true) {
       this.logger.error('❌ AKOOL credentials not configured properly');
       this.logger.error(`   AKOOL_CLIENT_ID: ${this.clientId || 'undefined'}`);
       this.logger.error(`   AKOOL_CLIENT_SECRET: ${this.clientSecret ? '***' : 'undefined'}`);
@@ -147,8 +152,10 @@ export class AkoolService {
    * Получение API токена AKOOL
    */
   private async getAccessToken(): Promise<string> {
-    if (this.accessToken) {
-      return this.accessToken;
+    const isAccessTokenPresent =
+      this.accessToken !== null && this.accessToken !== undefined && this.accessToken !== '';
+    if (isAccessTokenPresent === true) {
+      return this.accessToken as string;
     }
 
     try {
@@ -159,7 +166,8 @@ export class AkoolService {
         clientSecret: this.clientSecret,
       });
 
-      if (response.data.code === 1000) {
+      const isTokenSuccess = response.data.code === 1000;
+      if (isTokenSuccess === true) {
         this.accessToken = response.data.token;
         this.logger.log('✅ API токен AKOOL получен успешно');
         return this.accessToken;
@@ -216,11 +224,13 @@ export class AkoolService {
 
         // Проверяем, является ли это ошибкой 1015 (временная ошибка)
         const isRetryableError =
-          error.message?.includes('create video error, please try again later') ||
-          error.message?.includes('1015') ||
-          error.message?.includes('AKOOL API error');
+          error.message?.includes('create video error, please try again later') === true ||
+          error.message?.includes('1015') === true ||
+          error.message?.includes('AKOOL API error') === true;
 
-        if (!isRetryableError || attempt === maxRetries) {
+        const isLastAttempt = attempt === maxRetries;
+        const shouldStopRetrying = isRetryableError === false || isLastAttempt === true;
+        if (shouldStopRetrying === true) {
           throw error;
         }
 
@@ -291,7 +301,8 @@ export class AkoolService {
             this.logger.log(`[${requestId}] ✅ Задача создана успешно. Task ID: ${taskId}`);
 
             // Сохраняем запрос в БД
-            if (userId) {
+            const isUserIdProvided = userId !== undefined && userId !== null;
+            if (isUserIdProvided === true) {
               await this.saveVideoRequest(
                 requestId,
                 userId,
@@ -385,12 +396,14 @@ export class AkoolService {
 
       this.logger.debug(`📊 Статус видео:`, response.data);
 
-      if (response.data.code === 1000) {
+      const isStatusSuccess = response.data.code === 1000;
+      if (isStatusSuccess === true) {
         const data = response.data.data;
         let status = 'processing';
 
         // Статусы AKOOL: 1 = processing, 2 = completed, 3 = error
-        if (data.video_status === 2) {
+        const isCompleted = data.video_status === 2;
+        if (isCompleted === true) {
           status = 'completed';
         } else if (data.video_status === 3) {
           status = 'error';
@@ -613,7 +626,8 @@ export class AkoolService {
       this.logger.log(`[${requestId}] ✅ Аудиофайл загружен, размер: ${audioBuffer.length} байт`);
 
       // Конвертируем OGA в MP3 если нужно
-      if (AudioConverter.needsConversion(voiceAudioUrl)) {
+      const isConversionNeeded = AudioConverter.needsConversion(voiceAudioUrl) === true;
+      if (isConversionNeeded === true) {
         this.logger.log(`[${requestId}] 🔄 Конвертирую OGA в MP3 для AKOOL...`);
         audioBuffer = await AudioConverter.convertOgaToMp3(audioBuffer, voiceAudioUrl);
         this.logger.log(
@@ -622,7 +636,8 @@ export class AkoolService {
       }
 
       // Валидируем аудио
-      if (!AkoolFileUploader.validateFileSize(audioBuffer, 10)) {
+      const isAudioSizeValid = AkoolFileUploader.validateFileSize(audioBuffer, 10) === true;
+      if (isAudioSizeValid === false) {
         throw new Error('Audio file too large (max 10MB)');
       }
 

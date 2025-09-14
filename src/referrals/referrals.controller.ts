@@ -52,8 +52,9 @@ export class ReferralsController {
   async getReferralStats(@Param('userId') userId: number): Promise<ReferralStatsResponse> {
     try {
       const statsResult = await this.referralsService.getReferralStats(userId);
-      
-      if (!statsResult.referralStats) {
+      const isReferralStatsMissing =
+        statsResult.referralStats === undefined || statsResult.referralStats === null;
+      if (isReferralStatsMissing === true) {
         return {
           total_referrals: 0,
           level_1_referrals: 0,
@@ -104,7 +105,7 @@ export class ReferralsController {
   ): Promise<ReferralListResponse> {
     try {
       const referrals = await this.referralsService.getUserReferrals(userId, level);
-      
+
       return {
         referrals: referrals.map(ref => ({
           id: ref.id,
@@ -129,7 +130,7 @@ export class ReferralsController {
   async getUserPayments(@Param('userId') userId: number): Promise<PaymentListResponse> {
     try {
       const payments = await this.referralsService.getUserPayments(userId);
-      
+
       return {
         payments: payments.map(payment => ({
           id: payment.id,
@@ -163,7 +164,8 @@ export class ReferralsController {
         body.newUserId
       );
 
-      if (result.referral) {
+      const isReferralCreated = result.referral !== undefined && result.referral !== null;
+      if (isReferralCreated === true) {
         return {
           success: true,
           message: 'Реферальная связь успешно создана',
@@ -197,7 +199,8 @@ export class ReferralsController {
         body.paymentReference
       );
 
-      if (success) {
+      const isPaymentSuccessful = success === true;
+      if (isPaymentSuccessful === true) {
         return {
           success: true,
           message: 'Платеж успешно обработан, реферальные бонусы начислены',
@@ -267,7 +270,7 @@ export class ReferralsController {
   }> {
     try {
       const payments = await this.referralsService.getAllPayments(limit, offset);
-      
+
       return {
         payments: payments.map(payment => ({
           id: payment.id,
@@ -302,7 +305,8 @@ export class ReferralsController {
       const isReferral = await this.referralsService.isReferral(userId);
       let referrerInfo = null;
 
-      if (isReferral) {
+      const isUserReferral = isReferral === true;
+      if (isUserReferral === true) {
         referrerInfo = await this.referralsService.getReferrer(userId);
       }
 

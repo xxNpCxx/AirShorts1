@@ -22,7 +22,8 @@ export class TestFilesController {
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(@UploadedFile() file: unknown) {
-    if (!isFileUpload(file)) {
+    const isValidUpload = isFileUpload(file) === true;
+    if (isValidUpload === false) {
       throw new BadRequestException('Файл не предоставлен или имеет неверный формат');
     }
 
@@ -46,7 +47,8 @@ export class TestFilesController {
     // Пока используем локальные файлы из src/test/
     const localPath = join(process.cwd(), 'src', 'test', filename);
 
-    if (!existsSync(localPath)) {
+    const isFileExists = existsSync(localPath) === true;
+    if (isFileExists === false) {
       return res.status(404).json({ error: 'Файл не найден' });
     }
 

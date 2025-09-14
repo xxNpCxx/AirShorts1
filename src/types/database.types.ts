@@ -360,7 +360,9 @@ export function validateCreateReferralData(data: unknown): data is CreateReferra
   );
 }
 
-export function validateCreateReferralPaymentData(data: unknown): data is CreateReferralPaymentData {
+export function validateCreateReferralPaymentData(
+  data: unknown
+): data is CreateReferralPaymentData {
   return (
     typeof data === 'object' &&
     data !== null &&
@@ -372,7 +374,8 @@ export function validateCreateReferralPaymentData(data: unknown): data is Create
     typeof (data as any).level === 'number' &&
     [1, 2, 3].includes((data as any).level) &&
     ['pending', 'paid', 'cancelled'].includes((data as any).status) &&
-    ((data as any).payment_reference === undefined || typeof (data as any).payment_reference === 'string')
+    ((data as any).payment_reference === undefined ||
+      typeof (data as any).payment_reference === 'string')
   );
 }
 
@@ -408,7 +411,7 @@ export const REFERRAL_BONUS_TYPES = ['percentage', 'fixed'] as const;
 export const REFERRAL_PAYMENT_STATUSES = ['pending', 'paid', 'cancelled'] as const;
 
 export const REFERRAL_BONUS_RATES = {
-  1: 0.10, // 10% для первого уровня
+  1: 0.1, // 10% для первого уровня
   2: 0.05, // 5% для второго уровня
   3: 0.02, // 2% для третьего уровня
 } as const;

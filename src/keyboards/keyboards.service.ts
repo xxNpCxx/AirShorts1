@@ -22,7 +22,6 @@ export class KeyboardsService {
     return Markup.inlineKeyboard(rows);
   }
 
-
   referralSystem(): ReturnType<typeof Markup.inlineKeyboard> {
     return Markup.inlineKeyboard([
       [Markup.button.callback('📊 Моя статистика', 'referral_stats')],
@@ -61,9 +60,7 @@ export class KeyboardsService {
   }
 
   paymentCustom(): ReturnType<typeof Markup.inlineKeyboard> {
-    return Markup.inlineKeyboard([
-      [Markup.button.callback('🔙 Назад к оплате', 'payment_menu')],
-    ]);
+    return Markup.inlineKeyboard([[Markup.button.callback('🔙 Назад к оплате', 'payment_menu')]]);
   }
 
   paymentProcessing(): ReturnType<typeof Markup.inlineKeyboard> {

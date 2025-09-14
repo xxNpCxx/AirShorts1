@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { CustomLoggerService } from './logger/logger.service';
-import { json } from 'express';
+import { json, urlencoded } from 'express';
 import { runMigrations } from './migrate';
 
 async function bootstrap() {
@@ -12,6 +12,7 @@ async function bootstrap() {
 
   // Настраиваем middleware для парсинга JSON
   app.use(json({ limit: '10mb' }));
+  app.use(urlencoded({ extended: false }));
 
   // Получаем экземпляр логгера
   let logger: CustomLoggerService;

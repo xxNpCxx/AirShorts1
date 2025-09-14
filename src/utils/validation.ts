@@ -22,7 +22,11 @@ import {
 // ============================================================================
 
 export function validateRequired(value: unknown, fieldName: string): ValidationResult {
-  if (value === null || value === undefined || value === '') {
+  const isNull = value === null;
+  const isUndefined = value === undefined;
+  const isEmptyString = value === '';
+  const isMissing = isNull === true || isUndefined === true || isEmptyString === true;
+  if (isMissing === true) {
     return {
       isValid: false,
       errors: [
@@ -44,9 +48,11 @@ export function validateString(
   maxLength?: number
 ): ValidationResult {
   const required = validateRequired(value, fieldName);
-  if (!required.isValid) return required;
+  const isRequiredValid = required.isValid === true;
+  if (isRequiredValid === false) return required;
 
-  if (typeof value !== 'string') {
+  const isStringType = typeof value === 'string';
+  if (isStringType === false) {
     return {
       isValid: false,
       errors: [
@@ -59,7 +65,8 @@ export function validateString(
     };
   }
 
-  if (value.length < minLength) {
+  const isTooShort = value.length < minLength;
+  if (isTooShort === true) {
     return {
       isValid: false,
       errors: [
@@ -72,7 +79,9 @@ export function validateString(
     };
   }
 
-  if (maxLength && value.length > maxLength) {
+  const isMaxDefined = maxLength !== undefined && maxLength !== null;
+  const isTooLong = isMaxDefined === true && value.length > (maxLength as number);
+  if (isTooLong === true) {
     return {
       isValid: false,
       errors: [
@@ -95,9 +104,13 @@ export function validateNumber(
   max?: number
 ): ValidationResult {
   const required = validateRequired(value, fieldName);
-  if (!required.isValid) return required;
+  const isRequiredValid = required.isValid === true;
+  if (isRequiredValid === false) return required;
 
-  if (typeof value !== 'number' || isNaN(value)) {
+  const isNumberType = typeof value === 'number';
+  const isValueNaN = Number.isNaN(value as number) === true;
+  const isNotValidNumber = isNumberType === false || isValueNaN === true;
+  if (isNotValidNumber === true) {
     return {
       isValid: false,
       errors: [
@@ -110,7 +123,9 @@ export function validateNumber(
     };
   }
 
-  if (min !== undefined && value < min) {
+  const isMinDefined = min !== undefined;
+  const isLessThanMin = isMinDefined === true && (value as number) < (min as number);
+  if (isLessThanMin === true) {
     return {
       isValid: false,
       errors: [
@@ -123,7 +138,9 @@ export function validateNumber(
     };
   }
 
-  if (max !== undefined && value > max) {
+  const isMaxDefined = max !== undefined;
+  const isMoreThanMax = isMaxDefined === true && (value as number) > (max as number);
+  if (isMoreThanMax === true) {
     return {
       isValid: false,
       errors: [
@@ -140,7 +157,8 @@ export function validateNumber(
 }
 
 export function validateBoolean(value: unknown, fieldName: string): ValidationResult {
-  if (typeof value !== 'boolean') {
+  const isBooleanType = typeof value === 'boolean';
+  if (isBooleanType === false) {
     return {
       isValid: false,
       errors: [
@@ -161,9 +179,11 @@ export function validateEnum<T extends string>(
   allowedValues: readonly T[]
 ): ValidationResult {
   const required = validateRequired(value, fieldName);
-  if (!required.isValid) return required;
+  const isRequiredValid = required.isValid === true;
+  if (isRequiredValid === false) return required;
 
-  if (!allowedValues.includes(value as T)) {
+  const isAllowed = allowedValues.includes(value as T) === true;
+  if (isAllowed === false) {
     return {
       isValid: false,
       errors: [
@@ -181,7 +201,8 @@ export function validateEnum<T extends string>(
 
 export function validateUrl(value: unknown, fieldName: string): ValidationResult {
   const stringValidation = validateString(value, fieldName);
-  if (!stringValidation.isValid) return stringValidation;
+  const isStringValid = stringValidation.isValid === true;
+  if (isStringValid === false) return stringValidation;
 
   try {
     new globalThis.URL(value as string);
@@ -202,10 +223,12 @@ export function validateUrl(value: unknown, fieldName: string): ValidationResult
 
 export function validateEmail(value: unknown, fieldName: string): ValidationResult {
   const stringValidation = validateString(value, fieldName);
-  if (!stringValidation.isValid) return stringValidation;
+  const isStringValid = stringValidation.isValid === true;
+  if (isStringValid === false) return stringValidation;
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(value as string)) {
+  const isEmailValid = emailRegex.test(value as string) === true;
+  if (isEmailValid === false) {
     return {
       isValid: false,
       errors: [
@@ -257,9 +280,11 @@ export function validateFileType(
   allowedTypes: readonly string[]
 ): ValidationResult {
   const stringValidation = validateString(value, fieldName);
-  if (!stringValidation.isValid) return stringValidation;
+  const isStringValid = stringValidation.isValid === true;
+  if (isStringValid === false) return stringValidation;
 
-  if (!allowedTypes.includes(value as string)) {
+  const isTypeAllowed = allowedTypes.includes(value as string) === true;
+  if (isTypeAllowed === false) {
     return {
       isValid: false,
       errors: [
@@ -293,7 +318,8 @@ export function validateFileSize(
   maxSize: number
 ): ValidationResult {
   const numberValidation = validateNumber(value, fieldName, 0, maxSize);
-  if (!numberValidation.isValid) return numberValidation;
+  const isNumberValid = numberValidation.isValid === true;
+  if (isNumberValid === false) return numberValidation;
 
   return { isValid: true, errors: [] };
 }
@@ -357,7 +383,8 @@ export function validateArray<T>(
   fieldName: string,
   itemValidator: (value: unknown, field: string) => ValidationResult
 ): ValidationResult {
-  if (!Array.isArray(data)) {
+  const isArrayType = Array.isArray(data) === true;
+  if (isArrayType === false) {
     return {
       isValid: false,
       errors: [
@@ -371,15 +398,17 @@ export function validateArray<T>(
   }
 
   const errors: ValidationError[] = [];
-  data.forEach((item, index) => {
+  (data as unknown[]).forEach((item, index) => {
     const result = itemValidator(item, `${fieldName}[${index}]`);
-    if (!result.isValid) {
+    const isItemValid = result.isValid === true;
+    if (isItemValid === false) {
       errors.push(...result.errors);
     }
   });
 
+  const isNoErrors = errors.length === 0;
   return {
-    isValid: errors.length === 0,
+    isValid: isNoErrors,
     errors,
   };
 }
@@ -390,8 +419,9 @@ export function validateArray<T>(
 
 export function combineValidationResults(...results: ValidationResult[]): ValidationResult {
   const allErrors = results.flatMap(result => result.errors);
+  const isNoErrors = allErrors.length === 0;
   return {
-    isValid: allErrors.length === 0,
+    isValid: isNoErrors,
     errors: allErrors,
   };
 }
@@ -401,7 +431,9 @@ export function validateOptional<T>(
   fieldName: string,
   validator: (value: unknown, field: string) => ValidationResult
 ): ValidationResult {
-  if (value === null || value === undefined) {
+  const isNull = value === null;
+  const isUndefined = value === undefined;
+  if (isNull === true || isUndefined === true) {
     return { isValid: true, errors: [] };
   }
   return validator(value, fieldName);
@@ -413,9 +445,11 @@ export function validateOptional<T>(
 
 export function validateTelegramId(value: unknown, fieldName: string): ValidationResult {
   const numberValidation = validateNumber(value, fieldName, 1);
-  if (!numberValidation.isValid) return numberValidation;
+  const isNumberValid = numberValidation.isValid === true;
+  if (isNumberValid === false) return numberValidation;
 
-  if (!Number.isInteger(value as number)) {
+  const isIntegerValue = Number.isInteger(value as number) === true;
+  if (isIntegerValue === false) {
     return {
       isValid: false,
       errors: [

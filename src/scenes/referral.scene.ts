@@ -25,7 +25,8 @@ export class ReferralScene {
   async showReferralMenu(@Ctx() ctx: TelegramContext): Promise<void> {
     try {
       const userId = ctx.from?.id;
-      if (!userId) return;
+      const isUserIdMissing = userId === undefined || userId === null;
+      if (isUserIdMissing === true) return;
 
       const message = `💰 <b>РЕФЕРАЛЬНАЯ СИСТЕМА</b>
 
@@ -54,18 +55,22 @@ export class ReferralScene {
   async showReferralStats(@Ctx() ctx: TelegramContext): Promise<void> {
     try {
       const userId = ctx.from?.id;
-      if (!userId) return;
+      const isUserIdMissingForStats = userId === undefined || userId === null;
+      if (isUserIdMissingForStats === true) return;
 
       // Получаем ID пользователя из базы данных
       const userResult = await this.getUserFromDatabase(userId);
-      if (!userResult) {
+      const isUserResultMissing = userResult === undefined || userResult === null;
+      if (isUserResultMissing === true) {
         await ctx.answerCbQuery('❌ Пользователь не найден в базе данных');
         return;
       }
 
       const statsResult = await this.referralsService.getReferralStats(userResult.id);
-      
-      if (!statsResult.referralStats) {
+
+      const isStatsMissing =
+        statsResult.referralStats === undefined || statsResult.referralStats === null;
+      if (isStatsMissing === true) {
         await ctx.answerCbQuery('❌ Ошибка получения статистики');
         return;
       }
@@ -98,18 +103,23 @@ export class ReferralScene {
   async showReferralLink(@Ctx() ctx: TelegramContext): Promise<void> {
     try {
       const userId = ctx.from?.id;
-      if (!userId) return;
+      const isUserIdMissingForLink = userId === undefined || userId === null;
+      if (isUserIdMissingForLink === true) return;
 
       // Получаем ID пользователя из базы данных
       const userResult = await this.getUserFromDatabase(userId);
-      if (!userResult) {
+      const isUserResultMissingForLink = userResult === undefined || userResult === null;
+      if (isUserResultMissingForLink === true) {
         await ctx.answerCbQuery('❌ Пользователь не найден в базе данных');
         return;
       }
 
       // Получаем username бота из контекста
       const botUsername = ctx.botInfo?.username || 'your_bot';
-      const referralLink = await this.referralsService.createReferralLink(userResult.id, botUsername);
+      const referralLink = await this.referralsService.createReferralLink(
+        userResult.id,
+        botUsername
+      );
 
       const message = `🔗 <b>ВАША РЕФЕРАЛЬНАЯ ССЫЛКА</b>
 
@@ -157,29 +167,33 @@ ${referralLink}
   async showReferralListByLevel(@Ctx() ctx: TelegramContext): Promise<void> {
     try {
       const userId = ctx.from?.id;
-      if (!userId) return;
+      const isUserIdMissingForLevel = userId === undefined || userId === null;
+      if (isUserIdMissingForLevel === true) return;
 
       const match = (ctx.callbackQuery as any)?.data?.match(/referral_list_level_(\d+)/);
-      if (!match) return;
+      const isNoMatch = match === undefined || match === null;
+      if (isNoMatch === true) return;
 
       const level = parseInt(match[1]);
 
       // Получаем ID пользователя из базы данных
       const userResult = await this.getUserFromDatabase(userId);
-      if (!userResult) {
+      const isUserResultMissingForLevel = userResult === undefined || userResult === null;
+      if (isUserResultMissingForLevel === true) {
         await ctx.answerCbQuery('❌ Пользователь не найден в базе данных');
         return;
       }
 
       const referrals = await this.referralsService.getUserReferrals(userResult.id, level);
-      
+
       let message = `👥 <b>РЕФЕРАЛЫ ${level}-ГО УРОВНЯ</b>\n\n`;
-      
+
       if (referrals.length === 0) {
         message += '😔 Пока нет рефералов на этом уровне';
       } else {
         referrals.forEach((ref, index) => {
-          const name = (ref as any).first_name + ((ref as any).last_name ? ` ${(ref as any).last_name}` : '');
+          const name =
+            (ref as any).first_name + ((ref as any).last_name ? ` ${(ref as any).last_name}` : '');
           const username = (ref as any).username ? ` (@${(ref as any).username})` : '';
           const date = new Date(ref.created_at).toLocaleDateString('ru-RU');
           message += `${index + 1}. ${name}${username}\n   📅 ${date}\n\n`;
@@ -202,28 +216,34 @@ ${referralLink}
   async showAllReferrals(@Ctx() ctx: TelegramContext): Promise<void> {
     try {
       const userId = ctx.from?.id;
-      if (!userId) return;
+      const isUserIdMissingForAll = userId === undefined || userId === null;
+      if (isUserIdMissingForAll === true) return;
 
       // Получаем ID пользователя из базы данных
       const userResult = await this.getUserFromDatabase(userId);
-      if (!userResult) {
+      const isUserResultMissingForAll = userResult === undefined || userResult === null;
+      if (isUserResultMissingForAll === true) {
         await ctx.answerCbQuery('❌ Пользователь не найден в базе данных');
         return;
       }
 
       const referrals = await this.referralsService.getUserReferrals(userResult.id);
-      
+
       let message = `👥 <b>ВСЕ МОИ РЕФЕРАЛЫ</b>\n\n`;
-      
+
       if (referrals.length === 0) {
         message += '😔 Пока нет рефералов';
       } else {
         // Группируем по уровням
-        const byLevel = referrals.reduce((acc, ref) => {
-          if (!acc[ref.level]) acc[ref.level] = [];
-          acc[ref.level].push(ref);
-          return acc;
-        }, {} as Record<number, any[]>);
+        const byLevel = referrals.reduce(
+          (acc, ref) => {
+            const isLevelGroupMissing = acc[ref.level] === undefined || acc[ref.level] === null;
+            if (isLevelGroupMissing === true) acc[ref.level] = [];
+            acc[ref.level].push(ref);
+            return acc;
+          },
+          {} as Record<number, any[]>
+        );
 
         for (const level of [1, 2, 3]) {
           if (byLevel[level]) {
@@ -264,18 +284,21 @@ ${referralLink}
       }
 
       const payments = await this.referralsService.getUserPayments(userResult.id);
-      
+
       let message = `💰 <b>ИСТОРИЯ НАЧИСЛЕНИЙ</b>\n\n`;
-      
+
       if (payments.length === 0) {
         message += '😔 Пока нет начислений';
       } else {
         payments.slice(0, 10).forEach((payment, index) => {
-          const payerName = (payment as any).first_name + ((payment as any).last_name ? ` ${(payment as any).last_name}` : '');
+          const payerName =
+            (payment as any).first_name +
+            ((payment as any).last_name ? ` ${(payment as any).last_name}` : '');
           const payerUsername = (payment as any).username ? ` (@${(payment as any).username})` : '';
           const date = new Date(payment.created_at).toLocaleDateString('ru-RU');
-          const status = payment.status === 'paid' ? '✅' : payment.status === 'pending' ? '⏳' : '❌';
-          
+          const status =
+            payment.status === 'paid' ? '✅' : payment.status === 'pending' ? '⏳' : '❌';
+
           message += `${index + 1}. ${status} ${payment.amount.toFixed(2)} ₽\n`;
           message += `   👤 ${payerName}${payerUsername}\n`;
           message += `   📊 Уровень ${payment.level} (${payment.bonus_value}%)\n`;

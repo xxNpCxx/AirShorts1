@@ -49,7 +49,7 @@ export class AdminReferralScene {
   async showSystemStats(@Ctx() ctx: TelegramContext): Promise<void> {
     try {
       const stats = await this.referralsService.getSystemStats();
-      
+
       const message = `📊 <b>ОБЩАЯ СТАТИСТИКА РЕФЕРАЛЬНОЙ СИСТЕМЫ</b>
 
 👥 <b>Активные рефереры:</b> ${stats.active_referrers}
@@ -77,20 +77,23 @@ export class AdminReferralScene {
   async showAllPayments(@Ctx() ctx: TelegramContext): Promise<void> {
     try {
       const payments = await this.referralsService.getAllPayments(20, 0);
-      
+
       let message = `💰 <b>ВСЕ РЕФЕРАЛЬНЫЕ НАЧИСЛЕНИЯ</b>\n\n`;
-      
+
       if (payments.length === 0) {
         message += '😔 Пока нет начислений';
       } else {
         payments.forEach((payment, index) => {
-          const referrerName = (payment as any).referrer_first_name + 
+          const referrerName =
+            (payment as any).referrer_first_name +
             ((payment as any).referrer_username ? ` (@${(payment as any).referrer_username})` : '');
-          const payerName = (payment as any).payer_first_name + 
+          const payerName =
+            (payment as any).payer_first_name +
             ((payment as any).payer_username ? ` (@${(payment as any).payer_username})` : '');
           const date = new Date(payment.created_at).toLocaleString('ru-RU');
-          const status = payment.status === 'paid' ? '✅' : payment.status === 'pending' ? '⏳' : '❌';
-          
+          const status =
+            payment.status === 'paid' ? '✅' : payment.status === 'pending' ? '⏳' : '❌';
+
           message += `${index + 1}. ${status} ${payment.amount.toFixed(2)}₽\n`;
           message += `   👤 Реферер: ${referrerName}\n`;
           message += `   💳 Плательщик: ${payerName}\n`;
@@ -119,9 +122,9 @@ export class AdminReferralScene {
   async showTopReferrers(@Ctx() ctx: TelegramContext): Promise<void> {
     try {
       const stats = await this.referralsService.getSystemStats();
-      
+
       let message = `🏆 <b>ТОП РЕФЕРАЛОВ</b>\n\n`;
-      
+
       if (stats.top_referrers.length === 0) {
         message += '😔 Пока нет рефералов';
       } else {
@@ -182,11 +185,11 @@ export class AdminReferralScene {
 
       let message = `📅 <b>СТАТИСТИКА ЗА ДЕНЬ</b>\n`;
       message += `📆 Дата: ${today}\n\n`;
-      
+
       message += `📊 <b>Общая статистика:</b>\n`;
       message += `• Всего рефералов: ${stats.totalReferrals}\n`;
       message += `• Общий доход: ${stats.totalEarnings.toFixed(2)}₽\n\n`;
-      
+
       message += `🎯 <b>По уровням:</b>\n`;
       message += `• 1-й уровень: ${stats.level1Referrals} рефералов (${stats.level1Earnings.toFixed(2)}₽)\n`;
       message += `• 2-й уровень: ${stats.level2Referrals} рефералов (${stats.level2Earnings.toFixed(2)}₽)\n`;
@@ -208,12 +211,9 @@ export class AdminReferralScene {
       });
     } catch (error) {
       this.logger.error('Ошибка показа дневной статистики:', error);
-      await ctx.editMessageText(
-        '❌ Ошибка загрузки статистики за день. Попробуйте позже.',
-        {
-          reply_markup: this.keyboardsService.adminReferralMenu().reply_markup,
-        }
-      );
+      await ctx.editMessageText('❌ Ошибка загрузки статистики за день. Попробуйте позже.', {
+        reply_markup: this.keyboardsService.adminReferralMenu().reply_markup,
+      });
     }
   }
 

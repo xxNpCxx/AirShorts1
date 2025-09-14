@@ -10,9 +10,11 @@ export const REDIS_TOKEN = 'REDIS_CLIENT';
       provide: REDIS_TOKEN,
       useFactory: (): Redis | null => {
         const url = process.env.REDIS_URL;
-        if (!url) return null;
-        const tls = url.startsWith('rediss://') ? { rejectUnauthorized: false } : undefined;
-        return new Redis(url, tls ? { tls } : {});
+        const isUrlMissing = url === undefined || url === null || url === '';
+        if (isUrlMissing === true) return null;
+        const isTls = (url as string).startsWith('rediss://') === true;
+        const tls = isTls === true ? { rejectUnauthorized: false } : undefined;
+        return new Redis(url as string, tls !== undefined ? { tls } : {});
       },
     },
   ],

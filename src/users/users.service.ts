@@ -23,7 +23,8 @@ export class UsersService {
 
   async upsertFromContext(ctx: TelegramContext): Promise<boolean> {
     const u = ctx.from;
-    if (!u) return false;
+    const isUserMissing = u === undefined || u === null;
+    if (isUserMissing === true) return false;
     try {
       const res = await this.pool.query('SELECT telegram_id FROM users WHERE telegram_id = $1', [
         u.id,

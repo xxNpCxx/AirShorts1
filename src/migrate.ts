@@ -35,7 +35,7 @@ async function runMigrations() {
           WHERE table_name = 'migrations'
         );
       `);
-      tableExists = tableExistsCheck.rows[0].exists;
+      tableExists = tableExistsCheck.rows[0].exists === true;
 
       if (tableExists) {
         const tableCheck = await client.query(`
@@ -44,7 +44,7 @@ async function runMigrations() {
           WHERE table_name = 'migrations' 
           AND column_name = 'name'
         `);
-        hasNameColumn = tableCheck.rows.length > 0;
+        hasNameColumn = tableCheck.rows.length > 0 === true;
 
         const filenameCheck = await client.query(`
           SELECT column_name 
@@ -52,7 +52,7 @@ async function runMigrations() {
           WHERE table_name = 'migrations' 
           AND column_name = 'filename'
         `);
-        hasFilenameColumn = filenameCheck.rows.length > 0;
+        hasFilenameColumn = filenameCheck.rows.length > 0 === true;
 
         console.log('🏗️ Таблица migrations уже существует');
       } else {
@@ -64,7 +64,8 @@ async function runMigrations() {
     }
 
     // Создаем или обновляем таблицу migrations
-    if (!tableExists) {
+    const isTableMissing = tableExists === false;
+    if (isTableMissing === true) {
       console.log('🏗️ Создаем таблицу migrations...');
       await client.query(`
         CREATE TABLE migrations (
@@ -74,7 +75,7 @@ async function runMigrations() {
         );
       `);
       console.log('✅ Таблица migrations создана');
-    } else if (!hasNameColumn && !hasFilenameColumn) {
+    } else if (hasNameColumn === false && hasFilenameColumn === false) {
       console.log('🔄 Обновляем существующую таблицу migrations...');
       try {
         await client.query(`
@@ -89,7 +90,7 @@ async function runMigrations() {
       } catch {
         console.log('⚠️ Некоторые колонки уже существуют, продолжаем...');
       }
-    } else if (hasFilenameColumn && !hasNameColumn) {
+    } else if (hasFilenameColumn === true && hasNameColumn === false) {
       // Если есть filename, но нет name, переименовываем
       console.log('🔄 Переименовываем filename в name...');
       try {
@@ -108,14 +109,17 @@ async function runMigrations() {
     // Читаем все SQL файлы миграций
     // На Render папка migrations находится в /opt/render/project/src/migrations
     // В локальной разработке папка migrations находится относительно src/
-    const migrationsDir = process.cwd().includes('/opt/render/project')
-      ? join(process.cwd(), 'migrations') // process.cwd() = /opt/render/project/src, нужен /opt/render/project/src/migrations
-      : join(__dirname, '../../migrations');
+    const isRenderEnv = process.cwd().includes('/opt/render/project') === true;
+    const migrationsDir =
+      isRenderEnv === true
+        ? join(process.cwd(), 'migrations') // process.cwd() = /opt/render/project/src, нужен /opt/render/project/src/migrations
+        : join(__dirname, '../../migrations');
 
     console.log(`📁 Ищем миграции в: ${migrationsDir}`);
 
     // Проверяем существование папки миграций
-    if (!existsSync(migrationsDir)) {
+    const isMigrationsDirExists = existsSync(migrationsDir) === true;
+    if (isMigrationsDirExists === false) {
       console.log(`⚠️ Папка миграций не найдена: ${migrationsDir}`);
       console.log(`📁 Текущая рабочая директория: ${process.cwd()}`);
       console.log(`📁 __dirname: ${__dirname}`);
@@ -135,12 +139,14 @@ async function runMigrations() {
       try {
         // Проверяем, была ли миграция уже выполнена (только если таблица migrations существует)
         let shouldSkip = false;
-        if (tableExists) {
+        const isTableExists = tableExists === true;
+        if (isTableExists === true) {
           try {
             const { rows } = await client.query('SELECT id FROM migrations WHERE name = $1', [
               filename,
             ]);
-            if (rows.length > 0) {
+            const isAlreadyExecuted = rows.length > 0 === true;
+            if (isAlreadyExecuted === true) {
               console.log(`⏭️  Миграция ${filename} уже выполнена, пропускаем`);
               shouldSkip = true;
             }
@@ -149,7 +155,8 @@ async function runMigrations() {
           }
         }
 
-        if (shouldSkip) {
+        const isShouldSkip = shouldSkip === true;
+        if (isShouldSkip === true) {
           continue;
         }
 
@@ -162,7 +169,7 @@ async function runMigrations() {
         await client.query(sql);
 
         // Записываем в таблицу migrations только если она существует
-        if (tableExists) {
+        if (isTableExists === true) {
           await client.query('INSERT INTO migrations (name) VALUES ($1)', [filename]);
         }
         await client.query('COMMIT');
@@ -181,7 +188,8 @@ async function runMigrations() {
       }
     }
 
-    if (failuresCount === 0) {
+    const isNoFailures = failuresCount === 0;
+    if (isNoFailures === true) {
       console.log('🎉 Все миграции выполнены успешно!');
     } else {
       console.log(`🏁 Миграции завершены с ошибками. Неуспешных: ${failuresCount}`);

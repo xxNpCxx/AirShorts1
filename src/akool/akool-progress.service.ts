@@ -88,7 +88,8 @@ export class AkoolProgressService {
     try {
       // Получаем данные задачи из БД
       const videoRequest = await this.findVideoRequestByTaskId(taskId);
-      if (!videoRequest) {
+      const isVideoRequestMissing = videoRequest === undefined || videoRequest === null;
+      if (isVideoRequestMissing === true) {
         this.logger.error(`❌ Задача не найдена: ${taskId}`);
         return;
       }
@@ -97,7 +98,8 @@ export class AkoolProgressService {
       const messageId = videoRequest.progress_message_id;
 
       // Если есть ID сообщения, обновляем его
-      if (messageId) {
+      const isMessageIdPresent = messageId !== undefined && messageId !== null;
+      if (isMessageIdPresent === true) {
         await this.editProgressMessage(userId, messageId, {
           taskId,
           userId,
@@ -117,7 +119,8 @@ export class AkoolProgressService {
       }
 
       // Если задача завершена, останавливаем отслеживание
-      if (status === 'completed' || status === 'failed') {
+      const isCompletedOrFailed = status === 'completed' || status === 'failed';
+      if (isCompletedOrFailed === true) {
         this.stopProgressTracking(taskId);
       }
     } catch (error) {
@@ -202,7 +205,8 @@ export class AkoolProgressService {
             await this.updateProgress(taskId, status.status, status.progress, status.message);
 
             // Если задача завершена, останавливаем проверку
-            if (status.status === 'completed' || status.status === 'failed') {
+            const isStatusTerminal = status.status === 'completed' || status.status === 'failed';
+            if (isStatusTerminal === true) {
               clearInterval(timer);
               this.progressTimers.delete(taskId);
             }

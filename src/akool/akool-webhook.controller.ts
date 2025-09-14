@@ -30,7 +30,8 @@ export class AkoolWebhookController {
   @Post()
   async handleWebhook(@Body() body: unknown) {
     // Валидация входящих данных
-    if (!validateAkoolWebhookBody(body)) {
+    const isValidWebhookBody = validateAkoolWebhookBody(body) === true;
+    if (isValidWebhookBody === false) {
       this.logger.error('❌ Invalid AKOOL webhook body received');
       return { success: false, error: 'Invalid webhook body format' };
     }
@@ -38,7 +39,8 @@ export class AkoolWebhookController {
 
     // Проверяем, не обрабатывали ли мы уже этот webhook
     const webhookId = this.generateWebhookId(body);
-    if (await this.isWebhookProcessed(webhookId)) {
+    const isAlreadyProcessed = (await this.isWebhookProcessed(webhookId)) === true;
+    if (isAlreadyProcessed === true) {
       this.logger.log(`⚠️ Webhook уже обработан: ${webhookId}`);
       return { status: 'ok', message: 'Webhook already processed' };
     }
@@ -48,7 +50,8 @@ export class AkoolWebhookController {
 
     try {
       // AKOOL отправляет зашифрованные данные
-      if (body.dataEncrypt) {
+      const isEncrypted = body.dataEncrypt !== undefined && body.dataEncrypt !== null;
+      if (isEncrypted === true) {
         this.logger.log('🔓 Получены зашифрованные данные от AKOOL');
         this.logger.log('📋 Webhook содержит зашифрованную информацию о статусе видео');
 
@@ -68,7 +71,14 @@ export class AkoolWebhookController {
           this.logger.log(`  URL: ${url}`);
 
           // Обновляем статус в БД
-          const dbStatus = status === 3 ? 'completed' : status === 4 ? 'failed' : 'processing';
+          const isStatusCompleted = status === 3;
+          const isStatusFailed = status === 4;
+          const dbStatus =
+            isStatusCompleted === true
+              ? 'completed'
+              : isStatusFailed === true
+                ? 'failed'
+                : 'processing';
           await this.updateVideoStatus(
             _id,
             dbStatus,
@@ -76,7 +86,7 @@ export class AkoolWebhookController {
             status === 4 ? 'Ошибка обработки' : undefined
           );
 
-          if (status === 3) {
+          if (isStatusCompleted === true) {
             // 3 = готово
             this.logger.log(`🎉 ${type} готово! ID: ${_id}, URL: ${url}`);
 
@@ -86,7 +96,7 @@ export class AkoolWebhookController {
             if (url) {
               await this.sendVideoToUser(url, _id);
             }
-          } else if (status === 4) {
+          } else if (isStatusFailed === true) {
             // 4 = ошибка
             this.logger.error(`❌ Ошибка создания ${type} для задачи: ${_id}`);
 
@@ -118,7 +128,9 @@ export class AkoolWebhookController {
       }
 
       // Если данные не зашифрованы (старая версия API)
-      if (body.data && body.data.video_status === 2) {
+      const isUnencryptedCompleted =
+        body.data !== undefined && body.data !== null && body.data.video_status === 2;
+      if (isUnencryptedCompleted === true) {
         // 2 = завершено
         const { video_id, video, task_id } = body.data;
 
@@ -128,7 +140,7 @@ export class AkoolWebhookController {
         if (video) {
           await this.sendVideoToUser(video, task_id);
         }
-      } else if (body.data && body.data.video_status === 3) {
+      } else if (body.data !== undefined && body.data !== null && body.data.video_status === 3) {
         // 3 = ошибка
         const { task_id } = body.data;
         this.logger.error(`❌ Ошибка создания видео для задачи: ${task_id}`);

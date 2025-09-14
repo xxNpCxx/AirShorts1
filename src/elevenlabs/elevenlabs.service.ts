@@ -98,7 +98,8 @@ export class ElevenLabsService {
 
   constructor(private readonly configService: ConfigService) {
     this.apiKey = this.configService.get<string>('ELEVENLABS_API_KEY') || '';
-    if (!this.apiKey) {
+    const isApiKeyMissing = this.apiKey === undefined || this.apiKey === null || this.apiKey === '';
+    if (isApiKeyMissing === true) {
       this.logger.warn('ELEVENLABS_API_KEY не найден в переменных окружения');
     }
   }
@@ -155,7 +156,8 @@ export class ElevenLabsService {
       let audioBuffer = request.audioBuffer;
       const contentType = request.contentType || 'application/octet-stream';
 
-      if (contentType !== 'audio/wav') {
+      const isNotWav = contentType === 'audio/wav' ? false : true;
+      if (isNotWav === true) {
         this.logger.log(`[${cloneId}] 🔄 Converting audio from ${contentType} to WAV`);
         audioBuffer = await this.convertToWav(request.audioBuffer, contentType);
       }
@@ -189,7 +191,8 @@ export class ElevenLabsService {
         `[${cloneId}] 📥 Voice creation response: ${response.status} ${response.statusText}`
       );
 
-      if (!response.ok) {
+      const isResponseOk = response.ok === true;
+      if (isResponseOk === false) {
         const errorText = await response.text();
         this.logger.error(`[${cloneId}] ❌ Failed to create voice:`, {
           status: response.status,
@@ -259,7 +262,8 @@ export class ElevenLabsService {
         body: formData,
       });
 
-      if (!response.ok) {
+      const isResponseOkClone = response.ok === true;
+      if (isResponseOkClone === false) {
         const errorText = await response.text();
         this.logger.error(`[${cloneId}] ❌ Fine-tuning also failed:`, errorText);
         throw new Error(`Fine-tuning failed: ${response.status} - ${errorText}`);
@@ -312,7 +316,8 @@ export class ElevenLabsService {
         `[${cloneId}] 📥 Voice cloning response: ${response.status} ${response.statusText}`
       );
 
-      if (!response.ok) {
+      const isTtsResponseOk = response.ok === true;
+      if (isTtsResponseOk === false) {
         const errorText = await response.text();
         this.logger.error(`[${cloneId}] ❌ Failed to clone voice:`, {
           status: response.status,
@@ -375,7 +380,8 @@ export class ElevenLabsService {
 
       this.logger.debug(`[${ttsId}] 📥 TTS response: ${response.status} ${response.statusText}`);
 
-      if (!response.ok) {
+      const isVoicesOk = response.ok === true;
+      if (isVoicesOk === false) {
         const errorText = await response.text();
         this.logger.error(`[${ttsId}] ❌ Failed to generate speech:`, {
           status: response.status,
@@ -507,7 +513,8 @@ export class ElevenLabsService {
         },
       });
 
-      if (!response.ok) {
+      const isDeleteOk = response.ok === true;
+      if (isDeleteOk === false) {
         const errorText = await response.text();
         this.logger.error(`❌ Failed to delete voice ${voiceId}:`, {
           status: response.status,

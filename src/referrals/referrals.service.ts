@@ -26,10 +26,7 @@ export class ReferralsService {
    */
   async generateReferralCode(userId: number): Promise<string> {
     try {
-      const result = await this.pool.query(
-        'SELECT generate_referral_code($1) as code',
-        [userId]
-      );
+      const result = await this.pool.query('SELECT generate_referral_code($1) as code', [userId]);
       return result.rows[0].code;
     } catch (error) {
       this.logger.error(`Ошибка генерации реферального кода для пользователя ${userId}:`, error);
@@ -54,16 +51,16 @@ export class ReferralsService {
 
       // Генерируем новый код
       const code = await this.generateReferralCode(userId);
-      
+
       // Сохраняем код в таблице пользователей
-      await this.pool.query(
-        'UPDATE users SET referral_code = $1 WHERE id = $2',
-        [code, userId]
-      );
+      await this.pool.query('UPDATE users SET referral_code = $1 WHERE id = $2', [code, userId]);
 
       return code;
     } catch (error) {
-      this.logger.error(`Ошибка получения/создания реферального кода для пользователя ${userId}:`, error);
+      this.logger.error(
+        `Ошибка получения/создания реферального кода для пользователя ${userId}:`,
+        error
+      );
       throw error;
     }
   }
@@ -81,7 +78,7 @@ export class ReferralsService {
       );
 
       const referral = result.rows[0] as ReferralsTable;
-      
+
       // Обновляем статистику
       await this.updateReferralStats(data.referrer_id);
 
@@ -137,18 +134,16 @@ export class ReferralsService {
    */
   async getReferralStats(userId: number): Promise<ReferralStatsQueryResult> {
     try {
-      const result = await this.pool.query(
-        'SELECT * FROM referral_stats WHERE user_id = $1',
-        [userId]
-      );
+      const result = await this.pool.query('SELECT * FROM referral_stats WHERE user_id = $1', [
+        userId,
+      ]);
 
       if (result.rows.length === 0) {
         // Создаем пустую статистику, если её нет
         await this.updateReferralStats(userId);
-        const newResult = await this.pool.query(
-          'SELECT * FROM referral_stats WHERE user_id = $1',
-          [userId]
-        );
+        const newResult = await this.pool.query('SELECT * FROM referral_stats WHERE user_id = $1', [
+          userId,
+        ]);
         return { referralStats: newResult.rows[0] as ReferralStatsTable };
       }
 
@@ -218,10 +213,11 @@ export class ReferralsService {
     paymentReference?: string
   ): Promise<boolean> {
     try {
-      await this.pool.query(
-        'SELECT process_referral_payment($1, $2, $3)',
-        [payerUserId, amount, paymentReference]
-      );
+      await this.pool.query('SELECT process_referral_payment($1, $2, $3)', [
+        payerUserId,
+        amount,
+        paymentReference,
+      ]);
 
       this.logger.log(`Обработан платеж ${amount} для пользователя ${payerUserId}`);
       return true;
@@ -400,7 +396,8 @@ export class ReferralsService {
       const endOfDay = `${targetDate} 23:59:59`;
 
       // Получаем общую статистику за день
-      const statsResult = await this.pool.query(`
+      const statsResult = await this.pool.query(
+        `
         SELECT 
           COUNT(DISTINCT r.id) as total_referrals,
           COALESCE(SUM(rp.amount), 0) as total_earnings,
@@ -414,10 +411,13 @@ export class ReferralsService {
         LEFT JOIN referral_payments rp ON r.id = rp.referral_id 
           AND rp.created_at >= $1 AND rp.created_at <= $2
         WHERE r.created_at >= $1 AND r.created_at <= $2
-      `, [startOfDay, endOfDay]);
+      `,
+        [startOfDay, endOfDay]
+      );
 
       // Получаем топ рефереров за день
-      const topReferrersResult = await this.pool.query(`
+      const topReferrersResult = await this.pool.query(
+        `
         SELECT 
           r.referrer_id as user_id,
           COUNT(DISTINCT r.id) as total_referrals,
@@ -429,7 +429,9 @@ export class ReferralsService {
         GROUP BY r.referrer_id
         ORDER BY total_earned DESC, total_referrals DESC
         LIMIT 10
-      `, [startOfDay, endOfDay]);
+      `,
+        [startOfDay, endOfDay]
+      );
 
       const stats = statsResult.rows[0];
       const topReferrers = topReferrersResult.rows;

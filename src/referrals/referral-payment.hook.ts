@@ -32,13 +32,9 @@ export class ReferralPaymentHook {
       );
 
       if (success) {
-        this.logger.log(
-          `✅ Реферальные бонусы успешно начислены для пользователя ${userId}`
-        );
+        this.logger.log(`✅ Реферальные бонусы успешно начислены для пользователя ${userId}`);
       } else {
-        this.logger.warn(
-          `⚠️ Не удалось начислить реферальные бонусы для пользователя ${userId}`
-        );
+        this.logger.warn(`⚠️ Не удалось начислить реферальные бонусы для пользователя ${userId}`);
       }
     } catch (error) {
       this.logger.error(
@@ -68,10 +64,7 @@ export class ReferralPaymentHook {
         `ℹ️ Отмена реферальных бонусов для пользователя ${userId} (функция в разработке)`
       );
     } catch (error) {
-      this.logger.error(
-        `❌ Ошибка отмены реферальных бонусов для пользователя ${userId}:`,
-        error
-      );
+      this.logger.error(`❌ Ошибка отмены реферальных бонусов для пользователя ${userId}:`, error);
     }
   }
 
@@ -81,8 +74,8 @@ export class ReferralPaymentHook {
   getProductPrice(productType: string): number {
     // Цены на готовые продукты
     const prices: Record<string, number> = {
-      'full_video': 75.0,  // 75 рублей за полное видео с голосом
-      'audio_only': 25.0,  // 25 рублей за только аудио
+      full_video: 75.0, // 75 рублей за полное видео с голосом
+      audio_only: 25.0, // 25 рублей за только аудио
     };
 
     return prices[productType] || 75.0; // По умолчанию 75 рублей
