@@ -5,12 +5,14 @@ import { Telegraf } from 'telegraf';
 import { getBotToken } from 'nestjs-telegraf';
 import { TelegramUpdate } from '../types';
 import { isTelegramUpdate } from '../utils/type-guards';
+import { UsersService } from '../users/users.service';
 
 @Controller('webhook')
 export class WebhookController {
   constructor(
     private readonly logger: CustomLoggerService,
-    @Inject(getBotToken('airshorts1_bot')) private readonly bot: Telegraf
+    @Inject(getBotToken('airshorts1_bot')) private readonly bot: Telegraf,
+    private readonly usersService: UsersService
   ) {}
 
   @Post()
@@ -113,6 +115,9 @@ export class WebhookController {
         );
       }
 
+      // Автоматически добавляем пользователя в базу данных
+      await this.ensureUserInDatabase(update);
+
       // Передаем обновление в Telegraf для обработки
       // Приводим к типу Update для совместимости с Telegraf API
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -151,5 +156,60 @@ export class WebhookController {
     if (update.chat_member) return 'chat_member';
     if (update.chat_join_request) return 'chat_join_request';
     return 'unknown';
+  }
+
+  /**
+   * Автоматически добавляет пользователя в базу данных при получении webhook'а
+   * Если пользователь уже существует, обновляет его данные
+   */
+  private async ensureUserInDatabase(update: TelegramUpdate): Promise<void> {
+    try {
+      // Извлекаем информацию о пользователе из различных типов обновлений
+      let user = null;
+
+      if (update.message?.from) {
+        user = update.message.from;
+      } else if (update.callback_query?.from) {
+        user = update.callback_query.from;
+      } else if (update.inline_query?.from) {
+        user = update.inline_query.from;
+      } else if (update.chosen_inline_result?.from) {
+        user = update.chosen_inline_result.from;
+      } else if (update.shipping_query?.from) {
+        user = update.shipping_query.from;
+      } else if (update.pre_checkout_query?.from) {
+        user = update.pre_checkout_query.from;
+      } else if (update.poll_answer?.user) {
+        user = update.poll_answer.user;
+      } else if (update.my_chat_member?.from) {
+        user = update.my_chat_member.from;
+      } else if (update.chat_member?.from) {
+        user = update.chat_member.from;
+      } else if (update.chat_join_request?.from) {
+        user = update.chat_join_request.from;
+      }
+
+      // Если пользователь найден, добавляем/обновляем его в базе данных
+      if (user) {
+        const isNewUser = await this.usersService.upsertFromContext({
+          from: user,
+        } as any);
+        
+        if (isNewUser) {
+          this.logger.log(`👤 Новый пользователь добавлен в базу: ${user.id} (@${user.username || 'без username'})`, 'WebhookController');
+        } else {
+          this.logger.debug(`👤 Пользователь обновлен в базе: ${user.id}`, 'WebhookController');
+        }
+      } else {
+        this.logger.debug('👤 Пользователь не найден в webhook', 'WebhookController');
+      }
+    } catch (error) {
+      this.logger.error(
+        `❌ Ошибка при добавлении пользователя в базу: ${error}`,
+        error instanceof Error ? error.stack : undefined,
+        'WebhookController'
+      );
+      // Не прерываем обработку webhook'а из-за ошибки добавления пользователя
+    }
   }
 }
