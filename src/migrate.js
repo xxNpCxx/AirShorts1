@@ -11,7 +11,7 @@ const { MigrationsService } = require('./migrations/migrations.service');
 
 async function runMigrations() {
   console.log('🚀 Запуск миграций...');
-  
+
   try {
     // Создаем временное приложение только для миграций
     const app = await NestFactory.createApplicationContext(AppModule, {

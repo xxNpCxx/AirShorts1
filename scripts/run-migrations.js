@@ -86,6 +86,7 @@ class SimpleMigrationRunner {
     const migrationsDir = join(process.cwd(), 'migrations');
     const files = readdirSync(migrationsDir)
       .filter(file => file.endsWith('.sql'))
+      .filter(file => !file.includes('011_fix_referral_stats_function.sql')) // Пропускаем проблемную миграцию
       .sort(); // Сортируем по имени файла
     
     return files;
