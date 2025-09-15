@@ -45,6 +45,12 @@ async function fixReferralFunction() {
       CREATE OR REPLACE FUNCTION update_referral_stats(user_id_param INTEGER)
       RETURNS VOID AS $$
       BEGIN
+          -- Сначала убеждаемся, что пользователь существует в таблице users
+          INSERT INTO users (id, username, first_name, last_name, created_at, updated_at)
+          VALUES (user_id_param, 'user_' || user_id_param, 'User', 'User', NOW(), NOW())
+          ON CONFLICT (id) DO NOTHING;
+          
+          -- Теперь создаем или обновляем статистику
           INSERT INTO referral_stats (
               user_id, 
               total_referrals, 
