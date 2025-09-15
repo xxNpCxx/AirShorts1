@@ -1,17 +1,17 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 
 /**
- * Скрипт для ручного запуска миграций
- * Использование: npm run migrate
+ * Скрипт для ручного запуска миграций (JavaScript версия)
+ * Использование: node dist/migrate.js
  */
 
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { MigrationsService } from './migrations/migrations.service';
+const { NestFactory } = require('@nestjs/core');
+const { AppModule } = require('./app.module');
+const { MigrationsService } = require('./migrations/migrations.service');
 
-export async function runMigrations() {
+async function runMigrations() {
   console.log('🚀 Запуск миграций...');
-
+  
   try {
     // Создаем временное приложение только для миграций
     const app = await NestFactory.createApplicationContext(AppModule, {
@@ -55,3 +55,5 @@ export async function runMigrations() {
 if (require.main === module) {
   runMigrations();
 }
+
+module.exports = { runMigrations };

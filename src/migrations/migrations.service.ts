@@ -9,7 +9,7 @@ export const PG_POOL = 'PG_POOL';
 @Injectable()
 export class MigrationsService implements OnModuleInit {
   private readonly logger = new Logger(MigrationsService.name);
-  private migrationRunner: MigrationRunner;
+  private readonly migrationRunner: MigrationRunner;
 
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {
     this.migrationRunner = new MigrationRunner(pool);

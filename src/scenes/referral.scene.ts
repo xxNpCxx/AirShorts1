@@ -95,7 +95,10 @@ export class ReferralScene {
       });
     } catch (error) {
       this.logger.error('Ошибка показа статистики рефералов:', error);
-      this.logger.error(`Детали ошибки - userId: ${ctx.from?.id}, error: ${error}`, 'ReferralScene');
+      this.logger.error(
+        `Детали ошибки - userId: ${ctx.from?.id}, error: ${error}`,
+        'ReferralScene'
+      );
       await ctx.answerCbQuery('❌ Ошибка получения статистики');
     }
   }
@@ -139,7 +142,10 @@ ${referralLink}
       });
     } catch (error) {
       this.logger.error('Ошибка показа реферальной ссылки:', error);
-      this.logger.error(`Детали ошибки - userId: ${ctx.from?.id}, botUsername: ${process.env.BOT_USERNAME}, error: ${error}`, 'ReferralScene');
+      this.logger.error(
+        `Детали ошибки - userId: ${ctx.from?.id}, botUsername: ${process.env.BOT_USERNAME}, error: ${error}`,
+        'ReferralScene'
+      );
       await ctx.answerCbQuery('❌ Ошибка получения ссылки');
     }
   }
@@ -322,7 +328,10 @@ ${referralLink}
       });
     } catch (error) {
       this.logger.error('Ошибка показа истории начислений:', error);
-      this.logger.error(`Детали ошибки - userId: ${ctx.from?.id}, error: ${error}`, 'ReferralScene');
+      this.logger.error(
+        `Детали ошибки - userId: ${ctx.from?.id}, error: ${error}`,
+        'ReferralScene'
+      );
       await ctx.answerCbQuery('❌ Ошибка получения истории');
     }
   }
