@@ -400,6 +400,56 @@ export class BotUpdate {
     ).scene.enter('referral');
   }
 
+  @Action('referral_stats')
+  async onReferralStats(@Ctx() ctx: Context) {
+    await ctx.answerCbQuery();
+    await (
+      ctx as unknown as {
+        scene: { enter: (sceneName: string) => Promise<void> };
+      }
+    ).scene.enter('referral');
+  }
+
+  @Action('referral_link')
+  async onReferralLink(@Ctx() ctx: Context) {
+    await ctx.answerCbQuery();
+    await (
+      ctx as unknown as {
+        scene: { enter: (sceneName: string) => Promise<void> };
+      }
+    ).scene.enter('referral');
+  }
+
+  @Action('referral_list')
+  async onReferralList(@Ctx() ctx: Context) {
+    await ctx.answerCbQuery();
+    await (
+      ctx as unknown as {
+        scene: { enter: (sceneName: string) => Promise<void> };
+      }
+    ).scene.enter('referral');
+  }
+
+  @Action('referral_payments')
+  async onReferralPayments(@Ctx() ctx: Context) {
+    await ctx.answerCbQuery();
+    await (
+      ctx as unknown as {
+        scene: { enter: (sceneName: string) => Promise<void> };
+      }
+    ).scene.enter('referral');
+  }
+
+  @Action('referral_info')
+  async onReferralInfo(@Ctx() ctx: Context) {
+    await ctx.answerCbQuery();
+    await (
+      ctx as unknown as {
+        scene: { enter: (sceneName: string) => Promise<void> };
+      }
+    ).scene.enter('referral');
+  }
+
   @Action('payment_menu')
   async onPaymentMenu(@Ctx() ctx: Context) {
     await ctx.answerCbQuery();

@@ -54,9 +54,20 @@ export class ReferralScene {
   @Action('referral_stats')
   async showReferralStats(@Ctx() ctx: TelegramContext): Promise<void> {
     try {
+      this.logger.log('🔍 [ReferralScene] showReferralStats вызван', 'ReferralScene');
       const userId = ctx.from?.id;
       const isUserIdMissingForStats = userId === undefined || userId === null;
-      if (isUserIdMissingForStats === true) return;
+      if (isUserIdMissingForStats === true) {
+        this.logger.warn(
+          '❌ [ReferralScene] userId отсутствует в showReferralStats',
+          'ReferralScene'
+        );
+        return;
+      }
+      this.logger.log(
+        `🔍 [ReferralScene] Обрабатываем статистику для пользователя ${userId}`,
+        'ReferralScene'
+      );
 
       // Получаем ID пользователя из базы данных
       const userResult = await this.getUserFromDatabase(userId);
