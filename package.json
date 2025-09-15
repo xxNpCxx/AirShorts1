@@ -11,6 +11,7 @@
     "start:debug": "npx nest start --debug --watch",
     "start:prod": "node dist/main",
     "migrate": "ts-node src/migrate.ts",
+    "migrate:status": "ts-node -e \"import('./src/migrate').then(m => m.runMigrations())\"",
     "lint": "eslint \"src/**/*.ts\" --fix",
     "lint:check": "eslint \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\"",

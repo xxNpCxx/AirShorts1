@@ -1,218 +1,57 @@
-import { readFileSync, readdirSync, existsSync } from 'fs';
-import { join } from 'path';
-import { Client } from 'pg';
-import * as dotenv from 'dotenv';
+#!/usr/bin/env ts-node
 
-// Загружаем переменные окружения
-dotenv.config();
+/**
+ * Скрипт для ручного запуска миграций
+ * Использование: npm run migrate
+ */
 
-async function runMigrations() {
-  console.log('🚀 Запуск миграций базы данных...');
-  console.log(`📁 NODE_ENV: ${process.env.NODE_ENV}`);
-  console.log(`📁 process.cwd(): ${process.cwd()}`);
-  console.log(`📁 __dirname: ${__dirname}`);
-  console.log(`📁 DATABASE_URL: ${process.env.DATABASE_URL ? 'установлен' : 'НЕ УСТАНОВЛЕН'}`);
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { MigrationsService } from './migrations/migrations.service';
 
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-  });
-
+export async function runMigrations() {
+  console.log('🚀 Запуск миграций...');
+  
   try {
-    console.log('🔌 Подключение к базе данных...');
-    await client.connect();
-    console.log('✅ Подключение успешно');
+    // Создаем временное приложение только для миграций
+    const app = await NestFactory.createApplicationContext(AppModule, {
+      logger: ['log', 'error', 'warn'],
+    });
 
-    // Проверяем существующую структуру таблицы migrations
-    let tableExists = false;
-    let hasNameColumn = false;
-    let hasFilenameColumn = false;
+    // Получаем сервис миграций
+    const migrationsService = app.get(MigrationsService);
 
-    try {
-      // Сначала проверяем, существует ли таблица вообще
-      const tableExistsCheck = await client.query(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_name = 'migrations'
-        );
-      `);
-      tableExists = tableExistsCheck.rows[0].exists === true;
+    // Показываем текущий статус
+    const status = await migrationsService.getStatus();
+    console.log('📊 Статус миграций:');
+    console.log(`   Всего миграций: ${status.total}`);
+    console.log(`   Выполнено: ${status.executed}`);
+    console.log(`   Ожидает: ${status.pending}`);
 
-      if (tableExists) {
-        const tableCheck = await client.query(`
-          SELECT column_name 
-          FROM information_schema.columns 
-          WHERE table_name = 'migrations' 
-          AND column_name = 'name'
-        `);
-        hasNameColumn = tableCheck.rows.length > 0 === true;
-
-        const filenameCheck = await client.query(`
-          SELECT column_name 
-          FROM information_schema.columns 
-          WHERE table_name = 'migrations' 
-          AND column_name = 'filename'
-        `);
-        hasFilenameColumn = filenameCheck.rows.length > 0 === true;
-
-        console.log('🏗️ Таблица migrations уже существует');
-      } else {
-        console.log('🏗️ Таблица migrations не существует, создаем новую');
-      }
-    } catch (error) {
-      console.log('🏗️ Ошибка при проверке таблицы migrations, создаем новую:', error);
-      tableExists = false;
+    if (status.pending > 0) {
+      console.log('⏳ Невыполненные миграции:', status.pendingMigrations.join(', '));
     }
 
-    // Создаем или обновляем таблицу migrations
-    const isTableMissing = tableExists === false;
-    if (isTableMissing === true) {
-      console.log('🏗️ Создаем таблицу migrations...');
-      await client.query(`
-        CREATE TABLE migrations (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(255) NOT NULL UNIQUE,
-          executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-      console.log('✅ Таблица migrations создана');
-    } else if (hasNameColumn === false && hasFilenameColumn === false) {
-      console.log('🔄 Обновляем существующую таблицу migrations...');
-      try {
-        await client.query(`
-          ALTER TABLE migrations 
-          ADD COLUMN name VARCHAR(255) UNIQUE
-        `);
-        await client.query(`
-          ALTER TABLE migrations 
-          ADD COLUMN executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        `);
-        console.log('✅ Таблица migrations обновлена');
-      } catch {
-        console.log('⚠️ Некоторые колонки уже существуют, продолжаем...');
-      }
-    } else if (hasFilenameColumn === true && hasNameColumn === false) {
-      // Если есть filename, но нет name, переименовываем
-      console.log('🔄 Переименовываем filename в name...');
-      try {
-        await client.query(`
-          ALTER TABLE migrations 
-          RENAME COLUMN filename TO name
-        `);
-        console.log('✅ Колонка filename переименована в name');
-      } catch {
-        console.log('⚠️ Ошибка при переименовании колонки');
-      }
-    } else {
-      console.log('✅ Таблица migrations уже имеет правильную структуру');
-    }
+    // Запускаем миграции
+    await migrationsService.forceRunMigrations();
 
-    // Читаем все SQL файлы миграций
-    // На Render папка migrations находится в /opt/render/project/src/migrations
-    // В локальной разработке папка migrations находится относительно src/
-    const isRenderEnv = process.cwd().includes('/opt/render/project') === true;
-    const migrationsDir =
-      isRenderEnv === true
-        ? join(process.cwd(), 'migrations') // process.cwd() = /opt/render/project/src, нужен /opt/render/project/src/migrations
-        : join(__dirname, '../../migrations');
+    // Показываем финальный статус
+    const finalStatus = await migrationsService.getStatus();
+    console.log('✅ Финальный статус:');
+    console.log(`   Всего миграций: ${finalStatus.total}`);
+    console.log(`   Выполнено: ${finalStatus.executed}`);
+    console.log(`   Ожидает: ${finalStatus.pending}`);
 
-    console.log(`📁 Ищем миграции в: ${migrationsDir}`);
-
-    // Проверяем существование папки миграций
-    const isMigrationsDirExists = existsSync(migrationsDir) === true;
-    if (isMigrationsDirExists === false) {
-      console.log(`⚠️ Папка миграций не найдена: ${migrationsDir}`);
-      console.log(`📁 Текущая рабочая директория: ${process.cwd()}`);
-      console.log(`📁 __dirname: ${__dirname}`);
-      console.log(`📁 NODE_ENV: ${process.env.NODE_ENV}`);
-      return; // Выходим без ошибки, если папки нет
-    }
-
-    const migrationFiles = readdirSync(migrationsDir)
-      .filter(file => file.endsWith('.sql'))
-      .sort(); // Сортируем по имени файла
-
-    console.log(`📁 Найдено ${migrationFiles.length} файлов миграций`);
-
-    let failuresCount = 0;
-
-    for (const filename of migrationFiles) {
-      try {
-        // Проверяем, была ли миграция уже выполнена (только если таблица migrations существует)
-        let shouldSkip = false;
-        const isTableExists = tableExists === true;
-        if (isTableExists === true) {
-          try {
-            const { rows } = await client.query('SELECT id FROM migrations WHERE name = $1', [
-              filename,
-            ]);
-            const isAlreadyExecuted = rows.length > 0 === true;
-            if (isAlreadyExecuted === true) {
-              console.log(`⏭️  Миграция ${filename} уже выполнена, пропускаем`);
-              shouldSkip = true;
-            }
-          } catch (error) {
-            console.log(`⚠️  Не удалось проверить статус миграции ${filename}, выполняем`);
-          }
-        }
-
-        const isShouldSkip = shouldSkip === true;
-        if (isShouldSkip === true) {
-          continue;
-        }
-
-        console.log(`🚀 Выполняем миграцию: ${filename}`);
-        const sqlPath = join(migrationsDir, filename);
-        const sql = readFileSync(sqlPath, 'utf8');
-
-        // Выполняем весь файл одной транзакцией, без разбиения по ';'
-        await client.query('BEGIN');
-        await client.query(sql);
-
-        // Записываем в таблицу migrations только если она существует
-        if (isTableExists === true) {
-          await client.query('INSERT INTO migrations (name) VALUES ($1)', [filename]);
-        }
-        await client.query('COMMIT');
-
-        console.log(`✅ Миграция ${filename} выполнена успешно`);
-      } catch (error) {
-        failuresCount += 1;
-        try {
-          await client.query('ROLLBACK');
-        } catch {
-          // Игнорируем ошибку rollback
-        }
-        console.error(`❌ Ошибка при выполнении миграции ${filename}:`, error);
-        // Продолжаем с другими миграциями
-        continue;
-      }
-    }
-
-    const isNoFailures = failuresCount === 0;
-    if (isNoFailures === true) {
-      console.log('🎉 Все миграции выполнены успешно!');
-    } else {
-      console.log(`🏁 Миграции завершены с ошибками. Неуспешных: ${failuresCount}`);
-    }
+    await app.close();
+    console.log('🎉 Миграции завершены успешно!');
+    process.exit(0);
   } catch (error) {
     console.error('❌ Ошибка при выполнении миграций:', error);
-    throw error;
-  } finally {
-    await client.end();
+    process.exit(1);
   }
 }
 
-// Запускаем миграции если файл вызван напрямую
+// Запускаем только если файл вызван напрямую
 if (require.main === module) {
-  runMigrations()
-    .then(() => {
-      console.log('🏁 Миграции завершены');
-      process.exit(0);
-    })
-    .catch(error => {
-      console.error('💥 Критическая ошибка:', error);
-      process.exit(1);
-    });
+  runMigrations();
 }
-
-export { runMigrations };

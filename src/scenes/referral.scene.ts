@@ -95,6 +95,7 @@ export class ReferralScene {
       });
     } catch (error) {
       this.logger.error('Ошибка показа статистики рефералов:', error);
+      this.logger.error(`Детали ошибки - userId: ${ctx.from?.id}, error: ${error}`, 'ReferralScene');
       await ctx.answerCbQuery('❌ Ошибка получения статистики');
     }
   }
@@ -114,8 +115,8 @@ export class ReferralScene {
         return;
       }
 
-      // Получаем username бота из контекста
-      const botUsername = ctx.botInfo?.username || 'your_bot';
+      // Получаем username бота из переменной окружения
+      const botUsername = process.env.BOT_USERNAME || 'your_bot';
       const referralLink = await this.referralsService.createReferralLink(
         userResult.id,
         botUsername
@@ -138,6 +139,7 @@ ${referralLink}
       });
     } catch (error) {
       this.logger.error('Ошибка показа реферальной ссылки:', error);
+      this.logger.error(`Детали ошибки - userId: ${ctx.from?.id}, botUsername: ${process.env.BOT_USERNAME}, error: ${error}`, 'ReferralScene');
       await ctx.answerCbQuery('❌ Ошибка получения ссылки');
     }
   }
@@ -274,11 +276,13 @@ ${referralLink}
   async showReferralPayments(@Ctx() ctx: TelegramContext): Promise<void> {
     try {
       const userId = ctx.from?.id;
-      if (!userId) return;
+      const isUserIdMissingForPayments = userId === undefined || userId === null;
+      if (isUserIdMissingForPayments === true) return;
 
       // Получаем ID пользователя из базы данных
       const userResult = await this.getUserFromDatabase(userId);
-      if (!userResult) {
+      const isUserResultMissingForPayments = userResult === undefined || userResult === null;
+      if (isUserResultMissingForPayments === true) {
         await ctx.answerCbQuery('❌ Пользователь не найден в базе данных');
         return;
       }
@@ -318,6 +322,7 @@ ${referralLink}
       });
     } catch (error) {
       this.logger.error('Ошибка показа истории начислений:', error);
+      this.logger.error(`Детали ошибки - userId: ${ctx.from?.id}, error: ${error}`, 'ReferralScene');
       await ctx.answerCbQuery('❌ Ошибка получения истории');
     }
   }
@@ -359,6 +364,7 @@ ${referralLink}
       });
     } catch (error) {
       this.logger.error('Ошибка показа информации о реферальной системе:', error);
+      await ctx.answerCbQuery('❌ Ошибка получения информации');
     }
   }
 

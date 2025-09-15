@@ -23,6 +23,7 @@ import { ReferralsModule } from './referrals/referrals.module';
 import { WebhookModule } from './webhook/webhook.module';
 import { TestFilesModule } from './test-files/test-files.module';
 import { AdminModule } from './admin/admin.module';
+import { MigrationsModule } from './migrations/migrations.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { AdminModule } from './admin/admin.module';
     WebhookModule,
     TestFilesModule,
     AdminModule,
+    MigrationsModule,
     TelegrafModule.forRoot({
       token: process.env.BOT_TOKEN || '',
       botName: 'airshorts1_bot',

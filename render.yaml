@@ -5,7 +5,7 @@ services:
     plan: starter
     runtime: node-22
     buildCommand: npm ci --legacy-peer-deps && npm run build
-    startCommand: npm run start:prod
+    startCommand: ./scripts/start-with-migrations.sh
     envVars:
       - key: NODE_ENV
         value: production
@@ -13,6 +13,8 @@ services:
         value: 3000
       - key: BOT_TOKEN
         sync: false
+      - key: BOT_USERNAME
+        value: airshorts1_bot
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL
