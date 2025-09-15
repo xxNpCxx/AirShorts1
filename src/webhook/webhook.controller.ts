@@ -194,9 +194,12 @@ export class WebhookController {
         const isNewUser = await this.usersService.upsertFromContext({
           from: user,
         } as any);
-        
+
         if (isNewUser) {
-          this.logger.log(`👤 Новый пользователь добавлен в базу: ${user.id} (@${user.username || 'без username'})`, 'WebhookController');
+          this.logger.log(
+            `👤 Новый пользователь добавлен в базу: ${user.id} (@${user.username || 'без username'})`,
+            'WebhookController'
+          );
         } else {
           this.logger.debug(`👤 Пользователь обновлен в базе: ${user.id}`, 'WebhookController');
         }

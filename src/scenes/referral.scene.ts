@@ -19,7 +19,14 @@ export class ReferralScene {
   @SceneEnter()
   async onSceneEnter(@Ctx() ctx: TelegramContext): Promise<void> {
     this.logger.log('🔍 [ReferralScene] SceneEnter called', 'ReferralScene');
-    await this.showReferralMenu(ctx);
+    
+    // Проверяем, нужно ли показывать меню
+    const shouldShowMenu = await this.shouldShowReferralMenu(ctx);
+    if (shouldShowMenu === true) {
+      await this.showReferralMenu(ctx);
+    } else {
+      this.logger.log('🔍 [ReferralScene] Menu already shown, skipping', 'ReferralScene');
+    }
   }
 
   @Action('referral_system')
@@ -57,7 +64,15 @@ export class ReferralScene {
       });
       this.logger.log('✅ [ReferralScene] Referral menu shown successfully', 'ReferralScene');
     } catch (error) {
-      this.logger.error('❌ [ReferralScene] Error showing referral menu:', error);
+      // Проверяем, является ли ошибка "message is not modified"
+      const isMessageNotModified = error instanceof Error && 
+        error.message.includes('message is not modified');
+      
+      if (isMessageNotModified === true) {
+        this.logger.log('ℹ️ [ReferralScene] Message already up to date, skipping edit', 'ReferralScene');
+      } else {
+        this.logger.error('❌ [ReferralScene] Error showing referral menu:', error);
+      }
     }
   }
 
@@ -421,6 +436,38 @@ ${referralLink}
     } catch (error) {
       this.logger.error('Ошибка получения пользователя из базы данных:', error);
       return null;
+    }
+  }
+
+  /**
+   * Проверяет, нужно ли показывать реферальное меню
+   * Возвращает false, если сообщение уже содержит реферальное меню
+   */
+  private async shouldShowReferralMenu(ctx: TelegramContext): Promise<boolean> {
+    try {
+      // Проверяем, есть ли callback_query с данными
+      const hasCallbackQuery = ctx.callbackQuery && 'data' in ctx.callbackQuery;
+      if (hasCallbackQuery === false) {
+        return true; // Если нет callback_query, показываем меню
+      }
+
+      const callbackData = (ctx.callbackQuery as any).data;
+      
+      // Если это переход из другого меню, показываем реферальное меню
+      if (callbackData === 'referral_system') {
+        return true;
+      }
+
+      // Если это уже реферальные действия, не показываем меню
+      const isReferralAction = callbackData?.startsWith('referral_');
+      if (isReferralAction === true) {
+        return false;
+      }
+
+      return true; // По умолчанию показываем меню
+    } catch (error) {
+      this.logger.error('Ошибка проверки необходимости показа меню:', error);
+      return true; // В случае ошибки показываем меню
     }
   }
 }
