@@ -134,22 +134,43 @@ export class ReferralsService {
    */
   async getReferralStats(userId: number): Promise<ReferralStatsQueryResult> {
     try {
+      this.logger.log(
+        `🔍 [ReferralsService] getReferralStats called for user ${userId}`,
+        'ReferralsService'
+      );
+
       const result = await this.pool.query('SELECT * FROM referral_stats WHERE user_id = $1', [
         userId,
       ]);
+      this.logger.log(
+        `🔍 [ReferralsService] Query result: ${result.rows.length} rows found`,
+        'ReferralsService'
+      );
 
       if (result.rows.length === 0) {
+        this.logger.log(
+          `🔍 [ReferralsService] No stats found, creating new stats for user ${userId}`,
+          'ReferralsService'
+        );
         // Создаем пустую статистику, если её нет
         await this.updateReferralStats(userId);
         const newResult = await this.pool.query('SELECT * FROM referral_stats WHERE user_id = $1', [
           userId,
         ]);
+        this.logger.log(
+          `🔍 [ReferralsService] New stats created: ${newResult.rows.length} rows`,
+          'ReferralsService'
+        );
         return { referralStats: newResult.rows[0] as ReferralStatsTable };
       }
 
+      this.logger.log(`✅ [ReferralsService] Stats found for user ${userId}`, 'ReferralsService');
       return { referralStats: result.rows[0] as ReferralStatsTable };
     } catch (error) {
-      this.logger.error(`Ошибка получения статистики рефералов для пользователя ${userId}:`, error);
+      this.logger.error(
+        `❌ [ReferralsService] Error getting referral stats for user ${userId}:`,
+        error
+      );
       return { referralStats: null, error: error.message };
     }
   }
@@ -232,9 +253,17 @@ export class ReferralsService {
    */
   async updateReferralStats(userId: number): Promise<void> {
     try {
+      this.logger.log(
+        `🔍 [ReferralsService] updateReferralStats called for user ${userId}`,
+        'ReferralsService'
+      );
       await this.pool.query('SELECT update_referral_stats($1)', [userId]);
+      this.logger.log(
+        `✅ [ReferralsService] updateReferralStats completed for user ${userId}`,
+        'ReferralsService'
+      );
     } catch (error) {
-      this.logger.error(`Ошибка обновления статистики для пользователя ${userId}:`, error);
+      this.logger.error(`❌ [ReferralsService] Error updating stats for user ${userId}:`, error);
     }
   }
 
