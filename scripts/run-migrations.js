@@ -21,17 +21,54 @@ class SimpleMigrationRunner {
    * Создает таблицу для отслеживания выполненных миграций
    */
   async createMigrationsTable() {
-    const query = `
-      CREATE TABLE IF NOT EXISTS migrations (
-        id SERIAL PRIMARY KEY,
-        filename VARCHAR(255) NOT NULL UNIQUE,
-        executed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        checksum VARCHAR(64)
+    // Сначала проверяем, существует ли таблица
+    const tableExists = await this.pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'migrations'
       );
-    `;
+    `);
     
-    await this.pool.query(query);
-    console.log('✅ Таблица migrations создана/проверена');
+    if (tableExists.rows[0].exists) {
+      // Таблица существует, проверяем структуру
+      const columns = await this.pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'migrations' 
+        AND table_schema = 'public'
+      `);
+      
+      const columnNames = columns.rows.map(row => row.column_name);
+      
+      // Если нет колонки filename, пересоздаем таблицу
+      if (!columnNames.includes('filename')) {
+        console.log('🔄 Обновляем структуру таблицы migrations...');
+        await this.pool.query('DROP TABLE IF EXISTS migrations CASCADE');
+        await this.pool.query(`
+          CREATE TABLE migrations (
+            id SERIAL PRIMARY KEY,
+            filename VARCHAR(255) NOT NULL UNIQUE,
+            executed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            checksum VARCHAR(64)
+          );
+        `);
+        console.log('✅ Таблица migrations пересоздана с правильной структурой');
+      } else {
+        console.log('✅ Таблица migrations уже существует с правильной структурой');
+      }
+    } else {
+      // Таблица не существует, создаем
+      await this.pool.query(`
+        CREATE TABLE migrations (
+          id SERIAL PRIMARY KEY,
+          filename VARCHAR(255) NOT NULL UNIQUE,
+          executed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          checksum VARCHAR(64)
+        );
+      `);
+      console.log('✅ Таблица migrations создана');
+    }
   }
 
   /**
