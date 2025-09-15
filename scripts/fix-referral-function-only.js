@@ -55,11 +55,11 @@ async function fixReferralFunction() {
               last_updated
           )
           SELECT 
-              r.referrer_id as user_id,
-              COUNT(*) as total_referrals,
-              COUNT(CASE WHEN r.level = 1 THEN 1 END) as level_1_referrals,
-              COUNT(CASE WHEN r.level = 2 THEN 1 END) as level_2_referrals,
-              COUNT(CASE WHEN r.level = 3 THEN 1 END) as level_3_referrals,
+              user_id_param as user_id,
+              COALESCE(COUNT(r.id), 0) as total_referrals,
+              COALESCE(COUNT(CASE WHEN r.level = 1 THEN 1 END), 0) as level_1_referrals,
+              COALESCE(COUNT(CASE WHEN r.level = 2 THEN 1 END), 0) as level_2_referrals,
+              COALESCE(COUNT(CASE WHEN r.level = 3 THEN 1 END), 0) as level_3_referrals,
               COALESCE(SUM(rp.amount), 0) as total_earned,
               NOW() as last_updated
           FROM referrals r
@@ -73,6 +73,28 @@ async function fixReferralFunction() {
               level_3_referrals = EXCLUDED.level_3_referrals,
               total_earned = EXCLUDED.total_earned,
               last_updated = EXCLUDED.last_updated;
+          
+          -- Если нет рефералов, создаем пустую запись
+          IF NOT FOUND THEN
+              INSERT INTO referral_stats (
+                  user_id, 
+                  total_referrals, 
+                  level_1_referrals, 
+                  level_2_referrals, 
+                  level_3_referrals,
+                  total_earned,
+                  last_updated
+              ) VALUES (
+                  user_id_param,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  NOW()
+              ) ON CONFLICT (user_id) DO UPDATE SET
+                  last_updated = EXCLUDED.last_updated;
+          END IF;
       END;
       $$ LANGUAGE plpgsql;
     `);
