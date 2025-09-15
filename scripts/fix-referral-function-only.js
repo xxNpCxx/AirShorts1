@@ -42,7 +42,7 @@ async function fixReferralFunction() {
     // Создаем исправленную функцию
     console.log('🔄 Создаем исправленную функцию update_referral_stats...');
     await pool.query(`
-      CREATE OR REPLACE FUNCTION update_referral_stats(user_id INTEGER)
+      CREATE OR REPLACE FUNCTION update_referral_stats(user_id_param INTEGER)
       RETURNS VOID AS $$
       BEGIN
           INSERT INTO referral_stats (
@@ -64,9 +64,9 @@ async function fixReferralFunction() {
               NOW() as last_updated
           FROM referrals r
           LEFT JOIN referral_payments rp ON r.id = rp.referral_id AND rp.status = 'paid'
-          WHERE r.referrer_id = $1
+          WHERE r.referrer_id = user_id_param
           GROUP BY r.referrer_id
-          ON CONFLICT (user_id) DO UPDATE SET
+          ON CONFLICT (referral_stats.user_id) DO UPDATE SET
               total_referrals = EXCLUDED.total_referrals,
               level_1_referrals = EXCLUDED.level_1_referrals,
               level_2_referrals = EXCLUDED.level_2_referrals,
