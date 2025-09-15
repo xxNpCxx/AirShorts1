@@ -3,7 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { CustomLoggerService } from './logger/logger.service';
 import { json, urlencoded } from 'express';
-import { runMigrations } from './migrate';
+// import { runMigrations } from './migrate'; // Миграции теперь выполняются в start-with-migrations.sh
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -60,25 +60,8 @@ async function bootstrap() {
   logger.debug(`WEBHOOK_URL: ${process.env.WEBHOOK_URL || 'не установлен'}`, 'Bootstrap');
   logger.debug(`PORT: ${process.env.PORT || 'не установлен, используется 3000'}`, 'Bootstrap');
 
-  // Запускаем миграции базы данных
-  logger.log('🔧 Начинаем запуск миграций базы данных...', 'Bootstrap');
-  try {
-    logger.log('🔧 Запуск миграций базы данных...', 'Bootstrap');
-    await runMigrations();
-    logger.log('✅ Миграции базы данных выполнены успешно', 'Bootstrap');
-  } catch (error) {
-    logger.error(
-      '❌ Ошибка при выполнении миграций:',
-      error instanceof Error ? error.message : String(error),
-      'Bootstrap'
-    );
-    logger.error(
-      '❌ Stack trace:',
-      error instanceof Error ? error.stack : 'No stack trace',
-      'Bootstrap'
-    );
-    // Не останавливаем приложение, продолжаем работу
-  }
+  // Миграции теперь выполняются в start-with-migrations.sh перед запуском приложения
+  logger.log('ℹ️ Миграции базы данных уже выполнены в start-with-migrations.sh', 'Bootstrap');
 
   // Запускаем приложение
   const port = Number(process.env.PORT) || 3000;

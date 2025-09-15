@@ -16,8 +16,8 @@ export class MigrationsService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    // Запускаем миграции при старте приложения
-    await this.runMigrations();
+    // Миграции теперь выполняются в start-with-migrations.sh перед запуском приложения
+    // await this.runMigrations();
   }
 
   /**
