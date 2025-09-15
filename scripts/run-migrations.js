@@ -126,6 +126,37 @@ class SimpleMigrationRunner {
   }
 
   /**
+   * Проверяет существование необходимых таблиц
+   */
+  async checkRequiredTables() {
+    const requiredTables = ['referrals', 'referral_payments', 'referral_stats'];
+    const existingTables = await this.pool.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      AND table_name = ANY($1)
+    `, [requiredTables]);
+    
+    const existingTableNames = existingTables.rows.map(row => row.table_name);
+    const missingTables = requiredTables.filter(table => !existingTableNames.includes(table));
+    
+    if (missingTables.length > 0) {
+      console.log('⚠️  Отсутствуют необходимые таблицы:', missingTables.join(', '));
+      console.log('📋 Выполняем миграцию 010_create_referral_system.sql для создания таблиц...');
+      
+      // Выполняем миграцию создания таблиц
+      const createTablesMigration = 'migrations/010_create_referral_system.sql';
+      if (this.getMigrationFiles().includes('010_create_referral_system.sql')) {
+        await this.executeMigration('010_create_referral_system.sql');
+      } else {
+        throw new Error('Миграция 010_create_referral_system.sql не найдена');
+      }
+    } else {
+      console.log('✅ Все необходимые таблицы существуют');
+    }
+  }
+
+  /**
    * Запускает все невыполненные миграции
    */
   async runMigrations() {
@@ -134,6 +165,9 @@ class SimpleMigrationRunner {
 
       // Создаем таблицу для отслеживания миграций
       await this.createMigrationsTable();
+
+      // Проверяем существование необходимых таблиц
+      await this.checkRequiredTables();
 
       // Получаем списки миграций
       const executedMigrations = await this.getExecutedMigrations();
