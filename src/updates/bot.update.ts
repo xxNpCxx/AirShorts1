@@ -408,7 +408,7 @@ export class BotUpdate {
     } catch (error) {
       this._logger.warn('⚠️ [BotUpdate] Failed to answer callback query:', error);
     }
-    
+
     this._logger.log('🔍 [BotUpdate] referral_stats action triggered', 'BotUpdate');
     this._logger.log('🔍 [BotUpdate] entering referral scene for stats', 'BotUpdate');
     await (
@@ -426,7 +426,7 @@ export class BotUpdate {
     } catch (error) {
       this._logger.warn('⚠️ [BotUpdate] Failed to answer callback query:', error);
     }
-    
+
     await (
       ctx as unknown as {
         scene: { enter: (sceneName: string) => Promise<void> };
@@ -442,7 +442,7 @@ export class BotUpdate {
     } catch (error) {
       this._logger.warn('⚠️ [BotUpdate] Failed to answer callback query:', error);
     }
-    
+
     await (
       ctx as unknown as {
         scene: { enter: (sceneName: string) => Promise<void> };
@@ -458,7 +458,7 @@ export class BotUpdate {
     } catch (error) {
       this._logger.warn('⚠️ [BotUpdate] Failed to answer callback query:', error);
     }
-    
+
     await (
       ctx as unknown as {
         scene: { enter: (sceneName: string) => Promise<void> };
@@ -474,7 +474,7 @@ export class BotUpdate {
     } catch (error) {
       this._logger.warn('⚠️ [BotUpdate] Failed to answer callback query:', error);
     }
-    
+
     await (
       ctx as unknown as {
         scene: { enter: (sceneName: string) => Promise<void> };

@@ -42,13 +42,18 @@ async function fixReferralFunction() {
     // Создаем исправленную функцию
     console.log('🔄 Создаем исправленную функцию update_referral_stats...');
     await pool.query(`
-      CREATE OR REPLACE FUNCTION update_referral_stats(user_id_param INTEGER)
+      CREATE OR REPLACE FUNCTION update_referral_stats(telegram_id_param INTEGER)
       RETURNS VOID AS $$
+      DECLARE
+          user_id_internal INTEGER;
       BEGIN
           -- Сначала убеждаемся, что пользователь существует в таблице users
-          INSERT INTO users (id, username, first_name, last_name, created_at, updated_at)
-          VALUES (user_id_param, 'user_' || user_id_param, 'User', 'User', NOW(), NOW())
-          ON CONFLICT (id) DO NOTHING;
+          INSERT INTO users (telegram_id, username, first_name, last_name, created_at, updated_at)
+          VALUES (telegram_id_param, 'user_' || telegram_id_param, 'User', 'User', NOW(), NOW())
+          ON CONFLICT (telegram_id) DO NOTHING;
+          
+          -- Получаем внутренний ID пользователя
+          SELECT id INTO user_id_internal FROM users WHERE telegram_id = telegram_id_param;
           
           -- Теперь создаем или обновляем статистику
           INSERT INTO referral_stats (
@@ -61,7 +66,7 @@ async function fixReferralFunction() {
               last_updated
           )
           SELECT 
-              user_id_param as user_id,
+              user_id_internal as user_id,
               COALESCE(COUNT(r.id), 0) as total_referrals,
               COALESCE(COUNT(CASE WHEN r.level = 1 THEN 1 END), 0) as level_1_referrals,
               COALESCE(COUNT(CASE WHEN r.level = 2 THEN 1 END), 0) as level_2_referrals,
@@ -70,7 +75,7 @@ async function fixReferralFunction() {
               NOW() as last_updated
           FROM referrals r
           LEFT JOIN referral_payments rp ON r.id = rp.referral_id AND rp.status = 'paid'
-          WHERE r.referrer_id = user_id_param
+          WHERE r.referrer_id = user_id_internal
           GROUP BY r.referrer_id
           ON CONFLICT (user_id) DO UPDATE SET
               total_referrals = EXCLUDED.total_referrals,
@@ -91,7 +96,7 @@ async function fixReferralFunction() {
                   total_earned,
                   last_updated
               ) VALUES (
-                  user_id_param,
+                  user_id_internal,
                   0,
                   0,
                   0,

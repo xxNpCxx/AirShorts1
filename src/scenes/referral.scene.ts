@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { Scene, SceneEnter, Action, Ctx, On } from 'nestjs-telegraf';
 import { Context } from 'telegraf';
 import { ReferralsService } from '../referrals/referrals.service';
 import { KeyboardsService } from '../keyboards/keyboards.service';
 import { CustomLoggerService } from '../logger/logger.service';
+import { Pool } from 'pg';
+import { PG_POOL } from '../database/database.module';
 
 interface TelegramContext extends Context {}
 
@@ -13,7 +15,8 @@ export class ReferralScene {
   constructor(
     private readonly referralsService: ReferralsService,
     private readonly keyboardsService: KeyboardsService,
-    private readonly logger: CustomLoggerService
+    private readonly logger: CustomLoggerService,
+    @Inject(PG_POOL) private readonly pool: Pool
   ) {}
 
   @SceneEnter()
@@ -433,9 +436,15 @@ ${referralLink}
    */
   private async getUserFromDatabase(telegramId: number): Promise<{ id: number } | null> {
     try {
-      // Здесь должен быть запрос к базе данных
-      // Пока возвращаем заглушку
-      return { id: telegramId };
+      // Получаем пользователя из базы данных по telegram_id
+      const result = await this.pool.query('SELECT id FROM users WHERE telegram_id = $1', [telegramId]);
+      
+      if (result.rows.length === 0) {
+        this.logger.warn(`Пользователь с telegram_id ${telegramId} не найден в базе данных`);
+        return null;
+      }
+      
+      return { id: result.rows[0].id };
     } catch (error) {
       this.logger.error('Ошибка получения пользователя из базы данных:', error);
       return null;
