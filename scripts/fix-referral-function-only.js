@@ -66,7 +66,7 @@ async function fixReferralFunction() {
           LEFT JOIN referral_payments rp ON r.id = rp.referral_id AND rp.status = 'paid'
           WHERE r.referrer_id = user_id_param
           GROUP BY r.referrer_id
-          ON CONFLICT (referral_stats.user_id) DO UPDATE SET
+          ON CONFLICT (user_id) DO UPDATE SET
               total_referrals = EXCLUDED.total_referrals,
               level_1_referrals = EXCLUDED.level_1_referrals,
               level_2_referrals = EXCLUDED.level_2_referrals,
