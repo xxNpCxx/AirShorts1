@@ -19,7 +19,7 @@ export class ReferralScene {
   @SceneEnter()
   async onSceneEnter(@Ctx() ctx: TelegramContext): Promise<void> {
     this.logger.log('🔍 [ReferralScene] SceneEnter called', 'ReferralScene');
-    
+
     // Проверяем, нужно ли показывать меню
     const shouldShowMenu = await this.shouldShowReferralMenu(ctx);
     if (shouldShowMenu === true) {
@@ -65,11 +65,14 @@ export class ReferralScene {
       this.logger.log('✅ [ReferralScene] Referral menu shown successfully', 'ReferralScene');
     } catch (error) {
       // Проверяем, является ли ошибка "message is not modified"
-      const isMessageNotModified = error instanceof Error && 
-        error.message.includes('message is not modified');
-      
+      const isMessageNotModified =
+        error instanceof Error && error.message.includes('message is not modified');
+
       if (isMessageNotModified === true) {
-        this.logger.log('ℹ️ [ReferralScene] Message already up to date, skipping edit', 'ReferralScene');
+        this.logger.log(
+          'ℹ️ [ReferralScene] Message already up to date, skipping edit',
+          'ReferralScene'
+        );
       } else {
         this.logger.error('❌ [ReferralScene] Error showing referral menu:', error);
       }
@@ -452,7 +455,7 @@ ${referralLink}
       }
 
       const callbackData = (ctx.callbackQuery as any).data;
-      
+
       // Если это переход из другого меню, показываем реферальное меню
       if (callbackData === 'referral_system') {
         return true;

@@ -402,8 +402,14 @@ export class BotUpdate {
 
   @Action('referral_stats')
   async onReferralStats(@Ctx() ctx: Context) {
+    // Немедленно отвечаем на callback query, чтобы избежать timeout
+    try {
+      await ctx.answerCbQuery();
+    } catch (error) {
+      this._logger.warn('⚠️ [BotUpdate] Failed to answer callback query:', error);
+    }
+    
     this._logger.log('🔍 [BotUpdate] referral_stats action triggered', 'BotUpdate');
-    await ctx.answerCbQuery();
     this._logger.log('🔍 [BotUpdate] entering referral scene for stats', 'BotUpdate');
     await (
       ctx as unknown as {
@@ -414,7 +420,13 @@ export class BotUpdate {
 
   @Action('referral_link')
   async onReferralLink(@Ctx() ctx: Context) {
-    await ctx.answerCbQuery();
+    // Немедленно отвечаем на callback query, чтобы избежать timeout
+    try {
+      await ctx.answerCbQuery();
+    } catch (error) {
+      this._logger.warn('⚠️ [BotUpdate] Failed to answer callback query:', error);
+    }
+    
     await (
       ctx as unknown as {
         scene: { enter: (sceneName: string) => Promise<void> };
@@ -424,7 +436,13 @@ export class BotUpdate {
 
   @Action('referral_list')
   async onReferralList(@Ctx() ctx: Context) {
-    await ctx.answerCbQuery();
+    // Немедленно отвечаем на callback query, чтобы избежать timeout
+    try {
+      await ctx.answerCbQuery();
+    } catch (error) {
+      this._logger.warn('⚠️ [BotUpdate] Failed to answer callback query:', error);
+    }
+    
     await (
       ctx as unknown as {
         scene: { enter: (sceneName: string) => Promise<void> };
@@ -434,7 +452,13 @@ export class BotUpdate {
 
   @Action('referral_payments')
   async onReferralPayments(@Ctx() ctx: Context) {
-    await ctx.answerCbQuery();
+    // Немедленно отвечаем на callback query, чтобы избежать timeout
+    try {
+      await ctx.answerCbQuery();
+    } catch (error) {
+      this._logger.warn('⚠️ [BotUpdate] Failed to answer callback query:', error);
+    }
+    
     await (
       ctx as unknown as {
         scene: { enter: (sceneName: string) => Promise<void> };
@@ -444,7 +468,13 @@ export class BotUpdate {
 
   @Action('referral_info')
   async onReferralInfo(@Ctx() ctx: Context) {
-    await ctx.answerCbQuery();
+    // Немедленно отвечаем на callback query, чтобы избежать timeout
+    try {
+      await ctx.answerCbQuery();
+    } catch (error) {
+      this._logger.warn('⚠️ [BotUpdate] Failed to answer callback query:', error);
+    }
+    
     await (
       ctx as unknown as {
         scene: { enter: (sceneName: string) => Promise<void> };
