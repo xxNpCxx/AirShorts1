@@ -116,4 +116,18 @@ export class UsersService {
       throw error; // Перебрасываем другие ошибки
     }
   }
+  // ... existing code ...
+
+  async getUserFromDatabase(telegramId: number): Promise<{ id: number } | null> {
+    try {
+      const res = await this.pool.query('SELECT id FROM users WHERE telegram_id = $1', [telegramId]);
+      if (res.rowCount === 0) {
+        return null;
+      }
+      return { id: res.rows[0].id };
+    } catch (error) {
+      this.logger.error('Ошибка получения пользователя из базы данных:', error);
+      return null;
+    }
+  }
 }

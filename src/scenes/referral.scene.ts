@@ -437,13 +437,15 @@ ${referralLink}
   private async getUserFromDatabase(telegramId: number): Promise<{ id: number } | null> {
     try {
       // Получаем пользователя из базы данных по telegram_id
-      const result = await this.pool.query('SELECT id FROM users WHERE telegram_id = $1', [telegramId]);
-      
+      const result = await this.pool.query('SELECT id FROM users WHERE telegram_id = $1', [
+        telegramId,
+      ]);
+
       if (result.rows.length === 0) {
         this.logger.warn(`Пользователь с telegram_id ${telegramId} не найден в базе данных`);
         return null;
       }
-      
+
       return { id: result.rows[0].id };
     } catch (error) {
       this.logger.error('Ошибка получения пользователя из базы данных:', error);
