@@ -402,7 +402,9 @@ export class BotUpdate {
 
   @Action('referral_stats')
   async onReferralStats(@Ctx() ctx: Context) {
+    this._logger.log('🔍 [BotUpdate] referral_stats action triggered', 'BotUpdate');
     await ctx.answerCbQuery();
+    this._logger.log('🔍 [BotUpdate] entering referral scene for stats', 'BotUpdate');
     await (
       ctx as unknown as {
         scene: { enter: (sceneName: string) => Promise<void> };

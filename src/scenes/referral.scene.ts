@@ -18,15 +18,24 @@ export class ReferralScene {
 
   @SceneEnter()
   async onSceneEnter(@Ctx() ctx: TelegramContext): Promise<void> {
+    this.logger.log('🔍 [ReferralScene] SceneEnter called', 'ReferralScene');
     await this.showReferralMenu(ctx);
   }
 
   @Action('referral_system')
   async showReferralMenu(@Ctx() ctx: TelegramContext): Promise<void> {
     try {
+      this.logger.log('🔍 [ReferralScene] showReferralMenu called', 'ReferralScene');
       const userId = ctx.from?.id;
       const isUserIdMissing = userId === undefined || userId === null;
-      if (isUserIdMissing === true) return;
+      if (isUserIdMissing === true) {
+        this.logger.warn('❌ [ReferralScene] userId missing in showReferralMenu', 'ReferralScene');
+        return;
+      }
+      this.logger.log(
+        `🔍 [ReferralScene] Showing referral menu for user ${userId}`,
+        'ReferralScene'
+      );
 
       const message = `💰 <b>РЕФЕРАЛЬНАЯ СИСТЕМА</b>
 
@@ -46,8 +55,9 @@ export class ReferralScene {
         parse_mode: 'HTML',
         reply_markup: this.keyboardsService.referralSystem().reply_markup,
       });
+      this.logger.log('✅ [ReferralScene] Referral menu shown successfully', 'ReferralScene');
     } catch (error) {
-      this.logger.error('Ошибка показа меню реферальной системы:', error);
+      this.logger.error('❌ [ReferralScene] Error showing referral menu:', error);
     }
   }
 
@@ -104,8 +114,9 @@ export class ReferralScene {
         parse_mode: 'HTML',
         reply_markup: this.keyboardsService.referralStats().reply_markup,
       });
+      this.logger.log('✅ [ReferralScene] Referral stats shown successfully', 'ReferralScene');
     } catch (error) {
-      this.logger.error('Ошибка показа статистики рефералов:', error);
+      this.logger.error('❌ [ReferralScene] Error showing referral stats:', error);
       this.logger.error(
         `Детали ошибки - userId: ${ctx.from?.id}, error: ${error}`,
         'ReferralScene'
